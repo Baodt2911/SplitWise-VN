@@ -18,19 +18,20 @@ import {
 import { StatusCodes } from "http-status-codes";
 import redis from "../configs/redis.config";
 import { v4 as uuidv4 } from "uuid";
+
 export const loginController = catchAsync(
   async (req: Request<{}, {}, LoginDTO>, res: Response) => {
     const user = await loginService(req.body);
-    console.log(user);
 
-    const accessToken = generateAccessToken({ userId: user.id });
-    const refreshToken = generateRefreshToken({ userId: user.id });
     const sessionId = uuidv4();
+    const accessToken = generateAccessToken({ userId: user.id });
+    const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
     const key = `session:${user.id}:${sessionId}`;
     await redis.set(
       key,
       JSON.stringify({
         refreshToken,
+        sessionId,
         ua: req.headers["user-agent"] || "",
         ip: req.ip,
         createdAt: Date.now(),
@@ -62,14 +63,15 @@ export const googleAuthController = async (
     throw new Error("User ID missing after upsert");
   }
 
-  const accessToken = generateAccessToken({ userId: user.id });
-  const refreshToken = generateRefreshToken({ userId: user.id });
   const sessionId = uuidv4();
+  const accessToken = generateAccessToken({ userId: user.id });
+  const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
 
   await redis.set(
     `session:${user.id}:${sessionId}`,
     JSON.stringify({
       refreshToken,
+      sessionId,
       ua: req.headers["user-agent"] || "",
       ip: req.ip,
       createdAt: Date.now(),
@@ -92,14 +94,15 @@ export const registerController = catchAsync(
   async (req: Request<{}, {}, RegisterDTO>, res: Response) => {
     await registerService(req.body);
     res
-      .status(StatusCodes.CREATED)
-      .json({ message: "User registered successfully" });
+      .status(StatusCodes.OK)
+      .json({ message: "OTP has been sent to your phone number" });
   }
 );
 
 export const changePasswordController = catchAsync(
   async (req: Request<{}, {}, ChangePassDTO>, res: Response) => {
-    await changePasswordServie(req.user, req.body);
+    const userId = req.user?.userId;
+    await changePasswordServie(userId!, req.body);
     res.status(StatusCodes.OK).json({
       message: "Change password successfully",
     });
@@ -108,7 +111,9 @@ export const changePasswordController = catchAsync(
 
 export const updateProfileController = catchAsync(
   async (req: Request<{}, {}, Partial<UpdateProfileDTO>>, res: Response) => {
-    await updateProfileService(req.user, req.body);
+    const userId = req.user?.userId;
+
+    await updateProfileService(userId!, req.body);
     res.status(StatusCodes.OK).json({
       message: "User profile updated successfully",
     });

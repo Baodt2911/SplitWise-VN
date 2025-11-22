@@ -16,4 +16,5 @@ router.post("/login", validateLogin, loginController);
 router.post("/register", validateRegister, registerController);
 router.post("/refresh-token", verifyRefreshToken, refreshTokenController);
 router.post("/google-verify", googleAuthController);
+
 export default router;

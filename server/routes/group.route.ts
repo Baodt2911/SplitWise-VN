@@ -5,17 +5,21 @@ import {
   verifyAccessToken,
 } from "../middlewares";
 import {
+  acceptInviteController,
+  addMemberController,
   createGroupController,
   deleteGroupController,
   getAllGroupController,
   getGroupController,
+  joinGroupController,
   updateGroupControlleer,
+  verifyInviteTokenController,
 } from "../controllers";
 
 const router = Router();
 
-router.get("/id/:groupId", verifyAccessToken, getGroupController);
 router.get("/all", verifyAccessToken, getAllGroupController);
+router.get("/:groupId", verifyAccessToken, getGroupController);
 
 router.post(
   "/create",
@@ -24,10 +28,16 @@ router.post(
   createGroupController
 );
 router.patch(
-  "/update/:groupId",
+  "/:groupId/update",
   verifyAccessToken,
   validateUpdateGroup,
   updateGroupControlleer
 );
-router.delete("/delete/:groupId", verifyAccessToken, deleteGroupController);
+router.delete("/:groupId/delete", verifyAccessToken, deleteGroupController);
+
+router.get("/join/:code", verifyAccessToken, joinGroupController);
+router.post("/:groupId/add-member", verifyAccessToken, addMemberController);
+router.get("/invite/:token", verifyInviteTokenController);
+router.post("/invite/:token/accept", verifyAccessToken, acceptInviteController);
+
 export default router;

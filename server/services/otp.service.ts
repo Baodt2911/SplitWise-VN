@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt";
 import redis from "../configs/redis.config";
-import { RegisterDTO } from "../dtos/req";
 import otpGenerate from "otp-generator";
 import { StatusCodes } from "http-status-codes";
-
+import twilio from "twilio";
+const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 export const generateOtpService = async (key: string) => {
   const otp = otpGenerate.generate(6, {
     digits: true,
@@ -29,6 +29,13 @@ export const generateOtpService = async (key: string) => {
 
 export const sendOtpRegisterService = async (phone: string) => {
   const otp = await generateOtpService(`otp:register:${phone}`);
+  console.log(otp);
+
+  // await client.messages.create({
+  //   body: `[SplitWise VN] Your OTP code is ${otp}.`,
+  //   from: process.env.TWILIO_PHONE, // Số Twilio
+  //   to: `+84${phone}`, // Số người nhận, bắt đầu bằng +84
+  // });
   return true;
 };
 
@@ -58,7 +65,8 @@ export const verifyOtpRegisterService = async (data: {
       message: "OTP expired",
     };
   const otpData = JSON.parse(isOtp);
-  if (otpData.otp !== data.otp) {
+  const isCompareOtp = await bcrypt.compare(data.otp, otpData.otp);
+  if (!isCompareOtp) {
     otpData.retry += 1;
 
     // lưu lại số lần nhập sai (không reset TTL)
@@ -81,6 +89,7 @@ export const verifyOtpRegisterService = async (data: {
       messsage: "OTP incorrect",
     };
   }
+  console.log("Đã verify");
 
   await redis.del(`otp:register:${data.phone}`);
 

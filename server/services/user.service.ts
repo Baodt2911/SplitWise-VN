@@ -8,6 +8,7 @@ import {
   UpdateProfileDTO,
 } from "../dtos/req";
 import bcrypt from "bcrypt";
+import { sendOtpRegisterService } from "./otp.service";
 
 export const loginService = async (data: LoginDTO) => {
   const user = await prisma.user.findUnique({
@@ -58,6 +59,7 @@ export const registerService = async (data: RegisterDTO) => {
     "EX",
     300
   );
+  await sendOtpRegisterService(data.phone);
   return true;
 };
 
@@ -114,12 +116,12 @@ export const googleAuthService = async (idToken: string) => {
 };
 
 export const changePasswordServie = async (
-  user: Express.User,
+  userId: string,
   data: ChangePassDTO
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {
-      id: user.userId,
+      id: userId,
     },
   });
   if (!existingUser) {
@@ -142,7 +144,7 @@ export const changePasswordServie = async (
   const newPasswordHash = await bcrypt.hash(data.newPassword, salt);
   await prisma.user.update({
     where: {
-      id: user.userId,
+      id: userId,
     },
     data: {
       passwordHash: newPasswordHash,
@@ -151,12 +153,12 @@ export const changePasswordServie = async (
   return true;
 };
 export const updateProfileService = async (
-  user: Express.User,
+  userId: string,
   data: Partial<UpdateProfileDTO>
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {
-      id: user.userId,
+      id: userId,
     },
   });
   if (!existingUser) {
@@ -167,7 +169,7 @@ export const updateProfileService = async (
   }
   await prisma.user.update({
     where: {
-      id: user.userId,
+      id: userId,
     },
     data,
   });

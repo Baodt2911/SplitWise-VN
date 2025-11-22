@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { refreshTokenService } from "./../services";
 import { StatusCodes } from "http-status-codes";
+import { refreshTokenService } from "../services";
 
 export const refreshTokenController = catchAsync(
-  async (req: Request<{}, {}, { sessionId: string }>, res: Response) => {
+  async (req: Request, res: Response) => {
     const token: string =
       req.cookies.refreshToken || req.headers.authorization?.split(" ")[1];
-    const { sessionId } = req.body;
-    const data = await refreshTokenService(req.user, sessionId, token);
+    const { userId, sessionId } = req.user!;
+    const data = await refreshTokenService(userId!, sessionId!, token);
     res.status(StatusCodes.OK).json({
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,

@@ -2,15 +2,16 @@ import jwt from "jsonwebtoken";
 import redis from "../configs/redis.config";
 import { v4 as uuidv4 } from "uuid";
 import { StatusCodes } from "http-status-codes";
-import { CustomJwtPayload } from "../types";
-export const generateAccessToken = (payload: CustomJwtPayload) => {
+import { AccessJwtPayload, RefreshJwtPayload } from "../types/jwt";
+
+export const generateAccessToken = (payload: AccessJwtPayload) => {
   const secretKey = process.env.ACCESSTOKEN_KEY;
   if (!secretKey) {
     throw new Error("ACCESSTOKEN_KEY chưa được cấu hình");
   }
   return jwt.sign(payload, secretKey, { expiresIn: 60 * 5 });
 };
-export const generateRefreshToken = (payload: CustomJwtPayload) => {
+export const generateRefreshToken = (payload: RefreshJwtPayload) => {
   const secretKey = process.env.REFRESHTOKEN_KEY;
   if (!secretKey) {
     throw new Error("REFRESHTOKEN_KEY chưa được cấu hình");
@@ -20,11 +21,11 @@ export const generateRefreshToken = (payload: CustomJwtPayload) => {
   });
 };
 export const refreshTokenService = async (
-  user: any,
+  userId: string,
   sessionId: string,
   refreshToken: string
 ) => {
-  const key = `session:${user.id}:${sessionId}`;
+  const key = `session:${userId}:${sessionId}`;
   const raw = await redis.get(key);
 
   if (!raw) {
@@ -44,20 +45,20 @@ export const refreshTokenService = async (
       message: "Token reuse detected",
     };
   }
-
-  // 2. Tạo tokens mới
-  const newAccessToken = generateAccessToken({ userId: user.id });
-  const newRefreshToken = generateRefreshToken({ userId: user.id });
-
   // 3. Rotate sessionId mới
   const newSessionId = uuidv4();
-  const newKey = `session:${user.id}:${newSessionId}`;
+  const newKey = `session:${userId}:${newSessionId}`;
+
+  // 2. Tạo tokens mới
+  const newAccessToken = generateAccessToken({ userId });
+  const newRefreshToken = generateRefreshToken({ userId, sessionId });
 
   // 4. Lưu session mới vào Redis
   await redis.set(
     newKey,
     JSON.stringify({
       refreshToken: newRefreshToken,
+      sessionId: newSessionId,
       ua: session.ua ?? "",
       ip: session.ip ?? "",
       createdAt: session.createdAt,
@@ -76,4 +77,15 @@ export const refreshTokenService = async (
     refreshToken: newRefreshToken,
     sessionId: newSessionId,
   };
+};
+export const generateInviteToken = (payload: {
+  groupId: string;
+  invitedBy: string;
+  contact: string;
+}) => {
+  const secretKey = process.env.INVITETOKEN_KEY;
+  if (!secretKey) {
+    throw new Error("INVITETOKEN_KEY chưa được cấu hình");
+  }
+  return jwt.sign(payload, secretKey, { expiresIn: "15d" });
 };

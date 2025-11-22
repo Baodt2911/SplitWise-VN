@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 
@@ -16,62 +16,63 @@ datasource db {
 // ============================================
 
 model User {
-  id        String   @id @default(uuid())
-  phone     String   @unique @db.VarChar(15)
-  email     String?  @unique @db.VarChar(255)
-  passwordHash String @map("password_hash") @db.VarChar(255)
-  fullName  String   @map("full_name") @db.VarChar(100)
-  avatarUrl String?  @map("avatar_url") @db.Text
-  googleId  String?  @unique @map("google_id") @db.VarChar(255)
+  id                String  @id @default(uuid())
+  phone             String  @unique @db.VarChar(15)
+  email             String? @unique @db.VarChar(255)
+  passwordHash      String  @map("password_hash") @db.VarChar(255)
+  fullName          String  @map("full_name") @db.VarChar(100)
+  avatarUrl         String? @map("avatar_url") @db.Text
+  googleId          String? @unique @map("google_id") @db.VarChar(255)
   // Thông tin ngân hàng
   bankName          String? @map("bank_name") @db.VarChar(100)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(50)
   bankAccountName   String? @map("bank_account_name") @db.VarChar(100)
-  
+
   // Cài đặt
-  language String  @default("vi") @db.VarChar(10)
-  timezone String  @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
-  currency String  @default("VND") @db.VarChar(3)
-  
+  language       String  @default("vi") @db.VarChar(10)
+  timezone       String  @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
+  currency       String  @default("VND") @db.VarChar(3)
+  allowDirectAdd Boolean @default(false) @map("allow_direct_add")
+
   // Premium
   isPremium        Boolean   @default(false) @map("is_premium")
   premiumExpiresAt DateTime? @map("premium_expires_at") @db.Timestamp()
-  
+
   // Bảo mật
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret") @db.VarChar(255)
-  
+
   // Metadata
-  lastLoginAt      DateTime? @map("last_login_at") @db.Timestamp()
-  emailVerifiedAt  DateTime? @map("email_verified_at") @db.Timestamp()
-  phoneVerifiedAt  DateTime? @map("phone_verified_at") @db.Timestamp()
-  
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamp()
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamp()
+  phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamp()
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
-  
+
   // Relations
-  groupsCreated      Group[]             @relation("GroupCreator")
-  groupMemberships   GroupMember[]
-  expensesPaid       Expense[]           @relation("ExpensePaidBy")
-  expensesCreated    Expense[]           @relation("ExpenseCreator")
-  expenseSplits      ExpenseSplit[]
-  settlementsPaid    Settlement[]        @relation("SettlementPayer")
-  settlementsReceived Settlement[]       @relation("SettlementPayee")
-  settlementsConfirmed Settlement[]      @relation("SettlementConfirmer")
-  friendshipsInitiated Friendship[]      @relation("FriendshipUser")
-  friendshipsReceived  Friendship[]      @relation("FriendshipFriend")
-  notifications      Notification[]
-  comments           Comment[]
-  activities         Activity[]
-  groupInvitesSent   GroupInvite[]       @relation("InviteSender")
-  groupInvitesUsed   GroupInvite[]       @relation("InviteUser")
+  groupsCreated        Group[]               @relation("GroupCreator")
+  groupMemberships     GroupMember[]
+  expensesPaid         Expense[]             @relation("ExpensePaidBy")
+  expensesCreated      Expense[]             @relation("ExpenseCreator")
+  expenseSplits        ExpenseSplit[]
+  settlementsPaid      Settlement[]          @relation("SettlementPayer")
+  settlementsReceived  Settlement[]          @relation("SettlementPayee")
+  settlementsConfirmed Settlement[]          @relation("SettlementConfirmer")
+  friendshipsInitiated Friendship[]          @relation("FriendshipUser")
+  friendshipsReceived  Friendship[]          @relation("FriendshipFriend")
+  notifications        Notification[]
+  comments             Comment[]
+  activities           Activity[]
+  groupInvitesSent     GroupInvite[]         @relation("InviteSender")
+  groupInvitesUsed     GroupInvite[]         @relation("InviteUser")
   premiumSubscriptions PremiumSubscription[]
-  referralsGiven     Referral[]          @relation("Referrer")
-  referralsReceived  Referral[]          @relation("Referred")
-  pointTransactions  UserPoint[]
-  settings           UserSettings?
-  
+  referralsGiven       Referral[]            @relation("Referrer")
+  referralsReceived    Referral[]            @relation("Referred")
+  pointTransactions    UserPoint[]
+  settings             UserSettings?
+
   @@index([phone, deletedAt])
   @@index([email, deletedAt])
   @@index([isPremium, premiumExpiresAt])
@@ -79,37 +80,38 @@ model User {
 }
 
 model Group {
-  id          String   @id @default(uuid())
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  avatarUrl   String?  @map("avatar_url") @db.Text
-  
+  id          String  @id @default(uuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  avatarUrl   String? @map("avatar_url") @db.Text
+
   // Quyền riêng tư
   isPublic   Boolean @default(false) @map("is_public")
   inviteCode String? @unique @map("invite_code") @db.VarChar(50)
-  
+
   // Settings
   allowMemberEdit            Boolean @default(false) @map("allow_member_edit")
+  allowMemberDirectAdd       Boolean @default(false) @map("allow_member_direct_add")
   requirePaymentConfirmation Boolean @default(true) @map("require_payment_confirmation")
   autoReminderEnabled        Boolean @default(true) @map("auto_reminder_enabled")
   reminderDays               Int     @default(3) @map("reminder_days")
-  
+
   // Metadata
   createdBy  String?   @map("created_by")
   archivedAt DateTime? @map("archived_at") @db.Timestamp()
-  
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
-  
+
   // Relations
-  creator      User?         @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-  members      GroupMember[]
-  expenses     Expense[]
-  settlements  Settlement[]
-  invites      GroupInvite[]
-  activities   Activity[]
-  
+  creator     User?         @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  members     GroupMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+  invites     GroupInvite[]
+  activities  Activity[]
+
   @@index([createdBy, deletedAt])
   @@index([inviteCode, deletedAt])
   @@index([archivedAt, deletedAt])
@@ -120,24 +122,24 @@ model GroupMember {
   id      String @id @default(uuid())
   groupId String @map("group_id")
   userId  String @map("user_id")
-  
+
   // Role
-  role   String @default("member") @db.VarChar(20) // 'admin', 'member'
-  
+  role String @default("member") @db.VarChar(20) // 'admin', 'member'
+
   // Status
   status String @default("active") @db.VarChar(20) // 'active', 'left', 'removed'
-  
+
   // Metadata
   joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamp()
   leftAt   DateTime? @map("left_at") @db.Timestamp()
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
-  
+
   // Relations
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([groupId, userId])
   @@index([groupId, status])
   @@index([userId, status])
@@ -146,44 +148,44 @@ model GroupMember {
 }
 
 model Expense {
-  id          String   @id @default(uuid())
-  groupId     String   @map("group_id")
-  
+  id      String @id @default(uuid())
+  groupId String @map("group_id")
+
   // Thông tin chi phí
-  description String   @db.VarChar(500)
-  amount      Decimal  @db.Decimal(15, 2)
-  currency    String   @default("VND") @db.VarChar(3)
-  
+  description String  @db.VarChar(500)
+  amount      Decimal @db.Decimal(15, 2)
+  currency    String  @default("VND") @db.VarChar(3)
+
   // Người trả
   paidBy String @map("paid_by")
-  
+
   // Phân loại
   category String @default("other") @db.VarChar(50) // food, transport, entertainment, accommodation, shopping, other
-  
+
   // Ngày chi
   expenseDate DateTime @default(now()) @map("expense_date") @db.Date
-  
+
   // Hóa đơn
   receiptUrl String? @map("receipt_url") @db.Text
-  
+
   // Ghi chú
   notes String? @db.Text
-  
+
   // Cách chia
   splitType String @default("equal") @map("split_type") @db.VarChar(20) // equal, exact, percentage, shares
-  
+
   createdBy String    @map("created_by")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
-  
+
   // Relations
-  group    Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidByUser User         @relation("ExpensePaidBy", fields: [paidBy], references: [id], onDelete: Cascade)
-  creator  User           @relation("ExpenseCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  splits   ExpenseSplit[]
-  comments Comment[]
-  
+  group      Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidByUser User           @relation("ExpensePaidBy", fields: [paidBy], references: [id], onDelete: Cascade)
+  creator    User           @relation("ExpenseCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  splits     ExpenseSplit[]
+  comments   Comment[]
+
   @@index([groupId, expenseDate(sort: Desc), deletedAt])
   @@index([paidBy, deletedAt])
   @@index([category, deletedAt])
@@ -195,23 +197,23 @@ model ExpenseSplit {
   id        String @id @default(uuid())
   expenseId String @map("expense_id")
   userId    String @map("user_id")
-  
+
   // Số tiền phải trả
   amount Decimal @db.Decimal(15, 2)
-  
+
   // Phần chia (dùng cho split_type = 'shares')
   shares Decimal? @db.Decimal(10, 2)
-  
+
   // Phần trăm (dùng cho split_type = 'percentage')
   percentage Decimal? @db.Decimal(5, 2)
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
-  
+
   // Relations
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([expenseId, userId])
   @@index([expenseId])
   @@index([userId])
@@ -221,43 +223,43 @@ model ExpenseSplit {
 model Settlement {
   id      String @id @default(uuid())
   groupId String @map("group_id")
-  
+
   // Người trả
   payerId String @map("payer_id")
-  
+
   // Người nhận
   payeeId String @map("payee_id")
-  
+
   // Số tiền
   amount   Decimal @db.Decimal(15, 2)
   currency String  @default("VND") @db.VarChar(3)
-  
+
   // Trạng thái
   status String @default("pending") @db.VarChar(20) // pending, confirmed, rejected
-  
+
   // Ngày thanh toán
   paymentDate DateTime @default(now()) @map("payment_date") @db.Date
-  
+
   // Phương thức
   paymentMethod String? @map("payment_method") @db.VarChar(50) // cash, bank_transfer, momo, zalopay, vnpay
-  
+
   // Ghi chú
   notes String? @db.Text
-  
+
   // Xác nhận
   confirmedBy String?   @map("confirmed_by")
   confirmedAt DateTime? @map("confirmed_at") @db.Timestamp()
-  
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
-  
+
   // Relations
   group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   payer     User  @relation("SettlementPayer", fields: [payerId], references: [id], onDelete: Cascade)
   payee     User  @relation("SettlementPayee", fields: [payeeId], references: [id], onDelete: Cascade)
   confirmer User? @relation("SettlementConfirmer", fields: [confirmedBy], references: [id])
-  
+
   @@index([groupId, status, deletedAt])
   @@index([payerId, status, deletedAt])
   @@index([payeeId, status, deletedAt])
@@ -269,17 +271,17 @@ model Friendship {
   id       String @id @default(uuid())
   userId   String @map("user_id")
   friendId String @map("friend_id")
-  
+
   // Trạng thái
   status String @default("pending") @db.VarChar(20) // pending, accepted, blocked
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
-  
+
   // Relations
   user   User @relation("FriendshipUser", fields: [userId], references: [id], onDelete: Cascade)
   friend User @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, friendId])
   @@index([userId, status])
   @@index([friendId, status])
@@ -289,27 +291,27 @@ model Friendship {
 model Notification {
   id     String @id @default(uuid())
   userId String @map("user_id")
-  
+
   // Loại thông báo
   type String @db.VarChar(50) // expense_added, payment_request, payment_confirmed, member_added, comment_added, reminder
-  
+
   // Tiêu đề & nội dung
   title String @db.VarChar(255)
   body  String @db.Text
-  
+
   // Liên kết đến
   relatedType String? @map("related_type") @db.VarChar(50) // expense, settlement, group, user
   relatedId   String? @map("related_id")
-  
+
   // Trạng thái
   isRead Boolean   @default(false) @map("is_read")
   readAt DateTime? @map("read_at") @db.Timestamp()
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
-  
+
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@index([type])
   @@index([relatedType, relatedId])
@@ -320,23 +322,23 @@ model Comment {
   id        String @id @default(uuid())
   expenseId String @map("expense_id")
   userId    String @map("user_id")
-  
+
   // Nội dung
   content String @db.Text
-  
+
   // Reply
   parentId String? @map("parent_id")
-  
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
-  
+
   // Relations
   expense Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies Comment[] @relation("CommentReplies")
-  
+
   @@index([expenseId, createdAt, deletedAt])
   @@index([userId, deletedAt])
   @@index([parentId, deletedAt])
@@ -347,22 +349,22 @@ model Activity {
   id      String  @id @default(uuid())
   groupId String? @map("group_id")
   userId  String  @map("user_id")
-  
+
   // Loại hoạt động
   action String @db.VarChar(50) // create_group, add_member, add_expense, update_expense, delete_expense, make_payment, etc.
-  
+
   // Mô tả
   description String @db.Text
-  
+
   // Metadata (JSON)
   metadata Json?
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
-  
+
   // Relations
   group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([groupId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([action])
@@ -373,34 +375,34 @@ model Activity {
 model GroupInvite {
   id      String @id @default(uuid())
   groupId String @map("group_id")
-  
+
   // Người mời
   invitedBy String @map("invited_by")
-  
+
   // Mã mời
   inviteToken String @unique @map("invite_token") @db.VarChar(100)
-  
+
   // Thông tin
   email String? @db.VarChar(255)
   phone String? @db.VarChar(15)
-  
+
   // Trạng thái
   status String @default("pending") @db.VarChar(20) // pending, accepted, expired
-  
+
   // Hết hạn
   expiresAt DateTime @map("expires_at") @db.Timestamp()
-  
+
   // Sử dụng
   usedBy String?   @map("used_by")
   usedAt DateTime? @map("used_at") @db.Timestamp()
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
-  
+
   // Relations
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   inviter User  @relation("InviteSender", fields: [invitedBy], references: [id], onDelete: Cascade)
   user    User? @relation("InviteUser", fields: [usedBy], references: [id])
-  
+
   @@index([inviteToken, status])
   @@index([groupId, status])
   @@index([expiresAt])
@@ -410,38 +412,38 @@ model GroupInvite {
 model PremiumSubscription {
   id     String @id @default(uuid())
   userId String @map("user_id")
-  
+
   // Gói
   plan String @db.VarChar(20) // monthly, yearly, lifetime
-  
+
   // Giá
   amount   Decimal @db.Decimal(15, 2)
   currency String  @default("VND") @db.VarChar(3)
-  
+
   // Thời gian
   startsAt  DateTime  @map("starts_at") @db.Timestamp()
   expiresAt DateTime? @map("expires_at") @db.Timestamp()
-  
+
   // Trạng thái
   status String @default("active") @db.VarChar(20) // active, cancelled, expired
-  
+
   // Tự động gia hạn
   autoRenew Boolean @default(true) @map("auto_renew")
-  
+
   // Thanh toán
   paymentMethod String? @map("payment_method") @db.VarChar(50)
   transactionId String? @map("transaction_id") @db.VarChar(255)
-  
+
   // Hủy
   cancelledAt  DateTime? @map("cancelled_at") @db.Timestamp()
   cancelReason String?   @map("cancel_reason") @db.Text
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
-  
+
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId, status])
   @@index([expiresAt])
   @@index([autoRenew, expiresAt, status])
@@ -452,25 +454,25 @@ model Referral {
   id         String  @id @default(uuid())
   referrerId String  @map("referrer_id")
   referredId String? @map("referred_id")
-  
+
   // Mã giới thiệu
   referralCode String @unique @map("referral_code") @db.VarChar(50)
-  
+
   // Trạng thái
   status String @default("pending") @db.VarChar(20) // pending, completed, rewarded
-  
+
   // Phần thưởng
   rewardType   String?   @map("reward_type") @db.VarChar(50) // premium_days, points
   rewardAmount Int?      @map("reward_amount")
   rewardedAt   DateTime? @map("rewarded_at") @db.Timestamp()
-  
+
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp()
   completedAt DateTime? @map("completed_at") @db.Timestamp()
-  
+
   // Relations
   referrer User  @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referred User? @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
-  
+
   @@index([referrerId, status])
   @@index([referralCode])
   @@map("referrals")
@@ -479,28 +481,28 @@ model Referral {
 model UserPoint {
   id     String @id @default(uuid())
   userId String @map("user_id")
-  
+
   // Điểm
   points Int
-  
+
   // Loại giao dịch
   transactionType String @map("transaction_type") @db.VarChar(50) // earn, redeem
-  
+
   // Nguồn
   source String @db.VarChar(50) // complete_profile, add_expense, referral, check_in, etc.
-  
+
   // Mô tả
   description String? @db.Text
-  
+
   // Liên kết
   relatedType String? @map("related_type") @db.VarChar(50)
   relatedId   String? @map("related_id")
-  
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
-  
+
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId, createdAt(sort: Desc)])
   @@index([transactionType])
   @@map("user_points")
@@ -509,42 +511,42 @@ model UserPoint {
 model UserSettings {
   id     String @id @default(uuid())
   userId String @unique @map("user_id")
-  
+
   // Thông báo
-  notificationExpenseAdded       Boolean @default(true) @map("notification_expense_added")
-  notificationPaymentRequest     Boolean @default(true) @map("notification_payment_request")
-  notificationPaymentConfirmed   Boolean @default(true) @map("notification_payment_confirmed")
-  notificationMemberAdded        Boolean @default(true) @map("notification_member_added")
-  notificationComment            Boolean @default(true) @map("notification_comment")
-  notificationReminder           Boolean @default(true) @map("notification_reminder")
-  
+  notificationExpenseAdded     Boolean @default(true) @map("notification_expense_added")
+  notificationPaymentRequest   Boolean @default(true) @map("notification_payment_request")
+  notificationPaymentConfirmed Boolean @default(true) @map("notification_payment_confirmed")
+  notificationMemberAdded      Boolean @default(true) @map("notification_member_added")
+  notificationComment          Boolean @default(true) @map("notification_comment")
+  notificationReminder         Boolean @default(true) @map("notification_reminder")
+
   // Email
   emailNotifications Boolean @default(true) @map("email_notifications")
   emailWeeklySummary Boolean @default(false) @map("email_weekly_summary")
-  
+
   // Push
   pushNotifications Boolean @default(true) @map("push_notifications")
-  
+
   // App
-  appLockEnabled  Boolean @default(false) @map("app_lock_enabled")
-  appLockTimeout  Int     @default(5) @map("app_lock_timeout") // minutes
+  appLockEnabled   Boolean @default(false) @map("app_lock_enabled")
+  appLockTimeout   Int     @default(5) @map("app_lock_timeout") // minutes
   biometricEnabled Boolean @default(false) @map("biometric_enabled")
-  
+
   // Privacy
   showInSearch        Boolean @default(true) @map("show_in_search")
   allowFriendRequests Boolean @default(true) @map("allow_friend_requests")
   showOnlineStatus    Boolean @default(true) @map("show_online_status")
-  
+
   // Theme
-  theme      String @default("light") @db.VarChar(20) // light, dark, auto
+  theme       String @default("light") @db.VarChar(20) // light, dark, auto
   accentColor String @default("blue") @map("accent_color") @db.VarChar(20)
-  fontSize   String @default("medium") @map("font_size") @db.VarChar(20)
-  
+  fontSize    String @default("medium") @map("font_size") @db.VarChar(20)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
-  
+
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("user_settings")
 }

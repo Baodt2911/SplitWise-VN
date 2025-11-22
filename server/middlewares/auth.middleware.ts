@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import { CustomSocketType } from "../types";
+import { AccessJwtPayload, RefreshJwtPayload } from "../types/jwt";
 export const verifyAccessTokenSocket = (
   socket: CustomSocketType,
   next: NextFunction
@@ -44,7 +45,6 @@ export const verifyAccessToken = async (
     const secretKey = process.env.ACCESSTOKEN_KEY;
     if (!secretKey) {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: "ACCESSTOKEN_KEY is not configured",
       });
     }
@@ -52,23 +52,20 @@ export const verifyAccessToken = async (
       if (err) {
         if (err.name === "TokenExpiredError") {
           return res.status(StatusCodes.FORBIDDEN).json({
-            status: StatusCodes.FORBIDDEN,
             message: "Token has expired",
           });
         }
 
         return res.status(StatusCodes.FORBIDDEN).json({
-          status: StatusCodes.FORBIDDEN,
           message: "Invalid token",
         });
       }
-      req.user = decoded as { userId: string };
+      req.user = decoded as AccessJwtPayload;
       next();
     });
   } catch (error: any) {
     console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: StatusCodes.INTERNAL_SERVER_ERROR,
       error: error.message || ReasonPhrases.INTERNAL_SERVER_ERROR,
     });
   }
@@ -79,18 +76,19 @@ export const verifyRefreshToken = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const refreshToken: string =
-      req.cookies.refreshToken || req.headers.authorization?.split(" ")[1];
+    const refreshToken: string | undefined =
+      req.cookies?.refreshToken || req.headers.authorization?.split(" ")[1];
+
     if (!refreshToken) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: StatusCodes.UNAUTHORIZED,
         message: "You do not have access",
       });
     }
+
     const secretKey = process.env.REFRESHTOKEN_KEY;
     if (!secretKey) {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        status: StatusCodes.INTERNAL_SERVER_ERROR,
         message: "REFRESHTOKEN_KEY chưa được cấu hình",
       });
     }
@@ -98,24 +96,20 @@ export const verifyRefreshToken = async (
       if (err) {
         if (err.name === "TokenExpiredError") {
           return res.status(StatusCodes.FORBIDDEN).json({
-            status: StatusCodes.FORBIDDEN,
             message: "Token has expired",
           });
         }
 
         return res.status(StatusCodes.FORBIDDEN).json({
-          status: StatusCodes.FORBIDDEN,
           message: "Invalid token",
         });
       }
-      req.user = decoded as { userId: string };
-
+      req.user = decoded as RefreshJwtPayload;
       next();
     });
   } catch (error: any) {
     console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: StatusCodes.INTERNAL_SERVER_ERROR,
       error: error.message || ReasonPhrases.INTERNAL_SERVER_ERROR,
     });
   }

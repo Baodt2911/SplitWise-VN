@@ -3,6 +3,7 @@ import http from "http";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import { Server } from "socket.io";
+import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
 // import routes from "./routes";
 import { configSocket } from "./configs";
@@ -16,6 +17,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 dotenv.config();
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   morgan("combined", {
     // stream: {

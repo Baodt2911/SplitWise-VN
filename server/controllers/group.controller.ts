@@ -7,12 +7,18 @@ import {
   getAllGroupService,
   getGroupService,
   updateGroupService,
+  addMemberService,
+  verifyInviteTokenService,
+  acceptInviteService,
+  joinGroupService,
 } from "../services";
 import { StatusCodes } from "http-status-codes";
 
 export const createGroupController = catchAsync(
   async (req: Request<{}, {}, CreateGroupDTO>, res: Response) => {
-    await createGroupService(req.user, req.body);
+    const userId = req.user?.userId;
+
+    await createGroupService(userId!, req.body);
     res.status(StatusCodes.CREATED).json({
       message: "Created group successfully",
     });
@@ -30,7 +36,9 @@ export const updateGroupControlleer = catchAsync(
     >,
     res: Response
   ) => {
-    await updateGroupService(req.user, req.params.groupId, req.body);
+    const userId = req.user?.userId;
+
+    await updateGroupService(userId!, req.params.groupId, req.body);
     res.status(StatusCodes.OK).json({
       message: "Updated group successfully",
     });
@@ -39,7 +47,8 @@ export const updateGroupControlleer = catchAsync(
 
 export const deleteGroupController = catchAsync(
   async (req: Request<{ groupId: string }>, res: Response) => {
-    await deleteGroupService(req.user, req.params.groupId);
+    const userId = req.user?.userId;
+    await deleteGroupService(userId!, req.params.groupId);
     res.status(StatusCodes.OK).json({
       message: "Deleted groupd successfully",
     });
@@ -48,7 +57,9 @@ export const deleteGroupController = catchAsync(
 
 export const getAllGroupController = catchAsync(
   async (req: Request, res: Response) => {
-    const groups = await getAllGroupService(req.user);
+    const userId = req.user?.userId;
+
+    const groups = await getAllGroupService(userId!);
     res.status(StatusCodes.OK).json({
       groups,
     });
@@ -57,9 +68,56 @@ export const getAllGroupController = catchAsync(
 
 export const getGroupController = catchAsync(
   async (req: Request<{ groupId: string }>, res: Response) => {
-    const group = await getGroupService(req.user, req.params.groupId);
+    const userId = req.user?.userId;
+    const group = await getGroupService(userId!, req.params.groupId);
     res.status(StatusCodes.OK).json({
       group,
+    });
+  }
+);
+
+export const addMemberController = catchAsync(
+  async (
+    req: Request<{ groupId: string }, {}, { phone: string }>,
+    res: Response
+  ) => {
+    const userId = req.user?.userId;
+    const { added } = await addMemberService(
+      userId!,
+      req.params.groupId,
+      req.body.phone
+    );
+    res.status(StatusCodes.OK).json({
+      message: added ? "Added to group" : "Invitation sent",
+    });
+  }
+);
+
+export const verifyInviteTokenController = catchAsync(
+  async (req: Request<{ token: string }>, res: Response) => {
+    await verifyInviteTokenService(req.params.token);
+    res.status(StatusCodes.OK).json({
+      message: "Token verified",
+    });
+  }
+);
+
+export const acceptInviteController = catchAsync(
+  async (req: Request<{ token: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    await acceptInviteService(req.params.token, userId!);
+    res.status(StatusCodes.OK).json({
+      message: "Invitation accepted",
+    });
+  }
+);
+
+export const joinGroupController = catchAsync(
+  async (req: Request<{ code: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    await joinGroupService(userId!, req.params.code);
+    res.status(StatusCodes.OK).json({
+      message: "Joined the group",
     });
   }
 );
