@@ -4,9 +4,15 @@ import { CreateGroupDTO, UpdateGroupDTO } from "../dtos/req";
 import otpGenerator from "otp-generator";
 import { User } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
+import { checkGroupAdmin } from "../middlewares";
 export const getAllGroupService = async (userId: string) => {
   return await prisma.groupMember.findMany({
-    where: { userId },
+    where: {
+      userId,
+      group: {
+        deletedAt: null,
+      },
+    },
     select: {
       role: true,
       group: {
@@ -17,8 +23,8 @@ export const getAllGroupService = async (userId: string) => {
 };
 
 export const getGroupService = async (userId: string, groupId: string) => {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
+  const group = await prisma.group.findFirst({
+    where: { id: groupId, deletedAt: null },
     select: {
       name: true,
       createdBy: true,
@@ -69,27 +75,19 @@ export const updateGroupService = async (
   groupId: string,
   data: Partial<UpdateGroupDTO>
 ) => {
-  const existingGroup = await prisma.group.findUnique({
+  const existingGroup = await prisma.group.count({
     where: {
       id: groupId,
     },
-    select: { createdBy: true },
   });
 
-  if (!existingGroup) {
+  if (existingGroup < 0) {
     throw {
       status: StatusCodes.NOT_FOUND,
       message: "Group not found",
     };
   }
-
-  if (existingGroup?.createdBy !== userId) {
-    throw {
-      status: StatusCodes.FORBIDDEN,
-      message: "No permission",
-    };
-  }
-
+  await checkGroupAdmin(userId, groupId);
   await prisma.group.update({
     where: { id: groupId },
     data,
@@ -98,31 +96,25 @@ export const updateGroupService = async (
 };
 
 export const deleteGroupService = async (userId: string, groupId: string) => {
-  const existingGroup = await prisma.group.findUnique({
+  const existingGroup = await prisma.group.count({
     where: {
       id: groupId,
     },
-    select: {
-      createdBy: true,
-    },
   });
 
-  if (!existingGroup) {
+  if (existingGroup < 0) {
     throw {
       status: StatusCodes.NOT_FOUND,
       message: "Group not found",
     };
   }
-
-  if (existingGroup?.createdBy !== userId) {
-    throw {
-      status: StatusCodes.FORBIDDEN,
-      message: "No permission",
-    };
-  }
-  await prisma.group.delete({
+  await checkGroupAdmin(userId, groupId);
+  await prisma.group.update({
     where: {
       id: groupId,
+    },
+    data: {
+      deletedAt: new Date(),
     },
   });
   return true;
@@ -436,4 +428,133 @@ export const acceptInviteService = async (token: string, userId: string) => {
     },
   });
   return { joined: true };
+};
+
+export const removeMemberService = async (
+  userId: string,
+  groupId: string,
+  memberId: string
+) => {
+  const existingGroup = await prisma.group.count({
+    where: {
+      id: groupId,
+    },
+  });
+
+  if (existingGroup < 0) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Group not found",
+    };
+  }
+  await checkGroupAdmin(userId, groupId);
+
+  // Kiểm tra đã trong nhóm chưa
+  const groupMember = await prisma.groupMember.findFirst({
+    where: {
+      id: memberId,
+    },
+    select: {
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
+    },
+  });
+
+  if (!groupMember) {
+    throw {
+      status: StatusCodes.UNPROCESSABLE_ENTITY,
+      message: "The user is'nt a member of the group",
+    };
+  }
+
+  await prisma.groupMember.update({
+    where: {
+      id: memberId,
+    },
+    data: {
+      status: "removed",
+    },
+  });
+
+  //Create activity
+  await prisma.activity.create({
+    data: {
+      groupId: groupId,
+      userId: userId,
+      action: "removed_member",
+      description: `${groupMember.user.fullName} has been removed from the group`,
+    },
+  });
+};
+
+export const leaveGroupService = async (userId: string, groupId: string) => {
+  const existingGroup = await prisma.group.findUnique({
+    where: {
+      id: groupId,
+    },
+    select: {
+      createdBy: true,
+    },
+  });
+
+  if (!existingGroup) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Group not found",
+    };
+  }
+
+  //Không cho người tạo nhóm rời nếu chưa chuyển quyền
+  if (existingGroup.createdBy === userId) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "Group owner cannot leave the group",
+    };
+  }
+
+  // Kiểm tra đã trong nhóm chưa
+  const groupMember = await prisma.groupMember.findFirst({
+    where: {
+      groupId,
+      userId,
+    },
+    select: {
+      id: true,
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
+    },
+  });
+
+  if (!groupMember) {
+    throw {
+      status: StatusCodes.UNPROCESSABLE_ENTITY,
+      message: "The user is'nt a member of the group",
+    };
+  }
+
+  await prisma.groupMember.update({
+    where: {
+      id: groupMember.id,
+    },
+    data: {
+      status: "left",
+    },
+  });
+
+  //Create activity
+  await prisma.activity.create({
+    data: {
+      groupId: groupId,
+      userId: userId,
+      action: "left_group",
+      description: `${groupMember.user.fullName} has left the group`,
+    },
+  });
+  return true;
 };

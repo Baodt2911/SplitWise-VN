@@ -34,6 +34,26 @@
             "date": 1763744604830,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2025-11-22.log",
             "hash": "64295f31e8b0547fff5a7f25bf55518ba53fc2549b66303a36a4353feff0d1bc"
+        },
+        {
+            "date": 1763831844027,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2025-11-23.log",
+            "hash": "f2c72afad734c378b0cb73cd42729f6ef1f503acfcfb9b7f566db5e82d6e51c3"
+        },
+        {
+            "date": 1763996824144,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2025-11-24.log",
+            "hash": "0eacf8eedc6aec0d48ce11c976c53cfb041a6ab38c99431c8ae6fb9c07f7d2fd"
+        },
+        {
+            "date": 1764082189376,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2025-11-25.log",
+            "hash": "0f3ed05a0652322e94e04e152bd33701a54432ac5c733f3f0f0b1a80a24bf35a"
+        },
+        {
+            "date": 1764090294094,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2025-11-26.log",
+            "hash": "be18e4325553f7a95895c16ea283f451e28908d7cd8c411c197482b620b348a9"
         }
     ],
     "hashType": "sha256"

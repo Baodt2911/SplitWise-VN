@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  validateCreateExpense,
   validateCreateGroup,
   validateUpdateGroup,
   verifyAccessToken,
@@ -7,11 +8,13 @@ import {
 import {
   acceptInviteController,
   addMemberController,
+  createExpenseController,
   createGroupController,
   deleteGroupController,
   getAllGroupController,
   getGroupController,
   joinGroupController,
+  removeMemberController,
   updateGroupControlleer,
   verifyInviteTokenController,
 } from "../controllers";
@@ -34,10 +37,22 @@ router.patch(
   updateGroupControlleer
 );
 router.delete("/:groupId/delete", verifyAccessToken, deleteGroupController);
+router.delete(
+  "/:groupId/members/:memberId",
+  verifyAccessToken,
+  removeMemberController
+);
 
 router.get("/join/:code", verifyAccessToken, joinGroupController);
 router.post("/:groupId/add-member", verifyAccessToken, addMemberController);
 router.get("/invite/:token", verifyInviteTokenController);
 router.post("/invite/:token/accept", verifyAccessToken, acceptInviteController);
+
+router.post(
+  "/:groupId/expenses/create",
+  verifyAccessToken,
+  validateCreateExpense,
+  createExpenseController
+);
 
 export default router;

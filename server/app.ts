@@ -31,6 +31,7 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/otp", otpRouter);
 app.use("/api/v1/group", groupRouter);
+
 app.use((req: Request, res: Response) => {
   res.status(StatusCodes.NOT_FOUND).json({
     status: StatusCodes.NOT_FOUND,

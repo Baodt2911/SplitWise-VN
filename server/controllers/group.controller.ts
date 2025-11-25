@@ -11,6 +11,7 @@ import {
   verifyInviteTokenService,
   acceptInviteService,
   joinGroupService,
+  removeMemberService,
 } from "../services";
 import { StatusCodes } from "http-status-codes";
 
@@ -118,6 +119,19 @@ export const joinGroupController = catchAsync(
     await joinGroupService(userId!, req.params.code);
     res.status(StatusCodes.OK).json({
       message: "Joined the group",
+    });
+  }
+);
+
+export const removeMemberController = catchAsync(
+  async (
+    req: Request<{ groupId: string; memberId: string }>,
+    res: Response
+  ) => {
+    const userId = req.user?.userId;
+    await removeMemberService(userId!, req.params.groupId, req.params.memberId);
+    res.status(StatusCodes.OK).json({
+      message: "Removed from members from the group",
     });
   }
 );
