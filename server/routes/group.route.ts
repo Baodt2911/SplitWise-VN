@@ -2,7 +2,9 @@ import { Router } from "express";
 import {
   validateCreateExpense,
   validateCreateGroup,
+  validateCreateSettlement,
   validateUpdateGroup,
+  validateUpdateStatus,
   verifyAccessToken,
 } from "../middlewares";
 import {
@@ -10,12 +12,14 @@ import {
   addMemberController,
   createExpenseController,
   createGroupController,
+  createSettlementController,
   deleteGroupController,
   getAllGroupController,
   getGroupController,
   joinGroupController,
   removeMemberController,
   updateGroupControlleer,
+  updateStatusSettlementController,
   verifyInviteTokenController,
 } from "../controllers";
 
@@ -55,4 +59,16 @@ router.post(
   createExpenseController
 );
 
+router.post(
+  "/:groupId/settlements/create",
+  verifyAccessToken,
+  validateCreateSettlement, 
+  createSettlementController
+);
+router.patch(
+  "/:groupId/settlements/:settlementId/:status",
+  verifyAccessToken,
+  validateUpdateStatus,
+  updateStatusSettlementController
+);
 export default router;

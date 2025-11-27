@@ -118,3 +118,5 @@ export const createExpenseService = async (
   });
   return true;
 };
+
+export const updateExpenseService = async () => {};

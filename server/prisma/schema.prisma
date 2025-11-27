@@ -12,6 +12,76 @@ datasource db {
 }
 
 // ============================================
+// ENUMS
+// ============================================
+
+enum NotificationType {
+  // Expense
+  EXPENSE_ADDED        @map("expense_added")
+  EXPENSE_UPDATED      @map("expense_updated")
+  EXPENSE_DELETED      @map("expense_deleted")
+
+  // Payment
+  PAYMENT_REQUEST      @map("payment_request")      // A báo đã thanh toán → gửi B xác nhận
+  PAYMENT_CONFIRMED    @map("payment_confirmed")    // B xác nhận đã nhận tiền
+  PAYMENT_REJECTED     @map("payment_rejected")     // B từ chối
+
+  // Member
+  MEMBER_ADDED         @map("member_added")
+  MEMBER_REMOVED       @map("member_removed")
+  MEMBER_LEFT          @map("member_left")
+  MEMBER_ROLE_CHANGED  @map("member_role_changed")
+  MEMBER_SELF_JOINED   @map("member_self_joined")    // user tự join group
+
+  // Comment
+  COMMENT_ADDED        @map("comment_added")
+  COMMENT_MENTION      @map("comment_mention")
+
+  // Other
+  REMINDER             @map("reminder")
+}
+
+
+enum RelatedType {
+  EXPENSE     @map("expense")
+  SETTLEMENT  @map("settlement")
+  GROUP       @map("group")
+  USER        @map("user")
+  COMMENT     @map("comment")
+}
+
+enum ActivityAction {
+  // Group
+  CREATE_GROUP        @map("create_group")
+  UPDATE_GROUP        @map("update_group")
+  DELETE_GROUP        @map("delete_group")
+
+  ADD_MEMBER          @map("add_member")
+  REMOVE_MEMBER       @map("remove_member")
+  MEMBER_LEFT         @map("member_left")
+  CHANGE_MEMBER_ROLE  @map("change_member_role")
+  SELF_JOIN_GROUP      @map("self_join_group")       // tự join
+
+  // Expense
+  ADD_EXPENSE         @map("add_expense")
+  UPDATE_EXPENSE      @map("update_expense")
+  DELETE_EXPENSE      @map("delete_expense")
+
+  // Payment workflow
+  CREATE_PAYMENT      @map("create_payment")        // A tạo payment → chờ xác nhận
+  CONFIRM_PAYMENT     @map("confirm_payment")       // B xác nhận đã nhận
+  REJECT_PAYMENT      @map("reject_payment")        // B từ chối
+
+  // Comment
+  ADD_COMMENT         @map("add_comment")
+  DELETE_COMMENT      @map("delete_comment")
+
+  // Other
+  REMINDER_TRIGGERED  @map("reminder_triggered")
+}
+
+
+// ============================================
 // MODELS
 // ============================================
 
@@ -293,14 +363,14 @@ model Notification {
   userId String @map("user_id")
 
   // Loại thông báo
-  type String @db.VarChar(50) // expense_added, payment_request, payment_confirmed, member_added, comment_added, reminder
+  type NotificationType
 
   // Tiêu đề & nội dung
   title String @db.VarChar(255)
   body  String @db.Text
 
   // Liên kết đến
-  relatedType String? @map("related_type") @db.VarChar(50) // expense, settlement, group, user
+  relatedType RelatedType? @map("related_type") // expense, settlement, group, user
   relatedId   String? @map("related_id")
 
   // Trạng thái
@@ -351,7 +421,7 @@ model Activity {
   userId  String  @map("user_id")
 
   // Loại hoạt động
-  action String @db.VarChar(50) // create_group, add_member, add_expense, update_expense, delete_expense, make_payment, etc.
+  action ActivityAction
 
   // Mô tả
   description String @db.Text
