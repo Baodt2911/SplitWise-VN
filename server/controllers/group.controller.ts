@@ -1,6 +1,7 @@
+import { leaveGroupService } from "./../services/group.service";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { CreateGroupDTO, UpdateGroupDTO } from "../dtos/req";
+import { CreateGroupDTO, UpdateGroupDTO } from "../dtos";
 import {
   createGroupService,
   deleteGroupService,
@@ -33,7 +34,7 @@ export const updateGroupControlleer = catchAsync(
         groupId: string;
       },
       {},
-      Partial<UpdateGroupDTO>
+      UpdateGroupDTO
     >,
     res: Response
   ) => {
@@ -119,6 +120,16 @@ export const joinGroupController = catchAsync(
     await joinGroupService(userId!, req.params.code);
     res.status(StatusCodes.OK).json({
       message: "Joined the group",
+    });
+  }
+);
+
+export const leaveGroupController = catchAsync(
+  async (req: Request<{ groupId: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    await leaveGroupService(userId!, req.params.groupId);
+    res.status(StatusCodes.OK).json({
+      message: "Leaved the group",
     });
   }
 );

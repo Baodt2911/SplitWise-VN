@@ -1,12 +1,5 @@
 import { Router } from "express";
-import {
-  validateCreateExpense,
-  validateCreateGroup,
-  validateCreateSettlement,
-  validateUpdateGroup,
-  validateUpdateStatus,
-  verifyAccessToken,
-} from "../middlewares";
+import { validateAll, verifyAccessToken } from "../middlewares";
 import {
   acceptInviteController,
   addMemberController,
@@ -17,58 +10,184 @@ import {
   getAllGroupController,
   getGroupController,
   joinGroupController,
+  leaveGroupController,
   removeMemberController,
+  updateExpenseController,
   updateGroupControlleer,
   updateStatusSettlementController,
   verifyInviteTokenController,
 } from "../controllers";
+import {
+  createExpenseSchema,
+  createGroupSchema,
+  createSettlementSchema,
+  queryGroupSchema,
+  updateExpenseSchema,
+  updateGroupSchema,
+  updateStatusParamsSchema,
+} from "../schemas";
+import z from "zod";
 
 const router = Router();
 
-router.get("/all", verifyAccessToken, getAllGroupController);
-router.get("/:groupId", verifyAccessToken, getGroupController);
+// GROUP
+router.get(
+  "/all",
+  verifyAccessToken,
+  validateAll({ query: queryGroupSchema }),
+  getAllGroupController
+);
+router.get(
+  "/:groupId",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+  }),
+  getGroupController
+);
 
 router.post(
   "/create",
   verifyAccessToken,
-  validateCreateGroup,
+  validateAll({ body: createGroupSchema }),
   createGroupController
 );
 router.patch(
   "/:groupId/update",
   verifyAccessToken,
-  validateUpdateGroup,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    body: updateGroupSchema,
+  }),
   updateGroupControlleer
 );
-router.delete("/:groupId/delete", verifyAccessToken, deleteGroupController);
+router.delete(
+  "/:groupId/delete",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+  }),
+  deleteGroupController
+);
+
+// GROUP MEMBER
 router.delete(
   "/:groupId/members/:memberId",
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      memberId: z.uuid("Member ID is required"),
+    }),
+  }),
   verifyAccessToken,
   removeMemberController
 );
 
-router.get("/join/:code", verifyAccessToken, joinGroupController);
-router.post("/:groupId/add-member", verifyAccessToken, addMemberController);
-router.get("/invite/:token", verifyInviteTokenController);
-router.post("/invite/:token/accept", verifyAccessToken, acceptInviteController);
-
-router.post(
-  "/:groupId/expenses/create",
+router.get(
+  "/join/:code",
   verifyAccessToken,
-  validateCreateExpense,
-  createExpenseController
+  validateAll({
+    params: z.object({
+      code: z.string().length(6, "Invite code must be exactly 6 characters"),
+    }),
+  }),
+  joinGroupController
 );
 
 router.post(
+  "/:groupId/leave",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+  }),
+  leaveGroupController
+);
+
+router.post(
+  "/:groupId/add-member",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    body: z.object({
+      phone: z.string().min(1, "Phone number is required"),
+    }),
+  }),
+  addMemberController
+);
+
+router.get(
+  "/invite/:token",
+  validateAll({
+    params: z.object({
+      token: z.uuidv4("Token is required"),
+    }),
+  }),
+  verifyInviteTokenController
+);
+router.post(
+  "/invite/:token/accept",
+  validateAll({
+    params: z.object({
+      token: z.uuidv4("Token is required"),
+    }),
+  }),
+  verifyAccessToken,
+  acceptInviteController
+);
+
+// GROUP EXPENSES
+router.post(
+  "/:groupId/expenses/create",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    body: createExpenseSchema,
+  }),
+  createExpenseController
+);
+router.patch(
+  "/:groupId/expenses/:expenseId/update",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      expenseId: z.uuid("Expense ID is required"),
+    }),
+    body: updateExpenseSchema,
+  }),
+  updateExpenseController
+);
+
+// GROUP SETTLEMENT
+router.post(
   "/:groupId/settlements/create",
   verifyAccessToken,
-  validateCreateSettlement, 
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    body: createSettlementSchema,
+  }),
   createSettlementController
 );
 router.patch(
   "/:groupId/settlements/:settlementId/:status",
   verifyAccessToken,
-  validateUpdateStatus,
+  validateAll({
+    params: updateStatusParamsSchema,
+  }),
   updateStatusSettlementController
 );
 export default router;
