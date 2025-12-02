@@ -36,29 +36,120 @@ export const createExpenseSchema = z
     notes: z.string().optional(),
     splits: z.array(splitSchema),
   })
-  .refine(
-    (data) => {
-      const { splitType, splits } = data;
+  .superRefine((data, ctx) => {
+    const { splitType, splits, amount } = data;
+    // equal → không check thêm
+    if (splitType === "equal") return;
 
-      if (splitType === "equal") {
-        return true; // equal không cần validate thêm
+    // exact → tất cả splits phải có amount
+    if (splitType === "exact") {
+      const total = splits.reduce((sum, s) => sum + (s.amount ?? 0), 0);
+      if (total !== amount) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Exact split must equal total amount",
+          path: ["splits"], // chỉ rõ lỗi nằm ở splits
+        });
       }
+      return;
+    }
 
-      if (splitType === "exact") {
-        return splits.every((s) => s.amount !== undefined);
+    // percentage → tổng = 100
+    if (splitType === "percentage") {
+      const total = splits.reduce((sum, s) => sum + (s.percentage ?? 0), 0);
+      if (total !== 100) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Percentage must sum to 100%",
+          path: ["splits"],
+        });
       }
+      return;
+    }
 
-      if (splitType === "percentage") {
-        const total = splits.reduce((sum, s) => sum + (s.percentage ?? 0), 0);
-        return total === 100;
+    // shares → tổng shares > 0
+    if (splitType === "shares") {
+      const totalShares = splits.reduce((sum, s) => sum + (s.shares ?? 0), 0);
+      if (totalShares <= 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Total shares must be > 0",
+          path: ["splits"],
+        });
       }
+      return;
+    }
+  });
 
-      if (splitType === "shares") {
-        const total = splits.reduce((sum, s) => sum + (s.shares ?? 0), 0);
-        return total > 0;
+export const updateExpenseSchema = z
+  .object({
+    description: z.string().min(1, "Description is required"),
+    amount: z.number().positive("Amount must be a positive number"),
+    paidBy: z.string().min(1, "PaidBy is required"),
+    category: z.enum([
+      "food",
+      "transport",
+      "entertainment",
+      "accommodation",
+      "shopping",
+      "other",
+    ]),
+    splitType: z.enum(["equal", "exact", "percentage", "shares"]),
+    expenseDate: z.coerce.date(),
+    receiptUrl: z.url("Receipt URL must be a valid URL").or(z.literal("")),
+    notes: z.string(),
+    splits: z.array(splitSchema),
+  })
+  .partial()
+  .superRefine((data, ctx) => {
+    const { splitType, splits, amount } = data;
+
+    if (!splits && splitType !== "equal") {
+      ctx.addIssue({
+        code: "custom",
+        message: "Requires 'splits' if 'splitType' is different equal",
+        path: ["splits"], // chỉ rõ lỗi nằm ở splits
+      });
+      return;
+    }
+
+    // exact → tất cả splits phải có amount
+    if (splitType === "exact") {
+      const total = splits!.reduce((sum, s) => sum + (s.amount ?? 0), 0);
+
+      if (total !== amount) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Exact split must equal total amount",
+          path: ["splits"], // chỉ rõ lỗi nằm ở splits
+        });
       }
+      return;
+    }
 
-      return false;
-    },
-    { message: "Invalid split configuration" }
-  );
+    // percentage → tổng = 100
+    if (splitType === "percentage") {
+      const total = splits!.reduce((sum, s) => sum + (s.percentage ?? 0), 0);
+      if (total !== 100) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Percentage must sum to 100%",
+          path: ["splits"],
+        });
+      }
+      return;
+    }
+
+    // shares → tổng shares > 0
+    if (splitType === "shares") {
+      const totalShares = splits!.reduce((sum, s) => sum + (s.shares ?? 0), 0);
+      if (totalShares <= 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Total shares must be > 0",
+          path: ["splits"],
+        });
+      }
+      return;
+    }
+  });
