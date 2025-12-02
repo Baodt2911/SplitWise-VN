@@ -1,12 +1,13 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../configs";
+import { GroupMemberRole, GroupMemberStatus } from "@prisma/client";
 
 export const checkGroupMember = async (userId: string, groupId: string) => {
-  const exists = await prisma.groupMember.count({
-    where: { userId, groupId, status: "active" },
+  const exists = await prisma.groupMember.findFirst({
+    where: { userId, groupId, status: GroupMemberStatus.ACTIVE },
   });
 
-  if (exists === 0) {
+  if (!exists) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "You are not a member of this group",
@@ -15,11 +16,16 @@ export const checkGroupMember = async (userId: string, groupId: string) => {
 };
 
 export const checkGroupAdmin = async (userId: string, groupId: string) => {
-  const isAdmin = await prisma.groupMember.count({
-    where: { userId, groupId, role: "admin", status: "active" },
+  const isAdmin = await prisma.groupMember.findFirst({
+    where: {
+      userId,
+      groupId,
+      role: GroupMemberRole.ADMIN,
+      status: GroupMemberStatus.ACTIVE,
+    },
   });
 
-  if (isAdmin === 0) {
+  if (!isAdmin) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "You are not admin of this group",
@@ -41,14 +47,16 @@ export const checkExpensePermission = async (
     },
   });
 
-  if (!group) throw { status: 404, message: "Group not found" };
+  if (!group)
+    throw { status: StatusCodes.NOT_FOUND, message: "Group not found" };
 
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
     select: { createdBy: true },
   });
 
-  if (!expense) throw { status: 404, message: "Expense not found" };
+  if (!expense)
+    throw { status: StatusCodes.NOT_FOUND, message: "Expense not found" };
 
   const isAdmin = group.createdBy === userId;
   const isCreator = expense.createdBy === userId;
