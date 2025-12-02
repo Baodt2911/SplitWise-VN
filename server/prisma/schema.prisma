@@ -11,9 +11,76 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// ENUMS
-// ============================================
+// ============================================================
+// ENUM: Group Member
+// ============================================================
+
+enum GroupMemberRole {
+  ADMIN  @map("admin")
+  MEMBER @map("member")
+}
+
+enum GroupMemberStatus {
+  ACTIVE  @map("active")
+  LEFT    @map("left")
+  REMOVED @map("removed")
+}
+
+
+// ============================================================
+// ENUM: Expense
+// ============================================================
+
+enum ExpenseCategory {
+  FOOD           @map("food")
+  TRANSPORT      @map("transport")
+  ENTERTAINMENT  @map("entertainment")
+  ACCOMMODATION  @map("accommodation")
+  SHOPPING       @map("shopping")
+  OTHER          @map("other")
+}
+
+enum ExpenseSplitType {
+  EQUAL      @map("equal")
+  EXACT      @map("exact")
+  PERCENTAGE @map("percentage")
+  SHARES     @map("shares")
+}
+
+
+// ============================================================
+// ENUM: Settlement / Payments
+// ============================================================
+
+enum SettlementStatus {
+  PENDING    @map("pending")
+  CONFIRMED  @map("confirmed")
+  REJECTED   @map("rejected")
+}
+
+enum SettlementPaymentMethod {
+  CASH          @map("cash")
+  BANK_TRANSFER @map("bank_transfer")
+  MOMO          @map("momo")
+  ZALOPAY       @map("zalopay")
+  VNPAY         @map("vnpay")
+}
+
+
+// ============================================================
+// ENUM: Friendship
+// ============================================================
+
+enum FriendshipStatus {
+  PENDING  @map("pending")
+  ACCEPTED @map("accepted")
+  BLOCKED  @map("blocked")
+}
+
+
+// ============================================================
+// ENUM: Notification
+// ============================================================
 
 enum NotificationType {
   // Expense
@@ -21,17 +88,19 @@ enum NotificationType {
   EXPENSE_UPDATED      @map("expense_updated")
   EXPENSE_DELETED      @map("expense_deleted")
 
-  // Payment
-  PAYMENT_REQUEST      @map("payment_request")      // A báo đã thanh toán → gửi B xác nhận
-  PAYMENT_CONFIRMED    @map("payment_confirmed")    // B xác nhận đã nhận tiền
-  PAYMENT_REJECTED     @map("payment_rejected")     // B từ chối
+  // Payment flow
+  PAYMENT_REQUEST      @map("payment_request")
+  PAYMENT_CONFIRMED    @map("payment_confirmed")
+  PAYMENT_REJECTED     @map("payment_rejected")
 
-  // Member
+  // Member events
   MEMBER_ADDED         @map("member_added")
+  MEMBER_INVITED       @map("member_invited")
+  MEMBER_JOINED        @map("member_joined")
   MEMBER_REMOVED       @map("member_removed")
   MEMBER_LEFT          @map("member_left")
   MEMBER_ROLE_CHANGED  @map("member_role_changed")
-  MEMBER_SELF_JOINED   @map("member_self_joined")    // user tự join group
+  MEMBER_SELF_JOINED   @map("member_self_joined")
 
   // Comment
   COMMENT_ADDED        @map("comment_added")
@@ -41,7 +110,6 @@ enum NotificationType {
   REMINDER             @map("reminder")
 }
 
-
 enum RelatedType {
   EXPENSE     @map("expense")
   SETTLEMENT  @map("settlement")
@@ -50,17 +118,28 @@ enum RelatedType {
   COMMENT     @map("comment")
 }
 
+
+// ============================================================
+// ENUM: Activity Logs
+// ============================================================
+
 enum ActivityAction {
-  // Group
+  // Group lifecycle
   CREATE_GROUP        @map("create_group")
   UPDATE_GROUP        @map("update_group")
   DELETE_GROUP        @map("delete_group")
 
+  // Membership changes
   ADD_MEMBER          @map("add_member")
   REMOVE_MEMBER       @map("remove_member")
   MEMBER_LEFT         @map("member_left")
   CHANGE_MEMBER_ROLE  @map("change_member_role")
-  SELF_JOIN_GROUP      @map("self_join_group")       // tự join
+  SELF_JOIN_GROUP     @map("self_join_group")
+
+  // Invites
+  INVITE_MEMBER       @map("invite_member")
+  ACCEPT_INVITE       @map("accept_invite")
+  REJECT_INVITE       @map("reject_invite")
 
   // Expense
   ADD_EXPENSE         @map("add_expense")
@@ -68,16 +147,115 @@ enum ActivityAction {
   DELETE_EXPENSE      @map("delete_expense")
 
   // Payment workflow
-  CREATE_PAYMENT      @map("create_payment")        // A tạo payment → chờ xác nhận
-  CONFIRM_PAYMENT     @map("confirm_payment")       // B xác nhận đã nhận
-  REJECT_PAYMENT      @map("reject_payment")        // B từ chối
+  CREATE_PAYMENT      @map("create_payment")
+  CONFIRM_PAYMENT     @map("confirm_payment")
+  REJECT_PAYMENT      @map("reject_payment")
 
   // Comment
   ADD_COMMENT         @map("add_comment")
   DELETE_COMMENT      @map("delete_comment")
 
-  // Other
+  // System
   REMINDER_TRIGGERED  @map("reminder_triggered")
+}
+
+
+// ============================================================
+// ENUM: GroupInvite
+// ============================================================
+
+enum GroupInviteStatus {
+  PENDING  @map("pending")
+  ACCEPTED @map("accepted")
+  EXPIRED  @map("expired")
+}
+
+
+// ============================================================
+// ENUM: Premium Subscription
+// ============================================================
+
+enum PremiumPlan {
+  MONTHLY  @map("monthly")
+  YEARLY   @map("yearly")
+  LIFETIME @map("lifetime")
+}
+
+enum PremiumStatus {
+  ACTIVE    @map("active")
+  CANCELLED @map("cancelled")
+  EXPIRED   @map("expired")
+}
+
+enum PremiumPaymentMethod {
+  CASH          @map("cash")
+  BANK_TRANSFER @map("bank_transfer")
+  MOMO          @map("momo")
+  ZALOPAY       @map("zalopay")
+  VNPAY         @map("vnpay")
+  CREDIT_CARD   @map("credit_card")
+  PAYPAL        @map("paypal")
+  STRIPE        @map("stripe")
+  APPLE_PAY     @map("apple_pay")
+  GOOGLE_PAY    @map("google_pay")
+}
+
+
+// ============================================================
+// ENUM: Referral
+// ============================================================
+
+enum ReferralStatus {
+  PENDING    @map("pending")
+  COMPLETED  @map("completed")
+  REWARDED   @map("rewarded")
+}
+
+enum ReferralRewardType {
+  PREMIUM_DAYS @map("premium_days")
+  POINTS       @map("points")
+}
+
+
+// ============================================================
+// ENUM: User Points
+// ============================================================
+
+enum PointTransactionType {
+  EARN   @map("earn")
+  REDEEM @map("redeem")
+}
+
+enum PointSource {
+  COMPLETE_PROFILE @map("complete_profile")
+  ADD_EXPENSE      @map("add_expense")
+  REFERRAL         @map("referral")
+  CHECK_IN         @map("check_in")
+}
+
+
+// ============================================================
+// ENUM: User Settings (UI Preferences)
+// ============================================================
+
+enum ThemeType {
+  LIGHT @map("light")
+  DARK  @map("dark")
+  AUTO  @map("auto")
+}
+
+enum FontSize {
+  SMALL  @map("small")
+  MEDIUM @map("medium")
+  LARGE  @map("large")
+}
+
+enum AccentColor {
+  BLUE   @map("blue")
+  RED    @map("red")
+  GREEN  @map("green")
+  PURPLE @map("purple")
+  ORANGE @map("orange")
 }
 
 
@@ -193,11 +371,8 @@ model GroupMember {
   groupId String @map("group_id")
   userId  String @map("user_id")
 
-  // Role
-  role String @default("member") @db.VarChar(20) // 'admin', 'member'
-
-  // Status
-  status String @default("active") @db.VarChar(20) // 'active', 'left', 'removed'
+  role   GroupMemberRole   @default(MEMBER)
+  status GroupMemberStatus @default(ACTIVE)
 
   // Metadata
   joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamp()
@@ -230,7 +405,7 @@ model Expense {
   paidBy String @map("paid_by")
 
   // Phân loại
-  category String @default("other") @db.VarChar(50) // food, transport, entertainment, accommodation, shopping, other
+  category ExpenseCategory @default(OTHER) // food, transport, entertainment, accommodation, shopping, other
 
   // Ngày chi
   expenseDate DateTime @default(now()) @map("expense_date") @db.Date
@@ -242,7 +417,7 @@ model Expense {
   notes String? @db.Text
 
   // Cách chia
-  splitType String @default("equal") @map("split_type") @db.VarChar(20) // equal, exact, percentage, shares
+  splitType ExpenseSplitType @default(EQUAL) @map("split_type")
 
   createdBy String    @map("created_by")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
@@ -305,13 +480,13 @@ model Settlement {
   currency String  @default("VND") @db.VarChar(3)
 
   // Trạng thái
-  status String @default("pending") @db.VarChar(20) // pending, confirmed, rejected
+  status SettlementStatus @default(PENDING) // pending, confirmed, rejected
 
   // Ngày thanh toán
   paymentDate DateTime @default(now()) @map("payment_date") @db.Date
 
   // Phương thức
-  paymentMethod String? @map("payment_method") @db.VarChar(50) // cash, bank_transfer, momo, zalopay, vnpay
+  paymentMethod SettlementPaymentMethod? @map("payment_method") // cash, bank_transfer, momo, zalopay, vnpay
 
   // Ghi chú
   notes String? @db.Text
@@ -343,7 +518,7 @@ model Friendship {
   friendId String @map("friend_id")
 
   // Trạng thái
-  status String @default("pending") @db.VarChar(20) // pending, accepted, blocked
+   status FriendshipStatus @default(PENDING) // pending, accepted, blocked
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
@@ -457,7 +632,7 @@ model GroupInvite {
   phone String? @db.VarChar(15)
 
   // Trạng thái
-  status String @default("pending") @db.VarChar(20) // pending, accepted, expired
+  status GroupInviteStatus @default(PENDING) // pending, accepted, expired
 
   // Hết hạn
   expiresAt DateTime @map("expires_at") @db.Timestamp()
@@ -484,7 +659,7 @@ model PremiumSubscription {
   userId String @map("user_id")
 
   // Gói
-  plan String @db.VarChar(20) // monthly, yearly, lifetime
+  plan PremiumPlan
 
   // Giá
   amount   Decimal @db.Decimal(15, 2)
@@ -495,13 +670,13 @@ model PremiumSubscription {
   expiresAt DateTime? @map("expires_at") @db.Timestamp()
 
   // Trạng thái
-  status String @default("active") @db.VarChar(20) // active, cancelled, expired
+  status PremiumStatus @default(ACTIVE)
 
   // Tự động gia hạn
   autoRenew Boolean @default(true) @map("auto_renew")
 
   // Thanh toán
-  paymentMethod String? @map("payment_method") @db.VarChar(50)
+  paymentMethod PremiumPaymentMethod? @map("payment_method")
   transactionId String? @map("transaction_id") @db.VarChar(255)
 
   // Hủy
@@ -520,26 +695,23 @@ model PremiumSubscription {
   @@map("premium_subscriptions")
 }
 
+
 model Referral {
   id         String  @id @default(uuid())
   referrerId String  @map("referrer_id")
   referredId String? @map("referred_id")
 
-  // Mã giới thiệu
   referralCode String @unique @map("referral_code") @db.VarChar(50)
 
-  // Trạng thái
-  status String @default("pending") @db.VarChar(20) // pending, completed, rewarded
+  status ReferralStatus @default(PENDING)
 
-  // Phần thưởng
-  rewardType   String?   @map("reward_type") @db.VarChar(50) // premium_days, points
-  rewardAmount Int?      @map("reward_amount")
-  rewardedAt   DateTime? @map("rewarded_at") @db.Timestamp()
+  rewardType   ReferralRewardType? @map("reward_type")
+  rewardAmount Int?                @map("reward_amount")
+  rewardedAt   DateTime?           @map("rewarded_at") @db.Timestamp()
 
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp()
   completedAt DateTime? @map("completed_at") @db.Timestamp()
 
-  // Relations
   referrer User  @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referred User? @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
 
@@ -548,29 +720,23 @@ model Referral {
   @@map("referrals")
 }
 
+
 model UserPoint {
   id     String @id @default(uuid())
   userId String @map("user_id")
 
-  // Điểm
   points Int
 
-  // Loại giao dịch
-  transactionType String @map("transaction_type") @db.VarChar(50) // earn, redeem
+  transactionType PointTransactionType @map("transaction_type")
+  source          PointSource         
 
-  // Nguồn
-  source String @db.VarChar(50) // complete_profile, add_expense, referral, check_in, etc.
-
-  // Mô tả
   description String? @db.Text
 
-  // Liên kết
   relatedType String? @map("related_type") @db.VarChar(50)
   relatedId   String? @map("related_id")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
@@ -578,11 +744,11 @@ model UserPoint {
   @@map("user_points")
 }
 
+
 model UserSettings {
   id     String @id @default(uuid())
   userId String @unique @map("user_id")
 
-  // Thông báo
   notificationExpenseAdded     Boolean @default(true) @map("notification_expense_added")
   notificationPaymentRequest   Boolean @default(true) @map("notification_payment_request")
   notificationPaymentConfirmed Boolean @default(true) @map("notification_payment_confirmed")
@@ -590,32 +756,26 @@ model UserSettings {
   notificationComment          Boolean @default(true) @map("notification_comment")
   notificationReminder         Boolean @default(true) @map("notification_reminder")
 
-  // Email
   emailNotifications Boolean @default(true) @map("email_notifications")
   emailWeeklySummary Boolean @default(false) @map("email_weekly_summary")
 
-  // Push
   pushNotifications Boolean @default(true) @map("push_notifications")
 
-  // App
   appLockEnabled   Boolean @default(false) @map("app_lock_enabled")
-  appLockTimeout   Int     @default(5) @map("app_lock_timeout") // minutes
+  appLockTimeout   Int     @default(5) @map("app_lock_timeout")
   biometricEnabled Boolean @default(false) @map("biometric_enabled")
 
-  // Privacy
   showInSearch        Boolean @default(true) @map("show_in_search")
   allowFriendRequests Boolean @default(true) @map("allow_friend_requests")
   showOnlineStatus    Boolean @default(true) @map("show_online_status")
 
-  // Theme
-  theme       String @default("light") @db.VarChar(20) // light, dark, auto
-  accentColor String @default("blue") @map("accent_color") @db.VarChar(20)
-  fontSize    String @default("medium") @map("font_size") @db.VarChar(20)
+  theme       ThemeType  @default(LIGHT)
+  accentColor AccentColor @default(BLUE) @map("accent_color")
+  fontSize    FontSize    @default(MEDIUM) @map("font_size") 
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
