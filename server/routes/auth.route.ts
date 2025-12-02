@@ -1,19 +1,20 @@
 import { Router } from "express";
-import {
-  validateLogin,
-  validateRegister,
-  verifyRefreshToken,
-} from "../middlewares";
+import { validateAll, verifyRefreshToken } from "../middlewares";
 import {
   googleAuthController,
   loginController,
   refreshTokenController,
   registerController,
 } from "../controllers";
+import { loginSchema, registerSchema } from "../schemas";
 
 const router = Router();
-router.post("/login", validateLogin, loginController);
-router.post("/register", validateRegister, registerController);
+router.post("/login", validateAll({ body: loginSchema }), loginController);
+router.post(
+  "/register",
+  validateAll({ body: registerSchema }),
+  registerController
+);
 router.post("/refresh-token", verifyRefreshToken, refreshTokenController);
 router.post("/google-verify", googleAuthController);
 
