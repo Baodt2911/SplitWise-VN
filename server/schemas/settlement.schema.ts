@@ -4,7 +4,9 @@ export const createSettlementSchema = z.object({
   payeeId: z.string().min(1, "Payee ID is required"),
   amount: z.number().positive("Amount must be a positive number"),
   currency: z.string().optional(),
-  paymentMethod: z.string().optional(),
+  paymentMethod: z
+    .enum(["cash", "bank_transfer", "momo", "zalopay", "vnpay"])
+    .optional(),
   notes: z.string().optional(),
 });
 

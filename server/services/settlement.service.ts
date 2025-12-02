@@ -1,33 +1,44 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../configs";
-import { CreateSettlementDTO } from "../dtos/req";
+import { CreateSettlementDTO } from "../dtos";
 import { checkGroupMember } from "../middlewares";
+import {
+  ActivityAction,
+  NotificationType,
+  RelatedType,
+  SettlementPaymentMethod,
+  SettlementStatus,
+} from "@prisma/client";
 
 export const createSettlementService = async (
   userId: string,
   groupId: string,
   data: CreateSettlementDTO
 ) => {
-  const existingGroup = await prisma.group.count({
+  const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
     },
   });
 
-  if (existingGroup < 0) {
+  if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
       message: "Group not found",
     };
   }
+  const { paymentMethod, ...other } = data;
   await checkGroupMember(userId, groupId);
+  await prisma.$transaction(async (tx) => {
+    const keyMethod =
+      paymentMethod?.toUpperCase() as keyof typeof SettlementPaymentMethod;
 
-  await prisma.$transaction(async (ts) => {
-    const settlement = await ts.settlement.create({
+    const settlement = await tx.settlement.create({
       data: {
         groupId,
         payerId: userId,
-        ...data,
+        paymentMethod: SettlementPaymentMethod[keyMethod],
+        ...other,
       },
       select: {
         id: true,
@@ -45,23 +56,23 @@ export const createSettlementService = async (
       },
     });
 
-    await ts.activity.create({
+    await tx.activity.create({
       data: {
         groupId: groupId,
         userId: userId,
-        action: "create_payment",
+        action: ActivityAction.CREATE_PAYMENT,
         description: `${settlement.payer.fullName} đã thanh toán ${settlement.amount} cho ${settlement.payee.fullName}`,
       },
     });
 
     // Gửi thông báo cho người nhận tiền yêu cầu xác nhận
-    await ts.notification.create({
+    await tx.notification.create({
       data: {
         userId: data.payeeId,
-        type: "payment_request",
+        type: NotificationType.PAYMENT_REQUEST,
         title: "Yêu cầu xác nhận tiên",
         body: `Xác nhận đã nhận được khoản thanh toán ${settlement.amount} thành công từ ${settlement.payer.fullName}.`,
-        relatedType: "settlement",
+        relatedType: RelatedType.SETTLEMENT,
         relatedId: settlement.id,
       },
     });
@@ -98,27 +109,29 @@ export const updateStatusSettlementService = async (
     };
   }
 
-  if (settlement.status !== "pending") {
+  if (settlement.status.toUpperCase() !== SettlementStatus.PENDING) {
     throw {
       status: StatusCodes.CONFLICT,
       message: "Already handled",
     };
   }
 
-  await prisma.$transaction(async (ts) => {
+  await prisma.$transaction(async (tx) => {
+    const keyStatus = status.toUpperCase() as keyof typeof SettlementStatus;
     const updateData: {
-      status: string;
+      status: SettlementStatus;
       confirmedBy?: string;
       confirmedAt?: Date;
     } = {
-      status,
+      status: SettlementStatus[keyStatus],
     };
-    if (status === "confirmed") {
+
+    if (updateData.status === SettlementStatus.CONFIRMED) {
       updateData.confirmedBy = userId;
       updateData.confirmedAt = new Date();
     }
 
-    const settlement = await ts.settlement.update({
+    const settlement = await tx.settlement.update({
       where: {
         id: settlementId,
       },
@@ -134,30 +147,38 @@ export const updateStatusSettlementService = async (
       },
     });
 
-    await ts.activity.create({
+    await tx.activity.create({
       data: {
         groupId: groupId,
         userId: userId,
-        action: status === "confirmed" ? "confirm_payment" : "reject_payment",
+        action:
+          updateData.status === SettlementStatus.CONFIRMED
+            ? ActivityAction.CONFIRM_PAYMENT
+            : ActivityAction.REJECT_PAYMENT,
         description:
-          status === "confirmed"
+          updateData.status === SettlementStatus.CONFIRMED
             ? `${settlement.payer.fullName} đã xác nhận thanh toán`
             : `${settlement.payer.fullName} đã từ chối thanh toán`,
       },
     });
 
     // Gửi thông báo cho người thanh tóan
-    await ts.notification.create({
+    await tx.notification.create({
       data: {
         userId: settlement.payerId,
-        type: status === "confirmed" ? "payment_confirmed" : "payment_rejected",
+        type:
+          updateData.status === SettlementStatus.CONFIRMED
+            ? NotificationType.PAYMENT_CONFIRMED
+            : NotificationType.PAYMENT_REJECTED,
         title:
-          status === "confirmed" ? `Xác nhận thanh toán` : `Từ chối thanh toán`,
+          updateData.status === SettlementStatus.CONFIRMED
+            ? `Xác nhận thanh toán`
+            : `Từ chối thanh toán`,
         body:
-          status === "confirmed"
+          updateData.status === SettlementStatus.CONFIRMED
             ? `${settlement.payer.fullName} đã xác nhận thanh toán`
             : `${settlement.payer.fullName} đã từ chối thanh toán`,
-        relatedType: "settlement",
+        relatedType: RelatedType.SETTLEMENT,
         relatedId: settlement.id,
       },
     });

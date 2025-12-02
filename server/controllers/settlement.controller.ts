@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { CreateSettlementDTO } from "../dtos/req";
+import { CreateSettlementDTO, UpdateStatusParamsDTO } from "../dtos";
 import { StatusCodes } from "http-status-codes";
 import {
   createSettlementService,
@@ -21,16 +21,7 @@ export const createSettlementController = catchAsync(
 );
 
 export const updateStatusSettlementController = catchAsync(
-  async (
-    req: Request<
-      {
-        groupId: string;
-        settlementId: string;
-        status: "confirmed" | "rejected";
-      }
-    >,
-    res: Response
-  ) => {
+  async (req: Request<UpdateStatusParamsDTO>, res: Response) => {
     const userId = req.user?.userId;
     await updateStatusSettlementService(
       userId!,
