@@ -4,9 +4,9 @@ import redis from "../configs/redis.config";
 import {
   LoginDTO,
   RegisterDTO,
-  ChangePassDTO,
+  ChangePasswordDTO,
   UpdateProfileDTO,
-} from "../dtos/req";
+} from "../dtos";
 import bcrypt from "bcrypt";
 import { sendOtpRegisterService } from "./otp.service";
 
@@ -117,7 +117,7 @@ export const googleAuthService = async (idToken: string) => {
 
 export const changePasswordServie = async (
   userId: string,
-  data: ChangePassDTO
+  data: ChangePasswordDTO
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -154,7 +154,7 @@ export const changePasswordServie = async (
 };
 export const updateProfileService = async (
   userId: string,
-  data: Partial<UpdateProfileDTO>
+  data: UpdateProfileDTO
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {

@@ -9,7 +9,7 @@ export const generateAccessToken = (payload: AccessJwtPayload) => {
   if (!secretKey) {
     throw new Error("ACCESSTOKEN_KEY chưa được cấu hình");
   }
-  return jwt.sign(payload, secretKey, { expiresIn: 60 * 5 });
+  return jwt.sign(payload, secretKey, { expiresIn: "15d" });
 };
 export const generateRefreshToken = (payload: RefreshJwtPayload) => {
   const secretKey = process.env.REFRESHTOKEN_KEY;
@@ -77,15 +77,4 @@ export const refreshTokenService = async (
     refreshToken: newRefreshToken,
     sessionId: newSessionId,
   };
-};
-export const generateInviteToken = (payload: {
-  groupId: string;
-  invitedBy: string;
-  contact: string;
-}) => {
-  const secretKey = process.env.INVITETOKEN_KEY;
-  if (!secretKey) {
-    throw new Error("INVITETOKEN_KEY chưa được cấu hình");
-  }
-  return jwt.sign(payload, secretKey, { expiresIn: "15d" });
 };

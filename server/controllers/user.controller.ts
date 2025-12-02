@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import {
-  ChangePassDTO,
+  ChangePasswordDTO,
   LoginDTO,
   RegisterDTO,
   UpdateProfileDTO,
-} from "../dtos/req";
+} from "../dtos";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -100,7 +100,7 @@ export const registerController = catchAsync(
 );
 
 export const changePasswordController = catchAsync(
-  async (req: Request<{}, {}, ChangePassDTO>, res: Response) => {
+  async (req: Request<{}, {}, ChangePasswordDTO>, res: Response) => {
     const userId = req.user?.userId;
     await changePasswordServie(userId!, req.body);
     res.status(StatusCodes.OK).json({
@@ -110,7 +110,7 @@ export const changePasswordController = catchAsync(
 );
 
 export const updateProfileController = catchAsync(
-  async (req: Request<{}, {}, Partial<UpdateProfileDTO>>, res: Response) => {
+  async (req: Request<{}, {}, UpdateProfileDTO>, res: Response) => {
     const userId = req.user?.userId;
 
     await updateProfileService(userId!, req.body);
