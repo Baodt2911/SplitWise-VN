@@ -4,3 +4,4 @@ export * from "./group.controller";
 export * from "./token.controller";
 export * from "./expense.controller";
 export * from "./settlement.controller";
+export * from "./notification.controller";
