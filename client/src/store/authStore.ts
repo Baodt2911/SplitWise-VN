@@ -1,0 +1,161 @@
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import * as SecureStore from "expo-secure-store";
+
+export interface User {
+  id: string;
+  phone: string;
+  fullName: string;
+  email: string | null;
+}
+
+export interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  sessionId: string | null;
+  isAuthenticated: boolean;
+  setAuth: (data: {
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+  }) => Promise<void>;
+  clearAuth: () => Promise<void>;
+  initializeAuth: () => Promise<void>;
+}
+
+// Secure storage adapter for Zustand
+const secureStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      return await SecureStore.getItemAsync(name);
+    } catch (error) {
+      console.error("Error getting secure item:", error);
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      await SecureStore.setItemAsync(name, value);
+    } catch (error) {
+      console.error("Error setting secure item:", error);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await SecureStore.deleteItemAsync(name);
+    } catch (error) {
+      console.error("Error removing secure item:", error);
+    }
+  },
+};
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      sessionId: null,
+      isAuthenticated: false,
+
+      setAuth: async (data) => {
+        // Store tokens in SecureStore
+        await SecureStore.setItemAsync("accessToken", data.accessToken);
+        await SecureStore.setItemAsync("refreshToken", data.refreshToken);
+        await SecureStore.setItemAsync("sessionId", data.sessionId);
+        await SecureStore.setItemAsync("user", JSON.stringify(data.user));
+
+        set({
+          user: data.user,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          sessionId: data.sessionId,
+          isAuthenticated: true,
+        });
+      },
+
+      clearAuth: async () => {
+        // Remove tokens from SecureStore
+        await SecureStore.deleteItemAsync("accessToken");
+        await SecureStore.deleteItemAsync("refreshToken");
+        await SecureStore.deleteItemAsync("sessionId");
+        await SecureStore.deleteItemAsync("user");
+
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          sessionId: null,
+          isAuthenticated: false,
+        });
+      },
+
+      initializeAuth: async () => {
+        // Load auth data from SecureStore on app start
+        try {
+          const accessToken = await SecureStore.getItemAsync("accessToken");
+          const refreshToken = await SecureStore.getItemAsync("refreshToken");
+          const sessionId = await SecureStore.getItemAsync("sessionId");
+          const userStr = await SecureStore.getItemAsync("user");
+
+          console.log("[Auth] Initializing auth from SecureStore:", {
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken,
+            hasSessionId: !!sessionId,
+            hasUser: !!userStr,
+          });
+
+          if (accessToken && refreshToken && sessionId && userStr) {
+            try {
+              const user = JSON.parse(userStr) as User;
+              set({
+                user,
+                accessToken,
+                refreshToken,
+                sessionId,
+                isAuthenticated: true,
+              });
+              console.log("[Auth] Auth initialized successfully for user:", user.fullName);
+            } catch (parseError) {
+              console.error("[Auth] Error parsing user data:", parseError);
+              // Clear invalid data
+              await SecureStore.deleteItemAsync("user");
+            }
+          } else {
+            console.log("[Auth] No auth data found in SecureStore");
+            // Ensure state is cleared if no tokens found
+            set({
+              user: null,
+              accessToken: null,
+              refreshToken: null,
+              sessionId: null,
+              isAuthenticated: false,
+            });
+          }
+        } catch (error) {
+          console.error("[Auth] Error initializing auth:", error);
+          // On error, clear state
+          set({
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            sessionId: null,
+            isAuthenticated: false,
+          });
+        }
+      },
+    }),
+    {
+      name: "auth-storage",
+      storage: createJSONStorage(() => secureStorage),
+      partialize: (state) => ({
+        // Only persist user for convenience, tokens are in SecureStore
+        // Don't persist isAuthenticated - it should be determined by checking SecureStore
+        user: state.user,
+      }),
+    }
+  )
+);
+
