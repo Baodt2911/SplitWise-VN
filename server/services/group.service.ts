@@ -4,40 +4,185 @@ import { CreateGroupDTO, UpdateGroupDTO } from "../dtos";
 import otpGenerator from "otp-generator";
 import {
   ActivityAction,
+  ExpenseSplitType,
   GroupInviteStatus,
   GroupMemberRole,
   GroupMemberStatus,
   NotificationType,
   RelatedType,
+  SettlementStatus,
   User,
 } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 import { checkGroupAdmin } from "../middlewares";
 import { createActivityService } from "./activity.service";
 import { createNotificationService } from "./notification.service";
+import Decimal from "decimal.js";
 export const getAllGroupService = async (userId: string) => {
-  return await prisma.groupMember.findMany({
+  const group = await prisma.group.findMany({
     where: {
-      userId,
-      group: {
-        deletedAt: null,
+      members: {
+        some: {
+          userId,
+        },
       },
+      deletedAt: null,
     },
     select: {
-      role: true,
-      group: {
-        select: { id: true, name: true },
+      id: true,
+      name: true,
+      avatarUrl: true,
+      balances: {
+        where: {
+          OR: [{ payerId: userId }, { payeeId: userId }],
+        },
+        select: {
+          payer: { select: { id: true, fullName: true } },
+          payee: { select: { id: true, fullName: true } },
+          amount: true,
+        },
+      },
+      _count: {
+        select: {
+          members: true,
+          expenses: true,
+        },
       },
     },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
+  const result = group.map((g) => ({
+    id: g.id,
+    name: g.name,
+    avatarUrl: g.avatarUrl,
+    memberCount: g._count.members,
+    expenseCount: g._count.expenses,
+    peopleOweYou: g.balances
+      .filter((b) => b.payee.id === userId)
+      .map((b) => ({
+        fullName: b.payer.fullName,
+        total: b.amount,
+      })),
+    totalPeopleOweYou: g.balances.reduce(
+      (acc, b) => (b.payee.id === userId ? acc.plus(b.amount) : acc),
+      new Decimal(0)
+    ),
+    yourDebts: g.balances.reduce(
+      (acc, b) => (b.payer.id === userId ? acc.plus(b.amount) : acc),
+      new Decimal(0)
+    ),
+  }));
+  return result;
 };
 
 export const getGroupService = async (userId: string, groupId: string) => {
   const group = await prisma.group.findFirst({
-    where: { id: groupId, deletedAt: null },
+    where: {
+      id: groupId,
+      members: {
+        some: {
+          userId,
+        },
+      },
+      deletedAt: null,
+    },
     select: {
+      id: true,
       name: true,
-      createdBy: true,
+      description: true,
+      avatarUrl: true,
+      isPublic: true,
+      inviteCode: true,
+      allowMemberDirectAdd: true,
+      allowMemberEdit: true,
+      requirePaymentConfirmation: true,
+      autoReminderEnabled: true,
+      reminderDays: true,
+      archivedAt: true,
+      creator: {
+        select: {
+          id: true,
+          fullName: true,
+        },
+      },
+      members: {
+        where: { status: GroupMemberStatus.ACTIVE },
+        select: {
+          id: true,
+          role: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      expenses: {
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          currency: true,
+          paidBy: true,
+          paidByUser: {
+            select: {
+              fullName: true,
+            },
+          },
+          category: true,
+          expenseDate: true,
+          splitType: true,
+          splits: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                },
+              },
+              amount: true,
+              shares: true,
+              percentage: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      settlements: {
+        where: {
+          payeeId: userId,
+          status: SettlementStatus.CONFIRMED,
+        },
+        select: {
+          id: true,
+          payeeId: true,
+          payer: {
+            select: {
+              fullName: true,
+            },
+          },
+          payee: {
+            select: {
+              fullName: true,
+            },
+          },
+          amount: true,
+          status: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
 
@@ -48,14 +193,57 @@ export const getGroupService = async (userId: string, groupId: string) => {
     };
   }
 
-  if (group.createdBy !== userId) {
-    throw {
-      status: StatusCodes.FORBIDDEN,
-      message: "No permission",
-    };
-  }
+  const resultMember = group.members.map((m) => ({
+    id: m.id,
+    userId: m.user.id,
+    fullName: m.user.fullName,
+    avatarUrl: m.user.avatarUrl,
+    role: m.role,
+  }));
 
-  return group;
+  const resultExpenses = group.expenses.map((e) => ({
+    id: e.id,
+    description: e.description,
+    amount: e.amount.toString(),
+    currency: e.currency,
+    paidById: e.paidBy,
+    paidBy: e.paidByUser.fullName,
+    category: e.category,
+    expenseDate: e.expenseDate,
+    splitType: e.splitType,
+    splits: e.splits.map((s) => ({
+      id: s.id,
+      userId: s.user.id,
+      amount: s.amount.toString(),
+      shares: s.shares?.toString() || null,
+      percentage: s.percentage?.toString() || null,
+    })),
+    yourDebts: e.splits.reduce((acc, b) => {
+      if (b.user.id === userId && e.paidBy !== userId) {
+        return acc.minus(b.amount);
+      }
+      return acc;
+    }, new Decimal(0)).toString(),
+    yourCredits: group.settlements.reduce(
+      (acc, b) => acc.plus(b.amount),
+      new Decimal(0)
+    ).toString(),
+  }));
+
+  const resultSettlements = group.settlements.map((s) => ({
+    id: s.id,
+    payer: s.payer.fullName,
+    payee: s.payee.fullName,
+    amount: s.amount,
+  }));
+
+  return {
+    ...group,
+    creator: group.creator?.fullName,
+    members: resultMember,
+    expenses: resultExpenses,
+    settlements: [],
+  };
 };
 
 export const createGroupService = async (
@@ -313,6 +501,20 @@ const addMemberDirectlyService = async (
   groupId: string,
   user: User
 ) => {
+  //Check Invite tồn tại không
+  const isUser = await prisma.groupInvite.findFirst({
+    where: {
+      groupId,
+      phone: user.phone,
+    },
+  });
+  if (isUser) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "The invitation has been sent and cannot be added directly",
+    };
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.groupMember.create({
       data: {
@@ -355,6 +557,7 @@ const sendInviteTokensService = async (
   const isUser = await prisma.groupInvite.findFirst({
     where: {
       groupId,
+      phone: user.phone,
     },
   });
   if (isUser) {

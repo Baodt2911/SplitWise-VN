@@ -1,8 +1,9 @@
-import { Router } from "express";
-import { validateAll, verifyRefreshToken } from "../middlewares";
+                                                                                                                           import { Router } from "express";
+import { validateAll, verifyAccessToken, verifyRefreshToken } from "../middlewares";
 import {
   googleAuthController,
   loginController,
+  logoutController,
   refreshTokenController,
   registerController,
 } from "../controllers";
@@ -17,5 +18,5 @@ router.post(
 );
 router.post("/refresh-token", verifyRefreshToken, refreshTokenController);
 router.post("/google-verify", googleAuthController);
-
+router.post("/logout", verifyAccessToken, logoutController);
 export default router;

@@ -308,6 +308,8 @@ model User {
   settlementsPaid      Settlement[]          @relation("SettlementPayer")
   settlementsReceived  Settlement[]          @relation("SettlementPayee")
   settlementsConfirmed Settlement[]          @relation("SettlementConfirmer")
+  balancesPayer         Balance[]            @relation("BalancePayer")
+  balancesPayee         Balance[]            @relation("BalancePayee")
   friendshipsInitiated Friendship[]          @relation("FriendshipUser")
   friendshipsReceived  Friendship[]          @relation("FriendshipFriend")
   notifications        Notification[]
@@ -357,6 +359,7 @@ model Group {
   members     GroupMember[]
   expenses    Expense[]
   settlements Settlement[]
+  balances    Balance[]
   invites     GroupInvite[]
   activities  Activity[]
 
@@ -511,6 +514,22 @@ model Settlement {
   @@index([status, deletedAt])
   @@map("settlements")
 }
+
+model Balance {
+  id        String   @id @default(uuid())
+  groupId   String   @map("group_id")
+  payerId   String   @map("payer_id")
+  payeeId   String   @map("payee_id")
+  amount    Decimal  @db.Decimal(15, 2) // payer → payee nợ bao nhiêu
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer     User  @relation("BalancePayer", fields: [payerId], references: [id], onDelete: Cascade)
+  payee     User  @relation("BalancePayee", fields: [payeeId], references: [id], onDelete: Cascade)
+  @@unique([groupId, payerId, payeeId])
+  @@map("balances")
+}
+
 
 model Friendship {
   id       String @id @default(uuid())

@@ -1,12 +1,14 @@
 import { Router } from "express";
 import {
-  sendOtpRegisterController,
   verifyOtpRegisterController,
+  resendOtpRegisterController
 } from "../controllers";
+import { validateAll } from "../middlewares";
+import z from "zod";
 
 const router = Router();
 
-router.post("/register/send", sendOtpRegisterController);
-router.post("/register/verify", verifyOtpRegisterController);
 
+router.post("/register/verify",validateAll({ body: z.object({ phone: z.string().min(10, "Phone number is required"), otp: z.string().min(6, "OTP is required") }) }),  verifyOtpRegisterController);
+router.post("/register/resend",validateAll({ body: z.object({ phone: z.string().min(10, "Phone number is required") }) }), resendOtpRegisterController);
 export default router;

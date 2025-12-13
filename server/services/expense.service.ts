@@ -9,24 +9,30 @@ import {
   SettlementStatus,
 } from "@prisma/client";
 import { createActivityService } from "./activity.service";
+import Decimal from "decimal.js";
 
 const buildSplits = (
   expenseId: string,
+  paidBy: string,
   splits: {
     userId: string;
-    amount?: number;
-    percentage?: number;
-    shares?: number;
+    amount?: Decimal;
+    percentage?: Decimal;
+    shares?: Decimal;
   }[],
   splitType: ExpenseSplitType,
-  amount: number
-) =>
-  splits.map((s) => {
+  amount: Decimal
+) => {
+  //Kiểm tra user paidBy không có trong splits
+  const otherSplits = splits.filter((s) => s.userId !== paidBy);
+  console.log(typeof amount);
+
+  return otherSplits.map((s) => {
     if (splitType === ExpenseSplitType.EQUAL) {
       return {
         expenseId,
         userId: s.userId,
-        amount: amount / splits.length,
+        amount: amount.div(splits.length),
       };
     }
 
@@ -42,24 +48,29 @@ const buildSplits = (
       return {
         expenseId,
         userId: s.userId,
-        amount: (amount * s.percentage!) / 100,
+        amount: amount.mul(s.percentage!).div(100),
         percentage: s.percentage,
       };
     }
 
     if (splitType === ExpenseSplitType.SHARES) {
-      const totalShares = splits.reduce((sum, s) => sum + (s.shares ?? 0), 0);
-      const amountPerShare = amount / totalShares;
+      const totalShares = splits.reduce(
+        (sum, s) => sum.plus(s.shares ?? 0),
+        new Decimal(0)
+      );
+      const amountPerShare = amount.div(totalShares);
       return {
         expenseId,
         userId: s.userId,
-        amount: amountPerShare * s.shares!,
+        amount: amountPerShare.mul(s.shares!),
         shares: s.shares,
       };
     }
 
     throw new Error("Invalid split type");
   });
+};
+
 export const createExpenseService = async (
   userId: string,
   groupId: string,
@@ -95,16 +106,55 @@ export const createExpenseService = async (
       },
     });
     // ===== CALCULATE SPLITS =====
-
     const splitData = buildSplits(
       expense.id,
+      other.paidBy,
       splits,
       ExpenseSplitType[splitKey],
-      other.amount
+      new Decimal(other.amount)
     );
     await tx.expenseSplit.createMany({
       data: splitData,
     });
+
+    await Promise.all(
+      splitData.map(
+        async (s) =>
+          await tx.balance.upsert({
+            where: {
+              groupId_payerId_payeeId: {
+                groupId,
+                payerId: s.userId,
+                payeeId: other.paidBy || expense.paidBy,
+              },
+            },
+            update: {
+              amount: { increment: s.amount },
+            },
+            create: {
+              groupId,
+              payerId: s.userId,
+              payeeId: other.paidBy || expense.paidBy,
+              amount: s.amount,
+            },
+          })
+      )
+    );
+
+    const me = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true },
+    });
+
+    await createActivityService(
+      {
+        userId,
+        groupId,
+        action: ActivityAction.UPDATE_EXPENSE,
+        description: `${me?.fullName} đã tạo chi phí “${other.description}”.`,
+      },
+      tx
+    );
   });
   return true;
 };
@@ -222,6 +272,7 @@ export const updateExpenseService = async (
         id: expenseId,
       },
       data: {
+        paidBy,
         ...other,
         ...(splitType && { splitType: ExpenseSplitType[splitKey] }),
         ...(category && { category: ExpenseCategory[categoryKey] }),
@@ -243,14 +294,21 @@ export const updateExpenseService = async (
 
     // Kiểm tra
     if (splits || amount || splitType) {
-      const finalSplits = (splits || expense.splits) as any;
-      const finalAmount = (amount || expense.amount) as number;
+      const finalSplits = (splits || expense.splits) as {
+        userId: string;
+        amount?: Decimal;
+        percentage?: Decimal;
+        shares?: Decimal;
+      }[];
+
+      const finalAmount = amount || expense.amount;
       const finalSplitType = splitType
         ? ExpenseSplitType[splitKey]
         : expense.splitType;
 
       const newSplits = buildSplits(
         expenseId,
+        paidBy || expense.paidBy,
         finalSplits,
         finalSplitType,
         finalAmount
@@ -261,7 +319,32 @@ export const updateExpenseService = async (
       await tx.expenseSplit.createMany({
         data: newSplits,
       });
+
+      await Promise.all(
+        newSplits.map(
+          async (s) =>
+            await tx.balance.upsert({
+              where: {
+                groupId_payerId_payeeId: {
+                  groupId,
+                  payerId: s.userId,
+                  payeeId: paidBy || updateExpense.paidBy,
+                },
+              },
+              update: {
+                amount: { increment: s.amount },
+              },
+              create: {
+                groupId,
+                payerId: s.userId,
+                payeeId: paidBy || updateExpense.paidBy,
+                amount: s.amount,
+              },
+            })
+        )
+      );
     }
+
     const me = await prisma.user.findUnique({
       where: { id: userId },
       select: { fullName: true },

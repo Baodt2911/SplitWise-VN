@@ -24,7 +24,7 @@ import {
   queryGroupSchema,
   updateExpenseSchema,
   updateGroupSchema,
-  updateStatusParamsSchema,
+  updateStatusSettlementParamsSchema,
 } from "../schemas";
 import z from "zod";
 
@@ -186,7 +186,7 @@ router.patch(
   "/:groupId/settlements/:settlementId/:status",
   verifyAccessToken,
   validateAll({
-    params: updateStatusParamsSchema,
+    params: updateStatusSettlementParamsSchema,
   }),
   updateStatusSettlementController
 );

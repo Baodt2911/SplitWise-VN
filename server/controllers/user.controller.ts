@@ -119,3 +119,21 @@ export const updateProfileController = catchAsync(
     });
   }
 );
+
+export const logoutController = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    const sessionId = req.user?.sessionId;
+    const key = `session:${userId}:${sessionId}`;
+    const isLoggedIn = await redis.exists(key);
+    if (isLoggedIn === 0) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "You are not logged in",
+      });
+    }
+    await redis.del(key);
+    res.status(StatusCodes.OK).json({
+      message: "You are logged out successfully",
+    });
+  }
+);

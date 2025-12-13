@@ -27,6 +27,8 @@ export const generateOtpService = async (key: string) => {
   return otp;
 };
 
+
+
 export const sendOtpRegisterService = async (phone: string) => {
   const otp = await generateOtpService(`otp:register:${phone}`);
   console.log(otp);
@@ -51,6 +53,30 @@ export const sendOtpEmailService = async (email: string) => {
 
 export const sendOtpResetService = async (phone: string) => {
   const otp = await generateOtpService(`otp:reset:${phone}`);
+  return true;
+};
+
+export const resendOtpRegisterService = async (phone: string) => {
+  const key = `otp:resend:${phone}`;
+  const MAX_RESEND = 3;
+  const TTL_SECONDS = 10 * 60; // 10 phút
+
+  // Atomic increment
+  const resendCount = await redis.incr(key);
+
+  // Lần đầu → set TTL
+  if (resendCount === 1) {
+    await redis.expire(key, TTL_SECONDS);
+  }
+
+  if (resendCount > MAX_RESEND) {
+    throw {
+      status: StatusCodes.TOO_MANY_REQUESTS,
+      message: "Too many resend attempts. Please try again later.",
+    };
+  }
+  await redis.del(`otp:register:${phone}`);
+  await sendOtpRegisterService(phone);
   return true;
 };
 

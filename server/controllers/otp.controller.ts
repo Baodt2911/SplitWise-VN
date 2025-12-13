@@ -1,18 +1,17 @@
 import {
-  saveUserService,
-  sendOtpRegisterService,
+  saveUserService,  
   verifyOtpRegisterService,
+  resendOtpRegisterService,
 } from "../services";
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { StatusCodes } from "http-status-codes";
 
-export const sendOtpRegisterController = catchAsync(
+export const resendOtpRegisterController = catchAsync(
   async (req: Request<{}, {}, { phone: string }>, res: Response) => {
-    const { phone } = req.body;
-    await sendOtpRegisterService(phone);
+    await resendOtpRegisterService(req.body.phone);
     res.status(StatusCodes.OK).json({
-      message: "Sent otp successfully",
+      message: "OTP has been re-sent to your phone number",
     });
   }
 );

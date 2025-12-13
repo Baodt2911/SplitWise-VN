@@ -1,22 +1,33 @@
+import Decimal from "decimal.js";
 import { z } from "zod";
 
 // Zod schema for split item
 const splitSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  amount: z.number().positive("Amount must be positive").optional(),
+  amount: z
+    .string()
+    .optional()
+    .transform((val) => (val ? new Decimal(val) : undefined)),
   percentage: z
-    .number()
-    .min(0, "Percentage must be at least 0")
-    .max(100, "Percentage must be at most 100")
-    .optional(),
-  shares: z.number().positive("Shares must be positive").optional(),
+    .string()
+    .optional()
+    .transform((val) => (val ? new Decimal(val) : undefined)),
+  shares: z
+    .string()
+    .optional()
+    .transform((val) => (val ? new Decimal(val) : undefined)),
 });
 
 // Zod schema for creating expense
 export const createExpenseSchema = z
   .object({
     description: z.string().min(1, "Description is required"),
-    amount: z.number().positive("Amount must be a positive number"),
+    amount: z
+      .string()
+      .transform((val) => new Decimal(val))
+      .refine((val) => val.gt(0), {
+        message: "Amount must be a positive number",
+      }),
     currency: z.string().optional(),
     paidBy: z.string().min(1, "PaidBy is required"),
     category: z.enum([
@@ -43,8 +54,11 @@ export const createExpenseSchema = z
 
     // exact → tất cả splits phải có amount
     if (splitType === "exact") {
-      const total = splits.reduce((sum, s) => sum + (s.amount ?? 0), 0);
-      if (total !== amount) {
+      const total = splits.reduce(
+        (sum, s) => sum.plus(s.amount ?? 0),
+        new Decimal(0)
+      );
+      if (!total.equals(amount)) {
         ctx.addIssue({
           code: "custom",
           message: "Exact split must equal total amount",
@@ -56,8 +70,11 @@ export const createExpenseSchema = z
 
     // percentage → tổng = 100
     if (splitType === "percentage") {
-      const total = splits.reduce((sum, s) => sum + (s.percentage ?? 0), 0);
-      if (total !== 100) {
+      const total = splits.reduce(
+        (sum, s) => sum.plus(s.percentage ?? 0),
+        new Decimal(0)
+      );
+      if (!total.equals(new Decimal(100))) {
         ctx.addIssue({
           code: "custom",
           message: "Percentage must sum to 100%",
@@ -69,8 +86,11 @@ export const createExpenseSchema = z
 
     // shares → tổng shares > 0
     if (splitType === "shares") {
-      const totalShares = splits.reduce((sum, s) => sum + (s.shares ?? 0), 0);
-      if (totalShares <= 0) {
+      const totalShares = splits.reduce(
+        (sum, s) => sum.plus(s.shares ?? 0),
+        new Decimal(0)
+      );
+      if (totalShares.lte(0)) {
         ctx.addIssue({
           code: "custom",
           message: "Total shares must be > 0",
@@ -84,7 +104,12 @@ export const createExpenseSchema = z
 export const updateExpenseSchema = z
   .object({
     description: z.string().min(1, "Description is required"),
-    amount: z.number().positive("Amount must be a positive number"),
+    amount: z
+      .string()
+      .transform((val) => new Decimal(val))
+      .refine((val) => val.gt(0), {
+        message: "Amount must be a positive number",
+      }),
     paidBy: z.string().min(1, "PaidBy is required"),
     category: z.enum([
       "food",
@@ -115,9 +140,21 @@ export const updateExpenseSchema = z
 
     // exact → tất cả splits phải có amount
     if (splitType === "exact") {
-      const total = splits!.reduce((sum, s) => sum + (s.amount ?? 0), 0);
+      const total = splits!.reduce(
+        (sum, s) => sum.plus(s.amount ?? 0),
+        new Decimal(0)
+      );
 
-      if (total !== amount) {
+      if (!amount) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Exact split must equal total amount",
+          path: ["splits"],
+        });
+        return;
+      }
+
+      if (!total.equals(amount)) {
         ctx.addIssue({
           code: "custom",
           message: "Exact split must equal total amount",
@@ -129,8 +166,11 @@ export const updateExpenseSchema = z
 
     // percentage → tổng = 100
     if (splitType === "percentage") {
-      const total = splits!.reduce((sum, s) => sum + (s.percentage ?? 0), 0);
-      if (total !== 100) {
+      const total = splits!.reduce(
+        (sum, s) => sum.plus(s.percentage ?? 0),
+        new Decimal(0)
+      );
+      if (!total.equals(new Decimal(100))) {
         ctx.addIssue({
           code: "custom",
           message: "Percentage must sum to 100%",
@@ -142,8 +182,11 @@ export const updateExpenseSchema = z
 
     // shares → tổng shares > 0
     if (splitType === "shares") {
-      const totalShares = splits!.reduce((sum, s) => sum + (s.shares ?? 0), 0);
-      if (totalShares <= 0) {
+      const totalShares = splits!.reduce(
+        (sum, s) => sum.plus(s.shares ?? 0),
+        new Decimal(0)
+      );
+      if (totalShares.lte(0)) {
         ctx.addIssue({
           code: "custom",
           message: "Total shares must be > 0",
