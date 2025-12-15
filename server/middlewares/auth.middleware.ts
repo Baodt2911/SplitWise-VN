@@ -9,19 +9,19 @@ export const verifyAccessTokenSocket = (
 ) => {
   const accessToken: string = socket.handshake.auth.token;
   if (!accessToken) {
-    return next(new Error("You do not have access"));
+    return next(new Error("Bạn không có quyền truy cập"));
   }
   const secretKey = process.env.ACCESSTOKEN_KEY;
   if (!secretKey) {
-    return next(new Error("ACCESSTOKEN_KEY is not configured"));
+    return next(new Error("ACCESSTOKEN_KEY chưa được cấu hình"));
   }
   jwt.verify(accessToken, secretKey, (err, decoded) => {
     if (err) {
       if (err.name === "TokenExpiredError") {
-        return next(new Error("Token has expired"));
+        return next(new Error("Token đã hết hạn"));
       }
 
-      return next(new Error("Invalid token"));
+      return next(new Error("Token không hợp lệ"));
     }
     socket.user = decoded;
     next();
@@ -38,26 +38,26 @@ export const verifyAccessToken = async (
     if (!authorization) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: StatusCodes.UNAUTHORIZED,
-        message: "You do not have access",
+        message: "Bạn không có quyền truy cập",
       });
     }
     const accessToken = authorization.split(" ")[1];
     const secretKey = process.env.ACCESSTOKEN_KEY;
     if (!secretKey) {
       return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        message: "ACCESSTOKEN_KEY is not configured",
+        message: "ACCESSTOKEN_KEY chưa được cấu hình",
       });
     }
     jwt.verify(accessToken, secretKey, (err, decoded) => {
       if (err) {
         if (err.name === "TokenExpiredError") {
           return res.status(StatusCodes.FORBIDDEN).json({
-            message: "Token has expired",
+            message: "Token đã hết hạn",
           });
         }
 
         return res.status(StatusCodes.FORBIDDEN).json({
-          message: "Invalid token",
+          message: "Token không hợp lệ",
         });
       }
       req.user = decoded as AccessJwtPayload;
@@ -82,7 +82,7 @@ export const verifyRefreshToken = async (
     if (!refreshToken) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: StatusCodes.UNAUTHORIZED,
-        message: "You do not have access",
+        message: "Bạn không có quyền truy cập",
       });
     }
 
@@ -96,12 +96,12 @@ export const verifyRefreshToken = async (
       if (err) {
         if (err.name === "TokenExpiredError") {
           return res.status(StatusCodes.FORBIDDEN).json({
-            message: "Token has expired",
+            message: "Token đã hết hạn",
           });
         }
 
         return res.status(StatusCodes.FORBIDDEN).json({
-          message: "Invalid token",
+          message: "Token không hợp lệ",
         });
       }
       req.user = decoded as RefreshJwtPayload;

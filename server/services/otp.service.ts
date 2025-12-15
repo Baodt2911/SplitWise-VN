@@ -2,8 +2,8 @@ import bcrypt from "bcrypt";
 import redis from "../configs/redis.config";
 import otpGenerate from "otp-generator";
 import { StatusCodes } from "http-status-codes";
-import twilio from "twilio";
-const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+import { twilioClient } from "../configs";
+
 export const generateOtpService = async (key: string) => {
   const otp = otpGenerate.generate(6, {
     digits: true,
@@ -27,17 +27,17 @@ export const generateOtpService = async (key: string) => {
   return otp;
 };
 
-
-
 export const sendOtpRegisterService = async (phone: string) => {
   const otp = await generateOtpService(`otp:register:${phone}`);
   console.log(otp);
 
-  // await client.messages.create({
-  //   body: `[SplitWise VN] Your OTP code is ${otp}.`,
-  //   from: process.env.TWILIO_PHONE, // Số Twilio
-  //   to: `+84${phone}`, // Số người nhận, bắt đầu bằng +84
-  // });
+  const test = await twilioClient.messages.create({
+    body: `[SplitWise VN] Your OTP code is ${otp}.`,
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+    to: `${phone}`,
+  });
+  console.log(test);
+
   return true;
 };
 
@@ -72,7 +72,7 @@ export const resendOtpRegisterService = async (phone: string) => {
   if (resendCount > MAX_RESEND) {
     throw {
       status: StatusCodes.TOO_MANY_REQUESTS,
-      message: "Too many resend attempts. Please try again later.",
+      message: "Quá nhiều lần gửi lại. Vui lòng thử lại sau.",
     };
   }
   await redis.del(`otp:register:${phone}`);
@@ -88,7 +88,7 @@ export const verifyOtpRegisterService = async (data: {
   if (!isOtp)
     throw {
       status: StatusCodes.UNAUTHORIZED,
-      message: "OTP expired",
+      message: "OTP đã hết hạn",
     };
   const otpData = JSON.parse(isOtp);
   const isCompareOtp = await bcrypt.compare(data.otp, otpData.otp);
@@ -106,7 +106,7 @@ export const verifyOtpRegisterService = async (data: {
       await redis.del(`otp:verify:${data.phone}`);
       throw {
         status: StatusCodes.TOO_MANY_REQUESTS,
-        message: "Too many attempts",
+        message: "Quá nhiều lần thử",
       };
     }
 

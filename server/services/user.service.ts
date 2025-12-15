@@ -24,7 +24,7 @@ export const loginService = async (data: LoginDTO) => {
   if (!user) {
     throw {
       status: StatusCodes.BAD_REQUEST,
-      message: "Invalid phone",
+      message: "Số điện thoại không hợp lệ",
     };
   }
   const isPasswordValid = await bcrypt.compare(
@@ -34,7 +34,7 @@ export const loginService = async (data: LoginDTO) => {
   if (!isPasswordValid) {
     throw {
       status: StatusCodes.BAD_REQUEST,
-      message: "Invalid password",
+      message: "Mật khẩu không hợp lệ",
     };
   }
   await prisma.user.update({
@@ -68,7 +68,7 @@ export const saveUserService = async (phone: string) => {
   if (!raw) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "Register expired",
+      message: "Đăng ký đã hết hạn",
     };
   }
   const data = JSON.parse(raw);
@@ -127,7 +127,7 @@ export const changePasswordServie = async (
   if (!existingUser) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "User doen't exist",
+      message: "Người dùng không tồn tại",
     };
   }
   const isPasswordValid = await bcrypt.compare(
@@ -137,7 +137,7 @@ export const changePasswordServie = async (
   if (!isPasswordValid) {
     throw {
       status: StatusCodes.UNAUTHORIZED,
-      message: "Password is incorrect",
+      message: "Mật khẩu không đúng",
     };
   }
   const salt = await bcrypt.genSalt(10);
@@ -164,7 +164,7 @@ export const updateProfileService = async (
   if (!existingUser) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "User doen't exist",
+      message: "Người dùng không tồn tại",
     };
   }
   await prisma.user.update({

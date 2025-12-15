@@ -15,7 +15,7 @@ export const createSettlementController = catchAsync(
     const userId = req.user?.userId;
     await createSettlementService(userId!, req.params.groupId, req.body);
     res.status(StatusCodes.OK).json({
-      message: "Payment successful",
+      message: "Thanh toán thành công",
     });
   }
 );
@@ -30,7 +30,7 @@ export const updateStatusSettlementController = catchAsync(
       req.params.status
     );
     res.status(StatusCodes.OK).json({
-      message: "Payment successful",
+      message: "Thanh toán thành công",
     });
   }
 );

@@ -17,7 +17,7 @@ export const readNotificationService = async (
   if (!exist) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Notification not found",
+      message: "Không tìm thấy thông báo",
     };
   }
   await prisma.notification.update({

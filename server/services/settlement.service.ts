@@ -24,7 +24,7 @@ export const createSettlementService = async (
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
   const { paymentMethod, ...other } = data;
@@ -84,7 +84,8 @@ export const updateStatusSettlementService = async (
   userId: string,
   groupId: string,
   settlementId: string,
-  status: "confirmed" | "rejected"
+  status: "confirmed" | "rejected",
+  data: { rejectionReason?: string }
 ) => {
   await checkGroupMember(userId, groupId);
 
@@ -98,21 +99,21 @@ export const updateStatusSettlementService = async (
   if (settlement?.groupId !== groupId) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "This payment is not part of the group",
+      message: "Khoản thanh toán này không thuộc nhóm",
     };
   }
 
   if (settlement?.payeeId !== userId) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "You are not the one paying",
+      message: "Bạn không phải là người thanh toán",
     };
   }
 
   if (settlement.status.toUpperCase() !== SettlementStatus.PENDING) {
     throw {
       status: StatusCodes.CONFLICT,
-      message: "Already handled",
+      message: "Đã được xử lý",
     };
   }
 
@@ -120,12 +121,16 @@ export const updateStatusSettlementService = async (
     const keyStatus = status.toUpperCase() as keyof typeof SettlementStatus;
     const updateData: {
       status: SettlementStatus;
+      rejectionReason?: string;
       confirmedBy?: string;
       confirmedAt?: Date;
     } = {
       status: SettlementStatus[keyStatus],
     };
 
+    if (updateData.status === SettlementStatus.REJECTED) {
+      updateData.rejectionReason = data.rejectionReason;
+    }
     if (updateData.status === SettlementStatus.CONFIRMED) {
       updateData.confirmedBy = userId;
       updateData.confirmedAt = new Date();

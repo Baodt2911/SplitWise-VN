@@ -1,8 +1,26 @@
-import { createExpenseService, updateExpenseService } from "../services";
+import {
+  createExpenseService,
+  getDetailExpenseService,
+  updateExpenseService,
+} from "../services";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { CreateExpenseDTO, UpdateExpenseDTO } from "../dtos";
 import { StatusCodes } from "http-status-codes";
+
+export const getDetailExpenseController = catchAsync(
+  async (
+    req: Request<{ groupId: string; expenseId: string }>,
+    res: Response
+  ) => {
+    const userId = req.user?.userId;
+    const { groupId, expenseId } = req.params;
+    const expense = await getDetailExpenseService(userId!, groupId, expenseId);
+    res.status(StatusCodes.OK).json({
+      expense,
+    });
+  }
+);
 
 export const createExpenseController = catchAsync(
   async (
@@ -12,7 +30,7 @@ export const createExpenseController = catchAsync(
     const userId = req.user?.userId;
     await createExpenseService(userId!, req.params.groupId, req.body);
     res.status(StatusCodes.CREATED).json({
-      message: "Create successful costs",
+      message: "Tạo chi phí thành công",
     });
   }
 );
@@ -30,7 +48,7 @@ export const updateExpenseController = catchAsync(
       req.body
     );
     res.status(StatusCodes.OK).json({
-      message: "Update successful costs",
+      message: "Cập nhật chi phí thành công",
     });
   }
 );

@@ -42,7 +42,7 @@ export const loginController = catchAsync(
     );
 
     res.status(StatusCodes.OK).json({
-      message: "Login successfully",
+      message: "Đăng nhập thành công",
       user,
       accessToken,
       refreshToken,
@@ -82,7 +82,7 @@ export const googleAuthController = async (
   );
 
   res.status(StatusCodes.OK).json({
-    message: "Login successfully",
+    message: "Đăng nhập thành công",
     accessToken,
     refreshToken,
     sessionId,
@@ -95,7 +95,7 @@ export const registerController = catchAsync(
     await registerService(req.body);
     res
       .status(StatusCodes.OK)
-      .json({ message: "OTP has been sent to your phone number" });
+      .json({ message: "OTP đã được gửi đến số điện thoại của bạn" });
   }
 );
 
@@ -104,7 +104,7 @@ export const changePasswordController = catchAsync(
     const userId = req.user?.userId;
     await changePasswordServie(userId!, req.body);
     res.status(StatusCodes.OK).json({
-      message: "Change password successfully",
+      message: "Đổi mật khẩu thành công",
     });
   }
 );
@@ -115,7 +115,7 @@ export const updateProfileController = catchAsync(
 
     await updateProfileService(userId!, req.body);
     res.status(StatusCodes.OK).json({
-      message: "User profile updated successfully",
+      message: "Cập nhật thông tin người dùng thành công",
     });
   }
 );
@@ -128,12 +128,12 @@ export const logoutController = catchAsync(
     const isLoggedIn = await redis.exists(key);
     if (isLoggedIn === 0) {
       return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "You are not logged in",
+        message: "Bạn chưa đăng nhập",
       });
     }
     await redis.del(key);
     res.status(StatusCodes.OK).json({
-      message: "You are logged out successfully",
+      message: "Đăng xuất thành công",
     });
   }
 );

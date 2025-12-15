@@ -10,7 +10,7 @@ export const checkGroupMember = async (userId: string, groupId: string) => {
   if (!exists) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "You are not a member of this group",
+      message: "Bạn không phải là thành viên của nhóm này",
     };
   }
 };
@@ -28,7 +28,7 @@ export const checkGroupAdmin = async (userId: string, groupId: string) => {
   if (!isAdmin) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "You are not admin of this group",
+      message: "Bạn không phải là quản trị viên của nhóm này",
     };
   }
 };
@@ -48,7 +48,7 @@ export const checkExpensePermission = async (
   });
 
   if (!group)
-    throw { status: StatusCodes.NOT_FOUND, message: "Group not found" };
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
 
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
@@ -56,7 +56,7 @@ export const checkExpensePermission = async (
   });
 
   if (!expense)
-    throw { status: StatusCodes.NOT_FOUND, message: "Expense not found" };
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy chi phí" };
 
   const isAdmin = group.createdBy === userId;
   const isCreator = expense.createdBy === userId;
@@ -64,7 +64,7 @@ export const checkExpensePermission = async (
   if (!isAdmin && !isCreator && !group.allowMemberEdit) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "You do not have permission to modify this expense",
+      message: "Bạn không có quyền chỉnh sửa chi phí này",
     };
   }
 };

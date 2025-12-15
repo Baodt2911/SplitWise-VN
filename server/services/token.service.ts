@@ -31,7 +31,7 @@ export const refreshTokenService = async (
   if (!raw) {
     throw {
       status: StatusCodes.BAD_GATEWAY,
-      message: "Invalid session",
+      message: "Phiên đăng nhập không hợp lệ",
     };
   }
 
@@ -42,7 +42,7 @@ export const refreshTokenService = async (
     await redis.del(key);
     throw {
       status: StatusCodes.UNAUTHORIZED,
-      message: "Token reuse detected",
+      message: "Phát hiện token bị tái sử dụng",
     };
   }
   // 3. Rotate sessionId mới

@@ -30,7 +30,7 @@ export const validateAll = ({
 
       // Còn lại → throw lỗi bình thường
       return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "Invalid request data",
+        message: "Dữ liệu yêu cầu không hợp lệ",
       });
     }
   };

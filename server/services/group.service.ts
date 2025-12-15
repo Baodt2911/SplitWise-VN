@@ -121,7 +121,7 @@ export const getGroupService = async (userId: string, groupId: string) => {
           },
         },
         orderBy: {
-          createdAt: "desc",
+          role: "asc",
         },
       },
       expenses: {
@@ -189,7 +189,7 @@ export const getGroupService = async (userId: string, groupId: string) => {
   if (!group) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
 
@@ -218,16 +218,17 @@ export const getGroupService = async (userId: string, groupId: string) => {
       shares: s.shares?.toString() || null,
       percentage: s.percentage?.toString() || null,
     })),
-    yourDebts: e.splits.reduce((acc, b) => {
-      if (b.user.id === userId && e.paidBy !== userId) {
-        return acc.minus(b.amount);
-      }
-      return acc;
-    }, new Decimal(0)).toString(),
-    yourCredits: group.settlements.reduce(
-      (acc, b) => acc.plus(b.amount),
-      new Decimal(0)
-    ).toString(),
+    yourDebts: e.splits
+      .reduce((acc, b) => {
+        if (b.user.id === userId && e.paidBy !== userId) {
+          return acc.minus(b.amount);
+        }
+        return acc;
+      }, new Decimal(0))
+      .toString(),
+    yourCredits: group.settlements
+      .reduce((acc, b) => acc.plus(b.amount), new Decimal(0))
+      .toString(),
   }));
 
   const resultSettlements = group.settlements.map((s) => ({
@@ -284,7 +285,7 @@ export const updateGroupService = async (
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
   await checkGroupAdmin(userId, groupId);
@@ -305,7 +306,7 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
   await checkGroupAdmin(userId, groupId);
@@ -334,14 +335,14 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
 
   if (!existingGroup.isPublic) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "Private groups cannot be entered via InviteCode",
+      message: "Nhóm riêng tư không thể tham gia bằng mã mời",
     };
   }
 
@@ -353,7 +354,7 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
   if (!targetUser) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "User does'nt exist",
+      message: "Người dùng không tồn tại",
     };
   }
 
@@ -425,7 +426,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
 
@@ -433,7 +434,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
   if (existingGroup.createdBy === userId) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "Group owner cannot leave the group",
+      message: "Chủ sở hữu nhóm không thể rời khỏi nhóm",
     };
   }
 
@@ -456,7 +457,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
   if (!groupMember) {
     throw {
       status: StatusCodes.UNPROCESSABLE_ENTITY,
-      message: "The user is'nt a member of the group",
+      message: "Người dùng không phải là thành viên của nhóm",
     };
   }
 
@@ -511,7 +512,7 @@ const addMemberDirectlyService = async (
   if (isUser) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "The invitation has been sent and cannot be added directly",
+      message: "Lời mời đã được gửi và không thể thêm trực tiếp",
     };
   }
 
@@ -563,7 +564,7 @@ const sendInviteTokensService = async (
   if (isUser) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "An invitation has been sent and cannot be resend",
+      message: "Lời mời đã được gửi và không thể gửi lại",
     };
   }
 
@@ -620,7 +621,7 @@ export const addMemberService = async (
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
 
@@ -629,7 +630,7 @@ export const addMemberService = async (
   if (!isAdmin) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "Only admins are allowed to add members",
+      message: "Chỉ quản trị viên mới được phép thêm thành viên",
     };
   }
 
@@ -641,7 +642,7 @@ export const addMemberService = async (
   if (!targetUser) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "User does'nt exist",
+      message: "Người dùng không tồn tại",
     };
   }
 
@@ -656,7 +657,7 @@ export const addMemberService = async (
   if (exists) {
     throw {
       status: StatusCodes.UNPROCESSABLE_ENTITY,
-      message: "User is already a member",
+      message: "Người dùng đã là thành viên",
     };
   }
 
@@ -682,18 +683,18 @@ export const verifyInviteTokenService = async (token: string) => {
   });
 
   if (!invite) {
-    throw { status: StatusCodes.NOT_FOUND, message: "Invitation not found" };
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy lời mời" };
   }
 
   if (invite.status.toUpperCase() !== GroupInviteStatus.PENDING) {
     throw {
       status: StatusCodes.GONE,
-      message: "Invitation is no longer valid",
+      message: "Lời mời không còn hợp lệ",
     };
   }
 
   if (new Date() > invite.expiresAt) {
-    throw { status: StatusCodes.GONE, message: "Invitation has expired" };
+    throw { status: StatusCodes.GONE, message: "Lời mời đã hết hạn" };
   }
 
   return true;
@@ -705,20 +706,20 @@ export const acceptInviteService = async (token: string, userId: string) => {
   });
 
   if (!invite) {
-    throw { status: StatusCodes.NOT_FOUND, message: "Invalid invite token" };
+    throw { status: StatusCodes.NOT_FOUND, message: "Token mời không hợp lệ" };
   }
 
   // Check status
   if (invite.status.toUpperCase() !== GroupInviteStatus.PENDING) {
     throw {
       status: StatusCodes.GONE,
-      message: "Invitation already used or expired",
+      message: "Lời mời đã được sử dụng hoặc đã hết hạn",
     };
   }
 
   // Check expired
   if (new Date() > invite.expiresAt) {
-    throw { status: StatusCodes.GONE, message: "Invitation expired" };
+    throw { status: StatusCodes.GONE, message: "Lời mời đã hết hạn" };
   }
 
   // Check phone/email khớp user
@@ -726,12 +727,12 @@ export const acceptInviteService = async (token: string, userId: string) => {
     where: { id: userId },
   });
 
-  if (!user) throw { status: StatusCodes.NOT_FOUND, message: "User not found" };
+  if (!user) throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy người dùng" };
 
   if (invite.phone && invite.phone !== user.phone) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "This invitation is not for you",
+      message: "Lời mời này không dành cho bạn",
     };
   }
 
@@ -816,7 +817,7 @@ export const removeMemberService = async (
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
   await checkGroupAdmin(userId, groupId);
@@ -838,7 +839,7 @@ export const removeMemberService = async (
   if (!groupMember) {
     throw {
       status: StatusCodes.UNPROCESSABLE_ENTITY,
-      message: "The user is'nt a member of the group",
+      message: "Người dùng không phải là thành viên của nhóm",
     };
   }
 

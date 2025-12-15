@@ -22,7 +22,7 @@ export const createGroupController = catchAsync(
 
     await createGroupService(userId!, req.body);
     res.status(StatusCodes.CREATED).json({
-      message: "Created group successfully",
+      message: "Tạo nhóm thành công",
     });
   }
 );
@@ -42,7 +42,7 @@ export const updateGroupControlleer = catchAsync(
 
     await updateGroupService(userId!, req.params.groupId, req.body);
     res.status(StatusCodes.OK).json({
-      message: "Updated group successfully",
+      message: "Cập nhật nhóm thành công",
     });
   }
 );
@@ -52,7 +52,7 @@ export const deleteGroupController = catchAsync(
     const userId = req.user?.userId;
     await deleteGroupService(userId!, req.params.groupId);
     res.status(StatusCodes.OK).json({
-      message: "Deleted groupd successfully",
+      message: "Xóa nhóm thành công",
     });
   }
 );
@@ -90,7 +90,7 @@ export const addMemberController = catchAsync(
       req.body.phone
     );
     res.status(StatusCodes.OK).json({
-      message: added ? "Added to group" : "Invitation sent",
+      message: added ? "Đã thêm vào nhóm" : "Đã gửi lời mời",
     });
   }
 );
@@ -99,7 +99,7 @@ export const verifyInviteTokenController = catchAsync(
   async (req: Request<{ token: string }>, res: Response) => {
     await verifyInviteTokenService(req.params.token);
     res.status(StatusCodes.OK).json({
-      message: "Token verified",
+      message: "Token đã được xác thực",
     });
   }
 );
@@ -109,7 +109,7 @@ export const acceptInviteController = catchAsync(
     const userId = req.user?.userId;
     await acceptInviteService(req.params.token, userId!);
     res.status(StatusCodes.OK).json({
-      message: "Invitation accepted",
+      message: "Đã chấp nhận lời mời",
     });
   }
 );
@@ -119,7 +119,7 @@ export const joinGroupController = catchAsync(
     const userId = req.user?.userId;
     await joinGroupService(userId!, req.params.code);
     res.status(StatusCodes.OK).json({
-      message: "Joined the group",
+      message: "Đã tham gia nhóm",
     });
   }
 );
@@ -129,7 +129,7 @@ export const leaveGroupController = catchAsync(
     const userId = req.user?.userId;
     await leaveGroupService(userId!, req.params.groupId);
     res.status(StatusCodes.OK).json({
-      message: "Leaved the group",
+      message: "Đã rời khỏi nhóm",
     });
   }
 );
@@ -142,7 +142,7 @@ export const removeMemberController = catchAsync(
     const userId = req.user?.userId;
     await removeMemberService(userId!, req.params.groupId, req.params.memberId);
     res.status(StatusCodes.OK).json({
-      message: "Removed from members from the group",
+      message: "Đã xóa thành viên khỏi nhóm",
     });
   }
 );

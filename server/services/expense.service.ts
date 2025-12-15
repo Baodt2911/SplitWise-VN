@@ -85,7 +85,7 @@ export const createExpenseService = async (
   if (!existingGroup) {
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Group not found",
+      message: "Không tìm thấy nhóm",
     };
   }
 
@@ -174,7 +174,7 @@ export const updateExpenseService = async (
   });
 
   if (!group)
-    throw { status: StatusCodes.NOT_FOUND, message: "Group not found" };
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
 
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
@@ -198,13 +198,13 @@ export const updateExpenseService = async (
   if (!expense)
     throw {
       status: StatusCodes.NOT_FOUND,
-      message: "Expense not found",
+      message: "Không tìm thấy chi phí",
     };
 
   if (expense.groupId !== groupId)
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "This expense does not belong to this group",
+      message: "Chi phí này không thuộc nhóm này",
     };
 
   const isAdmin = group.createdBy === userId;
@@ -213,7 +213,7 @@ export const updateExpenseService = async (
   if (!isAdmin && !isCreator && !group.allowMemberEdit) {
     throw {
       status: StatusCodes.FORBIDDEN,
-      message: "You do not have permission to modify this expense",
+      message: "Bạn không có quyền chỉnh sửa chi phí này",
     };
   }
 
@@ -234,7 +234,7 @@ export const updateExpenseService = async (
       throw {
         status: StatusCodes.FORBIDDEN,
         message:
-          "You can't edit this cost because some users don't belong to this group",
+          "Bạn không thể chỉnh sửa chi phí này vì một số người dùng không thuộc nhóm này",
       };
     }
     const hasSettlement = await prisma.settlement.findFirst({
@@ -257,7 +257,7 @@ export const updateExpenseService = async (
       throw {
         status: StatusCodes.FORBIDDEN,
         message:
-          "You cannot edit this expense because some settlements have been confirmed.",
+          "Bạn không thể chỉnh sửa chi phí này vì một số khoản thanh toán đã được xác nhận.",
       };
     }
   }
@@ -360,4 +360,72 @@ export const updateExpenseService = async (
       tx
     );
   });
+};
+
+export const getDetailExpenseService = async (
+  userId: string,
+  groupId: string,
+  expenseId: string
+) => {
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+  });
+
+  if (!group)
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
+  await checkGroupMember(userId, groupId);
+
+  const expense = await prisma.expense.findUnique({
+    where: { id: expenseId },
+    select: {
+      id: true,
+      description: true,
+      amount: true,
+      currency: true,
+      paidBy: true,
+      paidByUser: {
+        select: {
+          fullName: true,
+        },
+      },
+      category: true,
+      expenseDate: true,
+      splitType: true,
+      splits: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+          amount: true,
+          shares: true,
+          percentage: true,
+        },
+      },
+      comments: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+            },
+          },
+          content: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+    },
+  });
+
+  const resultComments = expense?.comments || [];
+  resultComments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return expense;
 };

@@ -11,7 +11,7 @@ export const resendOtpRegisterController = catchAsync(
   async (req: Request<{}, {}, { phone: string }>, res: Response) => {
     await resendOtpRegisterService(req.body.phone);
     res.status(StatusCodes.OK).json({
-      message: "OTP has been re-sent to your phone number",
+      message: "OTP đã được gửi lại đến số điện thoại của bạn",
     });
   }
 );
@@ -24,7 +24,7 @@ export const verifyOtpRegisterController = catchAsync(
     await verifyOtpRegisterService(req.body);
     await saveUserService(req.body.phone);
     res.status(StatusCodes.OK).json({
-      message: "Verified successfully",
+      message: "Xác thực thành công",
     });
   }
 );
