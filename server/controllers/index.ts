@@ -1,3 +1,4 @@
+export * from "./auth.controller";
 export * from "./user.controller";
 export * from "./otp.controller";
 export * from "./group.controller";
@@ -5,3 +6,4 @@ export * from "./token.controller";
 export * from "./expense.controller";
 export * from "./settlement.controller";
 export * from "./notification.controller";
+export * from "./activity.controller";

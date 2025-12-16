@@ -3,18 +3,22 @@ import { validateAll, verifyAccessToken } from "../middlewares";
 import {
   acceptInviteController,
   addMemberController,
+  confirmSettlementController,
   createExpenseController,
   createGroupController,
   createSettlementController,
   deleteGroupController,
+  disputeSettlementController,
+  getActivitiesController,
   getAllGroupController,
+  getDetailExpenseController,
   getGroupController,
   joinGroupController,
   leaveGroupController,
+  rejectSettlementController,
   removeMemberController,
   updateExpenseController,
   updateGroupControlleer,
-  updateStatusSettlementController,
   verifyInviteTokenController,
 } from "../controllers";
 import {
@@ -24,7 +28,6 @@ import {
   queryGroupSchema,
   updateExpenseSchema,
   updateGroupSchema,
-  updateStatusSettlementParamsSchema,
 } from "../schemas";
 import z from "zod";
 
@@ -146,6 +149,17 @@ router.post(
 );
 
 // GROUP EXPENSES
+router.get(
+  "/:groupId/expenses/:expenseId",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      expenseId: z.uuid("Expense ID is required"),
+    }),
+  }),
+  getDetailExpenseController
+);
 router.post(
   "/:groupId/expenses/create",
   verifyAccessToken,
@@ -182,12 +196,50 @@ router.post(
   }),
   createSettlementController
 );
-router.patch(
-  "/:groupId/settlements/:settlementId/:status",
+
+router.post(
+  "/:groupId/settlements/:settlementId/confirm",
   verifyAccessToken,
   validateAll({
-    params: updateStatusSettlementParamsSchema,
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      settlementId: z.uuid("Settlement ID is required"),
+    }),
   }),
-  updateStatusSettlementController
+  confirmSettlementController
 );
+
+router.post(
+  "/:groupId/settlements/:settlementId/reject",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      settlementId: z.uuid("Settlement ID is required"),
+    }),
+    body: z.object({
+      rejectionReason: z.string().min(1, "Rejection reason is required"),
+    }),
+  }),
+  rejectSettlementController
+);
+
+router.post(
+  "/:groupId/settlements/:settlementId/dispute",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      settlementId: z.uuid("Settlement ID is required"),
+    }),
+    body: z.object({
+      disputeReason: z.string().min(1, "Dispute reason is required"),
+    }),
+  }),
+  disputeSettlementController
+);
+
+// ACTIVITY
+router.get("/:groupId/activities", verifyAccessToken, getActivitiesController);
+
 export default router;

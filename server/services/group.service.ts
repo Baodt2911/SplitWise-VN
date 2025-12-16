@@ -393,7 +393,7 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
         groupId: existingGroup.id,
         userId: userId,
         action: ActivityAction.SELF_JOIN_GROUP,
-        description: `${targetUser.fullName} joined the group`,
+        description: `Đã tham gia nhóm`,
       },
       tx
     );
@@ -402,8 +402,8 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
       {
         userId,
         type: NotificationType.MEMBER_SELF_JOINED,
-        title: "Thành viên mới trong nhóm",
-        body: `${targetUser.fullName} joined the group`,
+        title: "Nhóm có thành viên mới",
+        body: `${targetUser.fullName} vừa tham gia nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: existingGroup.id,
       },
@@ -477,7 +477,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
         groupId,
         userId: userId,
         action: ActivityAction.MEMBER_LEFT,
-        description: `${groupMember.user.fullName} has left the group`,
+        description: `Đã rời khỏi nhóm`,
       },
       tx
     );
@@ -486,8 +486,8 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
       {
         userId,
         type: NotificationType.MEMBER_LEFT,
-        title: "Thông báo",
-        body: `${groupMember.user.fullName} has left the group`,
+        title: "Thành viên rời nhóm",
+        body: `${groupMember.user.fullName} đã rời khỏi nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },
@@ -531,7 +531,8 @@ const addMemberDirectlyService = async (
         groupId,
         userId: userId,
         action: ActivityAction.ADD_MEMBER,
-        description: `Added ${user.fullName} to group`,
+        description: `Đã thêm thành viên vào nhóm`,
+        metadata: { targetUserId: user.id },
       },
       tx
     );
@@ -540,8 +541,8 @@ const addMemberDirectlyService = async (
       {
         userId,
         type: NotificationType.MEMBER_ADDED,
-        title: "Thông báo",
-        body: `Added ${user.fullName} to group`,
+        title: "Thành viên mới",
+        body: `${user.fullName} đã được thêm vào nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },
@@ -579,22 +580,12 @@ const sendInviteTokensService = async (
       },
     });
 
-    await createActivityService(
-      {
-        groupId,
-        userId: userId,
-        action: ActivityAction.INVITE_MEMBER,
-        description: `Invited ${user.fullName} to group`,
-      },
-      tx
-    );
-
     await createNotificationService(
       {
-        userId,
+        userId: user.id, // người được mời
         type: NotificationType.MEMBER_INVITED,
-        title: "",
-        body: ``,
+        title: "Lời mời tham gia nhóm",
+        body: `Bạn được mời tham gia một nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },
@@ -727,7 +718,11 @@ export const acceptInviteService = async (token: string, userId: string) => {
     where: { id: userId },
   });
 
-  if (!user) throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy người dùng" };
+  if (!user)
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Không tìm thấy người dùng",
+    };
 
   if (invite.phone && invite.phone !== user.phone) {
     throw {
@@ -783,7 +778,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
         groupId: invite.groupId,
         userId: userId,
         action: ActivityAction.ACCEPT_INVITE,
-        description: `${user.fullName} joined the group`,
+        description: `Đã tham gia nhóm`,
       },
       tx
     );
@@ -792,8 +787,8 @@ export const acceptInviteService = async (token: string, userId: string) => {
       {
         userId,
         type: NotificationType.MEMBER_JOINED,
-        title: "Thông báo",
-        body: `${user.fullName} joined the group`,
+        title: "Thành viên mới",
+        body: `${user.fullName} đã tham gia nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: invite.groupId,
       },
@@ -858,17 +853,18 @@ export const removeMemberService = async (
         groupId,
         userId: userId,
         action: ActivityAction.REMOVE_MEMBER,
-        description: `${groupMember.user.fullName} has been removed from the group`,
+        description: `Đã xóa thành viên khỏi nhóm`,
+        metadata: { targetUserId: memberId },
       },
       tx
     );
 
     await createNotificationService(
       {
-        userId,
-        type: NotificationType.MEMBER_REMOVED,
-        title: "Thông báo",
-        body: `${groupMember.user.fullName} has been removed from the group`,
+        userId: memberId, // người bị xóa
+        type: NotificationType.YOU_WERE_REMOVED,
+        title: "Bạn đã bị xóa khỏi nhóm",
+        body: "Bạn không còn là thành viên của nhóm này",
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },

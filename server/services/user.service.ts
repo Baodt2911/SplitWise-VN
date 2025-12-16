@@ -1,67 +1,12 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma, verifyGoogleIdToken } from "../configs";
+import { prisma } from "../configs";
 import redis from "../configs/redis.config";
 import {
-  LoginDTO,
-  RegisterDTO,
   ChangePasswordDTO,
   UpdateProfileDTO,
+  UpdateUserSettingsDTO,
 } from "../dtos";
 import bcrypt from "bcrypt";
-import { sendOtpRegisterService } from "./otp.service";
-
-export const loginService = async (data: LoginDTO) => {
-  const user = await prisma.user.findUnique({
-    where: { phone: data.phone },
-    select: {
-      id: true,
-      phone: true,
-      fullName: true,
-      email: true,
-      passwordHash: true,
-    },
-  });
-  if (!user) {
-    throw {
-      status: StatusCodes.BAD_REQUEST,
-      message: "Số điện thoại không hợp lệ",
-    };
-  }
-  const isPasswordValid = await bcrypt.compare(
-    data.password,
-    user.passwordHash
-  );
-  if (!isPasswordValid) {
-    throw {
-      status: StatusCodes.BAD_REQUEST,
-      message: "Mật khẩu không hợp lệ",
-    };
-  }
-  await prisma.user.update({
-    where: { phone: data.phone },
-    data: { lastLoginAt: new Date() },
-  });
-  const { passwordHash, ...rest } = user;
-  return rest;
-};
-
-export const registerService = async (data: RegisterDTO) => {
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(data.password, salt);
-  await redis.set(
-    `pending:${data.phone}`,
-    JSON.stringify({
-      phone: data.phone,
-      fullName: data.fullName,
-      email: data.email,
-      passwordHash: hashedPassword,
-    }),
-    "EX",
-    300
-  );
-  await sendOtpRegisterService(data.phone);
-  return true;
-};
 
 export const saveUserService = async (phone: string) => {
   const raw = await redis.get(`pending:${phone}`);
@@ -72,47 +17,21 @@ export const saveUserService = async (phone: string) => {
     };
   }
   const data = JSON.parse(raw);
-  await prisma.user.create({
-    data,
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data,
+    });
+
+    await tx.userSettings.create({
+      data: {
+        userId: user.id,
+      },
+    });
   });
 
   await redis.del(`pending:${phone}`);
 
   return true;
-};
-
-export const googleAuthService = async (idToken: string) => {
-  const payload = await verifyGoogleIdToken(idToken);
-  if (!payload) {
-    throw new Error("Invalid Google ID token");
-  } else {
-  }
-  const user = await prisma.user.upsert({
-    where: { googleId: payload?.sub },
-    update: {
-      email: payload.email,
-      fullName: payload.name || "",
-      avatarUrl: payload.picture,
-    },
-    create: {
-      googleId: payload?.sub,
-      email: payload?.email,
-      fullName: payload?.name || "",
-      avatarUrl: payload?.picture,
-      passwordHash: "",
-      phone: "",
-    },
-    select: {
-      id: true,
-      phone: true,
-      fullName: true,
-      email: true,
-      passwordHash: true,
-    },
-  });
-  const { passwordHash, ...rest } = user;
-
-  return rest;
 };
 
 export const changePasswordServie = async (
@@ -168,6 +87,30 @@ export const updateProfileService = async (
     };
   }
   await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data,
+  });
+  return true;
+};
+
+export const updateUserSettingsService = async (
+  userId: string,
+  data: UpdateUserSettingsDTO
+) => {
+  const existingUser = await prisma.userSettings.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+  if (!existingUser) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Người dùng không tồn tại",
+    };
+  }
+  await prisma.userSettings.update({
     where: {
       id: userId,
     },

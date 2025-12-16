@@ -1,4 +1,6 @@
 import { ActivityAction, Prisma } from "@prisma/client";
+import { prisma } from "../configs";
+import { checkGroupMember } from "../middlewares";
 
 export const createActivityService = async (
   data: {
@@ -13,4 +15,14 @@ export const createActivityService = async (
   return tx.activity.create({
     data,
   });
+};
+
+export const getActivitiesService = async (userId: string, groupId: string) => {
+  await checkGroupMember(userId, groupId);
+  const activities = await prisma.activity.findMany({
+    where: {
+      groupId,
+    },
+  });
+  return activities;
 };

@@ -1,19 +1,22 @@
+import { AccentColor, FontSize, ThemeType } from "@prisma/client";
 import { z } from "zod";
 export const loginSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-export const registerSchema = z.object({
-  phone: z.string().min(1, "Phone number is required"),
-  password: z.string().min(6, "Password must be at least 6 characters long"),
-  fullName: z.string().min(1, "Full name is required"),
-  email: z
-    .email("Invalid email format")
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => v || undefined),
-});
+export const registerSchema = z
+  .object({
+    phone: z.string().min(1, "Phone number is required"),
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+    fullName: z.string().min(1, "Full name is required"),
+    email: z
+      .email("Invalid email format")
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => v || undefined),
+  })
+  .strict();
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(6, "Current password is required"),
@@ -22,25 +25,67 @@ export const changePasswordSchema = z.object({
 
 export const updateProfileSchema = z
   .object({
-    fullName: z.string().min(1, "Full name is required"),
-    avatarUrl: z.string().min(1, "Avatar URL is required"),
-    bankName: z.string().min(1, "Bank name is required"),
-    bankAccountNumber: z.string().min(1, "Bank account number is required"),
-    bankAccountName: z.string().min(1, "Bank account name is required"),
-    language: z.string().min(1, "Language is required"),
-    timezone: z.string().min(1, "Timezone is required"),
-    currency: z.string().min(1, "Currency is required"),
+    fullName: z.string().min(1).optional(),
 
-    isPremium: z.boolean({ message: "isPremium must be a boolean" }),
+    avatarUrl: z.string().min(1).optional(),
 
-    premiumExpiresAt: z.iso
-      .datetime({ message: "premiumExpiresAt must be valid datetime" })
-      .transform((v) => new Date(v)),
+    bankName: z.string().min(1).optional(),
 
-    twoFactorEnabled: z.boolean({
-      message: "twoFactorEnabled must be a boolean",
-    }),
+    bankAccountNumber: z.string().min(1).optional(),
 
-    twoFactorSecret: z.string().min(1, "Two-factor secret is required"),
+    bankAccountName: z.string().min(1).optional(),
+
+    language: z.string().min(2).optional(),
+
+    timezone: z.string().min(1).optional(),
+
+    currency: z.string().length(3).optional(),
   })
-  .partial();
+  .strict();
+
+export const updateUserSettingsSchema = z
+  .object({
+    // Notification
+    notificationExpenseAdded: z.boolean().optional(),
+    notificationPaymentRequest: z.boolean().optional(),
+    notificationPaymentConfirmed: z.boolean().optional(),
+    notificationMemberAdded: z.boolean().optional(),
+    notificationComment: z.boolean().optional(),
+    notificationReminder: z.boolean().optional(),
+
+    // Email
+    emailNotifications: z.boolean().optional(),
+    emailWeeklySummary: z.boolean().optional(),
+
+    // Push
+    pushNotifications: z.boolean().optional(),
+
+    // Security
+    appLockEnabled: z.boolean().optional(),
+    appLockTimeout: z.number().int().min(1).max(60).optional(),
+    biometricEnabled: z.boolean().optional(),
+
+    // Privacy
+    showInSearch: z.boolean().optional(),
+    allowFriendRequests: z.boolean().optional(),
+    showOnlineStatus: z.boolean().optional(),
+
+    // Appearance
+    theme: z.enum(ThemeType).optional(),
+    accentColor: z.enum(AccentColor).optional(),
+    fontSize: z.enum(FontSize).optional(),
+  })
+  .refine(
+    (data) => {
+      // Nếu bật app lock thì phải có timeout
+      if (data.appLockEnabled === true) {
+        return typeof data.appLockTimeout === "number";
+      }
+      return true;
+    },
+    {
+      message: "appLockTimeout is required when appLockEnabled is true",
+      path: ["appLockTimeout"],
+    }
+  )
+  .strict();

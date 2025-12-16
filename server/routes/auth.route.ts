@@ -1,5 +1,9 @@
-                                                                                                                           import { Router } from "express";
-import { validateAll, verifyAccessToken, verifyRefreshToken } from "../middlewares";
+import { Router } from "express";
+import {
+  validateAll,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from "../middlewares";
 import {
   googleAuthController,
   loginController,

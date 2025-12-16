@@ -56,6 +56,7 @@ enum SettlementStatus {
   PENDING    @map("pending")
   CONFIRMED  @map("confirmed")
   REJECTED   @map("rejected")
+  DISPUTED   @map("disputed")
 }
 
 enum SettlementPaymentMethod {
@@ -89,9 +90,11 @@ enum NotificationType {
   EXPENSE_DELETED      @map("expense_deleted")
 
   // Payment flow
-  PAYMENT_REQUEST      @map("payment_request")
-  PAYMENT_CONFIRMED    @map("payment_confirmed")
-  PAYMENT_REJECTED     @map("payment_rejected")
+  PAYMENT_REQUEST          @map("payment_request")
+  PAYMENT_CONFIRMED        @map("payment_confirmed")
+  PAYMENT_REJECTED         @map("payment_rejected")
+  PAYMENT_DISPUTED         @map("payment_disputed")
+  PAYMENT_DISPUTE_REJECTED @map("payment_dispute_rejected")
 
   // Member events
   MEMBER_ADDED         @map("member_added")
@@ -101,7 +104,7 @@ enum NotificationType {
   MEMBER_LEFT          @map("member_left")
   MEMBER_ROLE_CHANGED  @map("member_role_changed")
   MEMBER_SELF_JOINED   @map("member_self_joined")
-
+  YOU_WERE_REMOVED     @map("you_were_removed")
   // Comment
   COMMENT_ADDED        @map("comment_added")
   COMMENT_MENTION      @map("comment_mention")
@@ -150,6 +153,10 @@ enum ActivityAction {
   CREATE_PAYMENT      @map("create_payment")
   CONFIRM_PAYMENT     @map("confirm_payment")
   REJECT_PAYMENT      @map("reject_payment")
+
+  DISPUTE_PAYMENT         @map("dispute_payment")
+  REJECT_DISPUTE_PAYMENT  @map("reject_dispute_payment")
+
 
   // Comment
   ADD_COMMENT         @map("add_comment")
@@ -484,6 +491,12 @@ model Settlement {
 
   // Trạng thái
   status SettlementStatus @default(PENDING) // pending, confirmed, rejected
+
+  // Lý do từ chối
+  rejectionReason String? @map("rejection_reason") @db.Text
+  
+  // Lý do tranh chấp
+  disputeReason String? @map("dispute_reason") @db.Text
 
   // Ngày thanh toán
   paymentDate DateTime @default(now()) @map("payment_date") @db.Date

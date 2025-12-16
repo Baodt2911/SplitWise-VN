@@ -2,21 +2,23 @@ import Decimal from "decimal.js";
 import { z } from "zod";
 
 // Zod schema for split item
-const splitSchema = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  amount: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Decimal(val) : undefined)),
-  percentage: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Decimal(val) : undefined)),
-  shares: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Decimal(val) : undefined)),
-});
+const splitSchema = z
+  .object({
+    userId: z.string().min(1, "User ID is required"),
+    amount: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Decimal(val) : undefined)),
+    percentage: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Decimal(val) : undefined)),
+    shares: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Decimal(val) : undefined)),
+  })
+  .strict();
 
 // Zod schema for creating expense
 export const createExpenseSchema = z
@@ -99,7 +101,8 @@ export const createExpenseSchema = z
       }
       return;
     }
-  });
+  })
+  .strict();
 
 export const updateExpenseSchema = z
   .object({
@@ -195,4 +198,5 @@ export const updateExpenseSchema = z
       }
       return;
     }
-  });
+  })
+  .strict();

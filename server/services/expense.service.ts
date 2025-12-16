@@ -425,7 +425,38 @@ export const getDetailExpenseService = async (
     },
   });
 
-  const resultComments = expense?.comments || [];
-  resultComments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  return expense;
+  if (!expense) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Chi phí không tồn tại",
+    };
+  }
+
+  return {
+    id: expense.id,
+    description: expense.description,
+    amount: expense.amount.toString(),
+    currency: expense.currency,
+    paidById: expense.paidBy,
+    paidBy: expense.paidByUser.fullName,
+    category: expense.category,
+    expenseDate: expense.expenseDate,
+    splitType: expense.splitType,
+    splits: expense.splits.map((s) => ({
+      id: s.id,
+      userId: s.user.id,
+      userName: s.user.fullName,
+      amount: s.amount.toString(),
+      shares: s.shares?.toString() || null,
+      percentage: s.percentage?.toString() || null,
+    })),
+    yourDebts: expense.splits
+      .reduce((acc, b) => {
+        if (b.user.id === userId && expense.paidBy !== userId) {
+          return acc.minus(b.amount);
+        }
+        return acc;
+      }, new Decimal(0))
+      .toString(),
+  };
 };

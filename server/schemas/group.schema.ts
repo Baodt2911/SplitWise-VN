@@ -1,15 +1,17 @@
 import { z } from "zod";
 
 // Zod schema for creating group
-export const createGroupSchema = z.object({
-  name: z.string().min(1, "Group name is required"),
-  description: z.string().optional(),
-  avatarUrl: z
-    .url("Avatar URL must be a valid URL")
-    .optional()
-    .or(z.literal("")),
-  isPublic: z.boolean().optional(),
-});
+export const createGroupSchema = z
+  .object({
+    name: z.string().min(1, "Group name is required"),
+    description: z.string().optional(),
+    avatarUrl: z
+      .url("Avatar URL must be a valid URL")
+      .optional()
+      .or(z.literal("")),
+    isPublic: z.boolean().optional(),
+  })
+  .strict();
 
 // Zod schema for updating group
 export const updateGroupSchema = z
@@ -29,7 +31,8 @@ export const updateGroupSchema = z
       .int()
       .positive("Reminder days must be a positive integer"),
   })
-  .partial();
+  .partial()
+  .strict();
 
 // Zod schema for query group
 export const queryGroupSchema = z.object({
