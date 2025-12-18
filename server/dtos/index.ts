@@ -2,3 +2,4 @@ export * from "./user.dto";
 export * from "./group.dto";
 export * from "./expense.dto";
 export * from "./settlement.dto";
+export * from "./comment.dto";

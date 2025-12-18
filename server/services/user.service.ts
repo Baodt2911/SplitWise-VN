@@ -86,13 +86,22 @@ export const updateProfileService = async (
       message: "Người dùng không tồn tại",
     };
   }
-  await prisma.user.update({
+  return await prisma.user.update({
     where: {
       id: userId,
     },
     data,
+    select: {
+      fullName: true,
+      avatarUrl: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+      language: true,
+      timezone: true,
+      currency: true,
+    },
   });
-  return true;
 };
 
 export const updateUserSettingsService = async (

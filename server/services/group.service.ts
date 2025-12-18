@@ -18,6 +18,7 @@ import { checkGroupAdmin } from "../middlewares";
 import { createActivityService } from "./activity.service";
 import { createNotificationService } from "./notification.service";
 import Decimal from "decimal.js";
+import { mapExpense } from "../utils/map";
 export const getAllGroupService = async (userId: string) => {
   const group = await prisma.group.findMany({
     where: {
@@ -153,6 +154,8 @@ export const getGroupService = async (userId: string, groupId: string) => {
               percentage: true,
             },
           },
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -202,34 +205,43 @@ export const getGroupService = async (userId: string, groupId: string) => {
   }));
 
   const resultExpenses = group.expenses.map((e) => ({
-    id: e.id,
-    description: e.description,
-    amount: e.amount.toString(),
-    currency: e.currency,
-    paidById: e.paidBy,
-    paidBy: e.paidByUser.fullName,
-    category: e.category,
-    expenseDate: e.expenseDate,
-    splitType: e.splitType,
-    splits: e.splits.map((s) => ({
-      id: s.id,
-      userId: s.user.id,
-      amount: s.amount.toString(),
-      shares: s.shares?.toString() || null,
-      percentage: s.percentage?.toString() || null,
-    })),
-    yourDebts: e.splits
-      .reduce((acc, b) => {
-        if (b.user.id === userId && e.paidBy !== userId) {
-          return acc.minus(b.amount);
-        }
-        return acc;
-      }, new Decimal(0))
-      .toString(),
+    ...mapExpense(userId, e),
     yourCredits: group.settlements
       .reduce((acc, b) => acc.plus(b.amount), new Decimal(0))
       .toString(),
   }));
+
+  // const resultExpenses = group.expenses.map((e) => ({
+  //   id: e.id,
+  //   description: e.description,
+  //   amount: e.amount.toString(),
+  //   currency: e.currency,
+  //   paidById: e.paidBy,
+  //   paidBy: e.paidByUser.fullName,
+  //   category: e.category,
+  //   expenseDate: e.expenseDate,
+  //   splitType: e.splitType,
+  //   splits: e.splits.map((s) => ({
+  //     id: s.id,
+  //     userId: s.user.id,
+  //     amount: s.amount.toString(),
+  //     shares: s.shares?.toString() || null,
+  //     percentage: s.percentage?.toString() || null,
+  //   })),
+  //   yourDebts: e.splits
+  //     .reduce((acc, b) => {
+  //       if (b.user.id === userId && e.paidBy !== userId) {
+  //         return acc.minus(b.amount);
+  //       }
+  //       return acc;
+  //     }, new Decimal(0))
+  //     .toString(),
+  //   yourCredits: group.settlements
+  //     .reduce((acc, b) => acc.plus(b.amount), new Decimal(0))
+  //     .toString(),
+  //   createdAt: e.createdAt,
+  //   updatedAt: e.updatedAt,
+  // }));
 
   const resultSettlements = group.settlements.map((s) => ({
     id: s.id,
@@ -254,21 +266,25 @@ export const createGroupService = async (
   const inviteCode = otpGenerator.generate(6, {
     specialChars: false,
   });
-  const group = await prisma.group.create({
+  return await prisma.group.create({
     data: {
       ...data,
       createdBy: userId,
       inviteCode: inviteCode.toUpperCase(),
+      members: {
+        create: {
+          userId,
+          role: GroupMemberRole.ADMIN,
+        },
+      },
+    },
+    select: {
+      id: true,
+      description: true,
+      avatarUrl: true,
+      isPublic: true,
     },
   });
-  await prisma.groupMember.create({
-    data: {
-      groupId: group.id,
-      userId,
-      role: GroupMemberRole.ADMIN,
-    },
-  });
-  return true;
 };
 
 export const updateGroupService = async (
@@ -289,11 +305,27 @@ export const updateGroupService = async (
     };
   }
   await checkGroupAdmin(userId, groupId);
-  await prisma.group.update({
+
+  return await prisma.group.update({
     where: { id: groupId },
     data,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      avatarUrl: true,
+      isPublic: true,
+      inviteCode: true,
+      allowMemberEdit: true,
+      allowMemberDirectAdd: true,
+      requirePaymentConfirmation: true,
+      autoReminderEnabled: true,
+      reminderDays: true,
+      createdBy: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
-  return true;
 };
 
 export const deleteGroupService = async (userId: string, groupId: string) => {

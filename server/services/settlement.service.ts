@@ -226,7 +226,7 @@ const disputeSettlementController = async (
       {
         userId: updateSettlement.payee.id, // người nhận tiền
         type: NotificationType.PAYMENT_DISPUTED,
-        title: "",
+        title: "Yêu cầu tranh chấp thanh toán",
         body: `${
           updateSettlement.payer.fullName
         } đã tranh chấp khoản thanh toán ${updateSettlement.amount.toString()} ${

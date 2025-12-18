@@ -20,9 +20,10 @@ export const createGroupController = catchAsync(
   async (req: Request<{}, {}, CreateGroupDTO>, res: Response) => {
     const userId = req.user?.userId;
 
-    await createGroupService(userId!, req.body);
+    const data = await createGroupService(userId!, req.body);
     res.status(StatusCodes.CREATED).json({
       message: "Tạo nhóm thành công",
+      data,
     });
   }
 );
@@ -40,9 +41,14 @@ export const updateGroupControlleer = catchAsync(
   ) => {
     const userId = req.user?.userId;
 
-    await updateGroupService(userId!, req.params.groupId, req.body);
+    const data = await updateGroupService(
+      userId!,
+      req.params.groupId,
+      req.body
+    );
     res.status(StatusCodes.OK).json({
       message: "Cập nhật nhóm thành công",
+      data,
     });
   }
 );

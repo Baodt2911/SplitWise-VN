@@ -28,9 +28,14 @@ export const createExpenseController = catchAsync(
     res: Response
   ) => {
     const userId = req.user?.userId;
-    await createExpenseService(userId!, req.params.groupId, req.body);
+    const data = await createExpenseService(
+      userId!,
+      req.params.groupId,
+      req.body
+    );
     res.status(StatusCodes.CREATED).json({
       message: "Tạo chi phí thành công",
+      data,
     });
   }
 );
@@ -41,7 +46,7 @@ export const updateExpenseController = catchAsync(
     res: Response
   ) => {
     const userId = req.user?.userId;
-    await updateExpenseService(
+    const data = await updateExpenseService(
       userId!,
       req.params.groupId,
       req.params.expenseId,
@@ -49,6 +54,7 @@ export const updateExpenseController = catchAsync(
     );
     res.status(StatusCodes.OK).json({
       message: "Cập nhật chi phí thành công",
+      data,
     });
   }
 );
