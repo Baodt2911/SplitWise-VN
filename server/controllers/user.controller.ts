@@ -27,9 +27,10 @@ export const updateProfileController = catchAsync(
   async (req: Request<{}, {}, UpdateProfileDTO>, res: Response) => {
     const userId = req.user?.userId;
 
-    await updateProfileService(userId!, req.body);
+    const data = await updateProfileService(userId!, req.body);
     res.status(StatusCodes.OK).json({
       message: "Cập nhật thông tin người dùng thành công",
+      data,
     });
   }
 );

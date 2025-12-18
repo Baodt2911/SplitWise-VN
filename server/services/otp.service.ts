@@ -31,12 +31,12 @@ export const sendOtpRegisterService = async (phone: string) => {
   const otp = await generateOtpService(`otp:register:${phone}`);
   console.log(otp);
 
-  const test = await twilioClient.messages.create({
-    body: `[SplitWise VN] Your OTP code is ${otp}.`,
-    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
-    to: `${phone}`,
-  });
-  console.log(test);
+  // const test = await twilioClient.messages.create({
+  //   body: `[SplitWise VN] Your OTP code is ${otp}.`,
+  //   messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+  //   to: `${phone}`,
+  // });
+  // console.log(test);
 
   return true;
 };

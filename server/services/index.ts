@@ -7,4 +7,4 @@ export * from "./expense.service";
 export * from "./settlement.service";
 export * from "./notification.service";
 export * from "./activity.service";
-export * from "./debt.service";
+export * from "./comment.service";

@@ -6,13 +6,16 @@ import {
   ActivityAction,
   ExpenseCategory,
   ExpenseSplitType,
+  NotificationType,
+  RelatedType,
   SettlementStatus,
 } from "@prisma/client";
 import { createActivityService } from "./activity.service";
 import Decimal from "decimal.js";
+import { createNotificationService } from "./notification.service";
+import { mapExpense } from "../utils/map";
 
 const buildSplits = (
-  expenseId: string,
   paidBy: string,
   splits: {
     userId: string;
@@ -25,12 +28,9 @@ const buildSplits = (
 ) => {
   //Kiểm tra user paidBy không có trong splits
   const otherSplits = splits.filter((s) => s.userId !== paidBy);
-  console.log(typeof amount);
-
   return otherSplits.map((s) => {
     if (splitType === ExpenseSplitType.EQUAL) {
       return {
-        expenseId,
         userId: s.userId,
         amount: amount.div(splits.length),
       };
@@ -38,7 +38,6 @@ const buildSplits = (
 
     if (splitType === ExpenseSplitType.EXACT) {
       return {
-        expenseId,
         userId: s.userId,
         amount: s.amount!,
       };
@@ -46,7 +45,6 @@ const buildSplits = (
 
     if (splitType === ExpenseSplitType.PERCENTAGE) {
       return {
-        expenseId,
         userId: s.userId,
         amount: amount.mul(s.percentage!).div(100),
         percentage: s.percentage,
@@ -60,7 +58,6 @@ const buildSplits = (
       );
       const amountPerShare = amount.div(totalShares);
       return {
-        expenseId,
         userId: s.userId,
         amount: amountPerShare.mul(s.shares!),
         shares: s.shares,
@@ -93,9 +90,35 @@ export const createExpenseService = async (
 
   const { splits, splitType, category, ...other } = data;
 
-  await prisma.$transaction(async (tx) => {
+  // Check user splits
+  const userIds = splits.map((s) => s.userId);
+
+  const members = await prisma.groupMember.findMany({
+    where: {
+      groupId,
+      userId: { in: userIds },
+    },
+    select: { userId: true },
+  });
+
+  if (members.length !== userIds.length) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "Có thành viên không thuộc nhóm",
+    };
+  }
+
+  return await prisma.$transaction(async (tx) => {
     const splitKey = splitType.toUpperCase() as keyof typeof ExpenseSplitType;
     const categoryKey = category.toUpperCase() as keyof typeof ExpenseCategory;
+    // ===== CALCULATE SPLITS =====
+    const splitData = buildSplits(
+      other.paidBy,
+      splits,
+      ExpenseSplitType[splitKey],
+      new Decimal(other.amount)
+    );
+
     const expense = await tx.expense.create({
       data: {
         ...other,
@@ -103,18 +126,41 @@ export const createExpenseService = async (
         category: ExpenseCategory[categoryKey],
         groupId,
         createdBy: userId,
+        splits: {
+          create: splitData,
+        },
       },
-    });
-    // ===== CALCULATE SPLITS =====
-    const splitData = buildSplits(
-      expense.id,
-      other.paidBy,
-      splits,
-      ExpenseSplitType[splitKey],
-      new Decimal(other.amount)
-    );
-    await tx.expenseSplit.createMany({
-      data: splitData,
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        currency: true,
+        paidBy: true,
+        paidByUser: {
+          select: {
+            fullName: true,
+          },
+        },
+        category: true,
+        expenseDate: true,
+        splitType: true,
+        splits: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+            amount: true,
+            shares: true,
+            percentage: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     await Promise.all(
@@ -141,22 +187,40 @@ export const createExpenseService = async (
       )
     );
 
-    const me = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { fullName: true },
-    });
-
     await createActivityService(
       {
         userId,
         groupId,
-        action: ActivityAction.UPDATE_EXPENSE,
-        description: `${me?.fullName} đã tạo chi phí “${other.description}”.`,
+        action: ActivityAction.ADD_EXPENSE,
+        description: "Đã tạo chi phí",
+        metadata: {
+          expenseId: expense.id,
+          paidBy: expense.paidBy,
+          amount: expense.amount,
+          currency: expense.currency,
+        },
       },
       tx
     );
+
+    const userAdd = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    await createNotificationService(
+      {
+        userId: userId, // người tạo chi phí
+        type: NotificationType.EXPENSE_ADDED,
+        title: "Nhóm có chi phí mới",
+        body: `${userAdd?.fullName} đã thêm chi phí "${expense.description}"`,
+        relatedType: RelatedType.EXPENSE,
+        relatedId: expense.id,
+      },
+      tx
+    );
+    return mapExpense(userId, expense);
   });
-  return true;
 };
 
 export const updateExpenseService = async (
@@ -263,7 +327,8 @@ export const updateExpenseService = async (
   }
 
   // Câp nhật
-  await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx) => {
+    let resultExpenses;
     const splitKey = splitType?.toUpperCase() as keyof typeof ExpenseSplitType;
     const categoryKey = category?.toUpperCase() as keyof typeof ExpenseCategory;
 
@@ -281,17 +346,37 @@ export const updateExpenseService = async (
       select: {
         id: true,
         description: true,
-        paidBy: true,
         amount: true,
-        splitType: true,
-        creator: {
+        currency: true,
+        paidBy: true,
+        paidByUser: {
           select: {
             fullName: true,
           },
         },
+        category: true,
+        expenseDate: true,
+        splitType: true,
+        splits: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+            amount: true,
+            shares: true,
+            percentage: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
+    resultExpenses = mapExpense(userId, updateExpense);
     // Kiểm tra
     if (splits || amount || splitType) {
       const finalSplits = (splits || expense.splits) as {
@@ -307,17 +392,53 @@ export const updateExpenseService = async (
         : expense.splitType;
 
       const newSplits = buildSplits(
-        expenseId,
         paidBy || expense.paidBy,
         finalSplits,
         finalSplitType,
         finalAmount
       );
 
-      await tx.expenseSplit.deleteMany({ where: { expenseId } });
-
-      await tx.expenseSplit.createMany({
-        data: newSplits,
+      const finalExpense = await tx.expense.update({
+        where: {
+          id: expenseId,
+        },
+        data: {
+          splits: {
+            deleteMany: {},
+            create: newSplits,
+          },
+        },
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          currency: true,
+          paidBy: true,
+          paidByUser: {
+            select: {
+              fullName: true,
+            },
+          },
+          category: true,
+          expenseDate: true,
+          splitType: true,
+          splits: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                },
+              },
+              amount: true,
+              shares: true,
+              percentage: true,
+            },
+          },
+          createdAt: true,
+          updatedAt: true,
+        },
       });
 
       await Promise.all(
@@ -343,22 +464,44 @@ export const updateExpenseService = async (
             })
         )
       );
-    }
 
-    const me = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { fullName: true },
-    });
+      resultExpenses = mapExpense(userId, finalExpense);
+    }
 
     await createActivityService(
       {
         userId,
         groupId,
         action: ActivityAction.UPDATE_EXPENSE,
-        description: `${me?.fullName} đã cập nhật chi phí “${updateExpense.description}”.`,
+        description: "Đã sửa chi phí",
+        metadata: {
+          expenseId: updateExpense.id,
+          paidBy: updateExpense.paidBy,
+          amount: updateExpense.amount,
+          currency: updateExpense.currency,
+        },
       },
       tx
     );
+
+    const userUpdate = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+    await createNotificationService(
+      {
+        userId: userId, // người tạo chi phí
+        type: NotificationType.EXPENSE_UPDATED,
+        title: "Chi phí vừa được sửa",
+        body: `${userUpdate?.fullName} đã sửa chi phí "${updateExpense.description}"`,
+        relatedType: RelatedType.EXPENSE,
+        relatedId: updateExpense.id,
+      },
+      tx
+    );
+
+    return resultExpenses;
   });
 };
 
@@ -405,6 +548,8 @@ export const getDetailExpenseService = async (
           percentage: true,
         },
       },
+      createdAt: true,
+      updatedAt: true,
       comments: {
         select: {
           id: true,
@@ -432,31 +577,5 @@ export const getDetailExpenseService = async (
     };
   }
 
-  return {
-    id: expense.id,
-    description: expense.description,
-    amount: expense.amount.toString(),
-    currency: expense.currency,
-    paidById: expense.paidBy,
-    paidBy: expense.paidByUser.fullName,
-    category: expense.category,
-    expenseDate: expense.expenseDate,
-    splitType: expense.splitType,
-    splits: expense.splits.map((s) => ({
-      id: s.id,
-      userId: s.user.id,
-      userName: s.user.fullName,
-      amount: s.amount.toString(),
-      shares: s.shares?.toString() || null,
-      percentage: s.percentage?.toString() || null,
-    })),
-    yourDebts: expense.splits
-      .reduce((acc, b) => {
-        if (b.user.id === userId && expense.paidBy !== userId) {
-          return acc.minus(b.amount);
-        }
-        return acc;
-      }, new Decimal(0))
-      .toString(),
-  };
+  return mapExpense(userId, expense);
 };
