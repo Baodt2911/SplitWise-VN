@@ -39,11 +39,28 @@ export const createCommentService = async (
       };
     }
   }
-  return await prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       expenseId,
       userId,
       ...data,
     },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      user: {
+        select: {
+          fullName: true,
+          avatarUrl: true,
+        },
+      },
+    },
   });
+  return {
+    id: comment.id,
+    content: comment.content,
+    fullName: comment.user.fullName,
+    avatarUrl: comment.user.avatarUrl,
+  };
 };
