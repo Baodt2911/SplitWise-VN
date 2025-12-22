@@ -1,5 +1,17 @@
-export { default as userRouter } from "./user.route";
-export { default as authRouter } from "./auth.route";
-export { default as otpRouter } from "./otp.route";
-export { default as groupRouter } from "./group.route";
-export { default as notificationRouter } from "./notification.route";
+import userRouter from "./user.route";
+import authRouter from "./auth.route";
+import groupBaseRouter from "./group.route";
+import groupRouters from "./groups/index";
+import otpRouter from "./otp.route";
+import notificationRouter from "./notification.route";
+import { Router } from "express";
+import { verifyAccessToken } from "../middlewares";
+
+const routers = Router();
+
+routers.use("/auth", authRouter);
+routers.use("/otp", otpRouter);
+routers.use("/group", groupBaseRouter);
+routers.use("/group/:groupId", verifyAccessToken, groupRouters);
+routers.use("/user", verifyAccessToken, userRouter);
+export default routers;

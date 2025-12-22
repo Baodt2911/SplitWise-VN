@@ -32,6 +32,7 @@ export const getAllGroupService = async (userId: string) => {
     select: {
       id: true,
       name: true,
+      description: true,
       avatarUrl: true,
       balances: {
         where: {
@@ -57,6 +58,7 @@ export const getAllGroupService = async (userId: string) => {
   const result = group.map((g) => ({
     id: g.id,
     name: g.name,
+    description: g.description,
     avatarUrl: g.avatarUrl,
     memberCount: g._count.members,
     expenseCount: g._count.expenses,
@@ -280,6 +282,7 @@ export const createGroupService = async (
     },
     select: {
       id: true,
+      name: true,
       description: true,
       avatarUrl: true,
       isPublic: true,

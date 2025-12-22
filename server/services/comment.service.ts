@@ -64,3 +64,50 @@ export const createCommentService = async (
     avatarUrl: comment.user.avatarUrl,
   };
 };
+
+export const getCommentsService = async (
+  userId: string,
+  groupId: string,
+  expenseId: string
+) => {
+  await checkGroupMember(userId, groupId);
+  const expense = await prisma.expense.findFirst({
+    where: {
+      id: expenseId,
+      groupId: groupId,
+    },
+  });
+
+  if (!expense) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Chi phí không tồn tại trong nhóm",
+    };
+  }
+  const comments = await prisma.comment.findMany({
+    where: {
+      expenseId,
+    },
+    select: {
+      id: true,
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
+      content: true,
+      createdAt: true,
+      parent: true,
+      replies: true,
+    },
+  });
+  const resultComments = comments.map((c) => ({
+    id: c.id,
+    fullName: c.user.fullName,
+    content: c.content,
+    createdAt: c.createdAt,
+    parent: c.parent,
+    replies: c.replies,
+  }));
+  return resultComments;
+};

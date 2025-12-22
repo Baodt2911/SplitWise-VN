@@ -7,3 +7,4 @@ export * from "./expense.controller";
 export * from "./settlement.controller";
 export * from "./notification.controller";
 export * from "./activity.controller";
+export * from "./comment.controller";

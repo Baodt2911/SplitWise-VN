@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { getActivitiesService } from "./../services/activity.service";
+import { getActivitiesService } from "./../services";
 import { StatusCodes } from "http-status-codes";
 
 export const getActivitiesController = catchAsync(

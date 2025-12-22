@@ -7,13 +7,7 @@ import cookieParser from "cookie-parser";
 import { configSocket } from "./configs";
 import { StatusCodes } from "http-status-codes";
 import { errorHandler } from "./middlewares";
-import {
-  authRouter,
-  groupRouter,
-  notificationRouter,
-  otpRouter,
-  userRouter,
-} from "./routes";
+import routers from "./routes";
 const app: Application = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -30,11 +24,8 @@ app.use(
     // },
   })
 );
-app.use("/api/v1/user", userRouter);
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/otp", otpRouter);
-app.use("/api/v1/group", groupRouter);
-app.use("/api/v1/notification", notificationRouter);
+app.use("/api/v1", routers);
+
 app.use((req: Request, res: Response) => {
   res.status(StatusCodes.NOT_FOUND).json({
     status: StatusCodes.NOT_FOUND,

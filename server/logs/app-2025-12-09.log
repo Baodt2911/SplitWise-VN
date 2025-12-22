@@ -1,0 +1,19 @@
+{"level":"error","message":"Group not found","method":"POST","path":"/api/v1/group/914f45aa-40da-4cce-95d1-66ee089f49cf/add-member","status":404,"timestamp":"2025-12-09T08:12:41.973Z"}
+{"level":"error","message":"Group not found","method":"POST","path":"/api/v1/group/09ee2634-815c-4046-8dcf-40b6c742fed2/add-member","status":404,"timestamp":"2025-12-09T08:13:10.716Z"}
+{"level":"error","message":"User is already a member","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":422,"timestamp":"2025-12-09T08:13:27.850Z"}
+{"level":"error","message":"User is already a member","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":422,"timestamp":"2025-12-09T08:22:31.239Z"}
+{"level":"error","message":"User is already a member","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":422,"timestamp":"2025-12-09T08:24:06.542Z"}
+{"level":"error","message":"An invitation has been sent and cannot be resend","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:24:20.851Z"}
+{"level":"error","message":"An invitation has been sent and cannot be resend","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:24:34.763Z"}
+{"level":"error","message":"An invitation has been sent and cannot be resend","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:25:52.487Z"}
+{"level":"error","message":"Không thể gửi lời mời khi đã thêm trực tiếp","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:26:37.664Z"}
+{"level":"error","message":"The invitation has been sent and cannot be added directly","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:27:25.856Z"}
+{"level":"error","message":"An invitation has been sent and cannot be resend","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/add-member","status":403,"timestamp":"2025-12-09T08:27:35.809Z"}
+{"level":"error","message":"Group not found","method":"POST","path":"/api/v1/group/6cfb871b-6730-475f-893f-d348fe9645c8/expenses/create","status":404,"timestamp":"2025-12-09T08:34:34.892Z"}
+{"level":"error","message":"You are not a member of this group","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/expenses/create","status":403,"timestamp":"2025-12-09T08:34:53.481Z"}
+{"level":"error","message":"You are not a member of this group","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/expenses/create","status":403,"timestamp":"2025-12-09T08:36:21.451Z"}
+{"level":"error","message":"You are not a member of this group","method":"POST","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084/expenses/create","status":403,"timestamp":"2025-12-09T08:36:48.073Z"}
+{"level":"error","message":"Group not found","method":"GET","path":"/api/v1/group/join/VNTNBS","status":404,"timestamp":"2025-12-09T12:10:55.441Z"}
+{"level":"error","message":"No permission","method":"GET","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084","status":403,"timestamp":"2025-12-09T15:34:21.358Z"}
+{"level":"error","message":"No permission","method":"GET","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084","status":403,"timestamp":"2025-12-09T15:35:08.699Z"}
+{"level":"error","message":"No permission","method":"GET","path":"/api/v1/group/c6d13b9b-3aa7-4cdf-82dc-e4a162ab7084","status":403,"timestamp":"2025-12-09T15:36:17.033Z"}
