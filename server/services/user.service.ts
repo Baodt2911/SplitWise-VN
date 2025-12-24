@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
+import { prisma } from "../lib/prisma";
 import redis from "../configs/redis.config";
 import {
   ChangePasswordDTO,

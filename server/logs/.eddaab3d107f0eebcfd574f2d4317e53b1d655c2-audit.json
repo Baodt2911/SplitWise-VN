@@ -6,11 +6,6 @@
     "auditLog": "D:\\project\\SplitWiseVN\\server\\logs\\.eddaab3d107f0eebcfd574f2d4317e53b1d655c2-audit.json",
     "files": [
         {
-            "date": 1765267725128,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-09.log",
-            "hash": "3d341ebfebaf7329bf30981167fc31c1efcd1cad44b26195aa23ccf0b4d4a47f"
-        },
-        {
             "date": 1765357402456,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-10.log",
             "hash": "96bf17302c9485ad1b3a516573df401125fcfe722f65e23e11f41e2391693a50"
@@ -49,6 +44,11 @@
             "date": 1766422972603,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-23.log",
             "hash": "0e55139a576d24693643d9aee128297d264e0bf148aa3aae3048ce8c0619a5d9"
+        },
+        {
+            "date": 1766565989285,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-24.log",
+            "hash": "766332929f82b73b86762a89d479992d2b07fce280bdf5c7e1a99fff1e51c1c2"
         }
     ],
     "hashType": "sha256"

@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma, verifyGoogleIdToken } from "../configs";
+import { prisma } from "../lib/prisma";
+import { verifyGoogleIdToken } from "../configs";
 import redis from "../configs/redis.config";
 import { LoginDTO, RegisterDTO } from "../dtos";
 import bcrypt from "bcrypt";

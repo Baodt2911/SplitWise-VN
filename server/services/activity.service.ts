@@ -1,5 +1,5 @@
-import { ActivityAction, Prisma } from "@prisma/client";
-import { prisma } from "../configs";
+import { ActivityAction, Prisma } from "../generated/prisma/client";
+import { prisma } from "../lib/prisma";
 import { checkGroupMember } from "../middlewares";
 
 export const createActivityService = async (

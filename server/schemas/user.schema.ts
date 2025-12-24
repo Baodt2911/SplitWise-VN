@@ -1,4 +1,4 @@
-import { AccentColor, FontSize, ThemeType } from "@prisma/client";
+import { AccentColor, FontSize, ThemeType } from "../generated/prisma/client";
 import { z } from "zod";
 export const loginSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),

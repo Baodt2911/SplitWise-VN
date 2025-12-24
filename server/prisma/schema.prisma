@@ -2,13 +2,13 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================================
@@ -16,14 +16,14 @@ datasource db {
 // ============================================================
 
 enum GroupMemberRole {
-  ADMIN  @map("admin")
-  MEMBER @map("member")
+  ADMIN
+  MEMBER
 }
 
 enum GroupMemberStatus {
-  ACTIVE  @map("active")
-  LEFT    @map("left")
-  REMOVED @map("removed")
+  ACTIVE
+  LEFT
+  REMOVED
 }
 
 
@@ -32,19 +32,19 @@ enum GroupMemberStatus {
 // ============================================================
 
 enum ExpenseCategory {
-  FOOD           @map("food")
-  TRANSPORT      @map("transport")
-  ENTERTAINMENT  @map("entertainment")
-  ACCOMMODATION  @map("accommodation")
-  SHOPPING       @map("shopping")
-  OTHER          @map("other")
+  FOOD
+  TRANSPORT
+  ENTERTAINMENT
+  ACCOMMODATION
+  SHOPPING
+  OTHER
 }
 
 enum ExpenseSplitType {
-  EQUAL      @map("equal")
-  EXACT      @map("exact")
-  PERCENTAGE @map("percentage")
-  SHARES     @map("shares")
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARES
 }
 
 
@@ -53,18 +53,18 @@ enum ExpenseSplitType {
 // ============================================================
 
 enum SettlementStatus {
-  PENDING    @map("pending")
-  CONFIRMED  @map("confirmed")
-  REJECTED   @map("rejected")
-  DISPUTED   @map("disputed")
+  PENDING
+  CONFIRMED
+  REJECTED
+  DISPUTED
 }
 
 enum SettlementPaymentMethod {
-  CASH          @map("cash")
-  BANK_TRANSFER @map("bank_transfer")
-  MOMO          @map("momo")
-  ZALOPAY       @map("zalopay")
-  VNPAY         @map("vnpay")
+  CASH
+  BANK_TRANSFER
+  MOMO
+  ZALOPAY
+  VNPAY
 }
 
 
@@ -73,9 +73,9 @@ enum SettlementPaymentMethod {
 // ============================================================
 
 enum FriendshipStatus {
-  PENDING  @map("pending")
-  ACCEPTED @map("accepted")
-  BLOCKED  @map("blocked")
+  PENDING
+  ACCEPTED
+  BLOCKED
 }
 
 
@@ -85,40 +85,41 @@ enum FriendshipStatus {
 
 enum NotificationType {
   // Expense
-  EXPENSE_ADDED        @map("expense_added")
-  EXPENSE_UPDATED      @map("expense_updated")
-  EXPENSE_DELETED      @map("expense_deleted")
+  EXPENSE_ADDED
+  EXPENSE_UPDATED
+  EXPENSE_DELETED
 
   // Payment flow
-  PAYMENT_REQUEST          @map("payment_request")
-  PAYMENT_CONFIRMED        @map("payment_confirmed")
-  PAYMENT_REJECTED         @map("payment_rejected")
-  PAYMENT_DISPUTED         @map("payment_disputed")
-  PAYMENT_DISPUTE_REJECTED @map("payment_dispute_rejected")
+  PAYMENT_REQUEST
+  PAYMENT_CONFIRMED
+  PAYMENT_REJECTED
+  PAYMENT_DISPUTED
+  PAYMENT_DISPUTE_REJECTED
 
   // Member events
-  MEMBER_ADDED         @map("member_added")
-  MEMBER_INVITED       @map("member_invited")
-  MEMBER_JOINED        @map("member_joined")
-  MEMBER_REMOVED       @map("member_removed")
-  MEMBER_LEFT          @map("member_left")
-  MEMBER_ROLE_CHANGED  @map("member_role_changed")
-  MEMBER_SELF_JOINED   @map("member_self_joined")
-  YOU_WERE_REMOVED     @map("you_were_removed")
+  MEMBER_ADDED
+  MEMBER_INVITED
+  MEMBER_JOINED
+  MEMBER_REMOVED
+  MEMBER_LEFT
+  MEMBER_ROLE_CHANGED
+  MEMBER_SELF_JOINED
+  YOU_WERE_REMOVED
+
   // Comment
-  COMMENT_ADDED        @map("comment_added")
-  COMMENT_MENTION      @map("comment_mention")
+  COMMENT_ADDED
+  COMMENT_MENTION
 
   // Other
-  REMINDER             @map("reminder")
+  REMINDER
 }
 
 enum RelatedType {
-  EXPENSE     @map("expense")
-  SETTLEMENT  @map("settlement")
-  GROUP       @map("group")
-  USER        @map("user")
-  COMMENT     @map("comment")
+  EXPENSE
+  SETTLEMENT
+  GROUP
+  USER
+  COMMENT
 }
 
 
@@ -128,42 +129,40 @@ enum RelatedType {
 
 enum ActivityAction {
   // Group lifecycle
-  CREATE_GROUP        @map("create_group")
-  UPDATE_GROUP        @map("update_group")
-  DELETE_GROUP        @map("delete_group")
+  CREATE_GROUP
+  UPDATE_GROUP
+  DELETE_GROUP
 
   // Membership changes
-  ADD_MEMBER          @map("add_member")
-  REMOVE_MEMBER       @map("remove_member")
-  MEMBER_LEFT         @map("member_left")
-  CHANGE_MEMBER_ROLE  @map("change_member_role")
-  SELF_JOIN_GROUP     @map("self_join_group")
+  ADD_MEMBER
+  REMOVE_MEMBER
+  MEMBER_LEFT
+  CHANGE_MEMBER_ROLE
+  SELF_JOIN_GROUP
 
   // Invites
-  INVITE_MEMBER       @map("invite_member")
-  ACCEPT_INVITE       @map("accept_invite")
-  REJECT_INVITE       @map("reject_invite")
+  INVITE_MEMBER
+  ACCEPT_INVITE
+  REJECT_INVITE
 
   // Expense
-  ADD_EXPENSE         @map("add_expense")
-  UPDATE_EXPENSE      @map("update_expense")
-  DELETE_EXPENSE      @map("delete_expense")
+  ADD_EXPENSE
+  UPDATE_EXPENSE
+  DELETE_EXPENSE
 
   // Payment workflow
-  CREATE_PAYMENT      @map("create_payment")
-  CONFIRM_PAYMENT     @map("confirm_payment")
-  REJECT_PAYMENT      @map("reject_payment")
-
-  DISPUTE_PAYMENT         @map("dispute_payment")
-  REJECT_DISPUTE_PAYMENT  @map("reject_dispute_payment")
-
+  CREATE_PAYMENT
+  CONFIRM_PAYMENT
+  REJECT_PAYMENT
+  DISPUTE_PAYMENT
+  REJECT_DISPUTE_PAYMENT
 
   // Comment
-  ADD_COMMENT         @map("add_comment")
-  DELETE_COMMENT      @map("delete_comment")
+  ADD_COMMENT
+  DELETE_COMMENT
 
   // System
-  REMINDER_TRIGGERED  @map("reminder_triggered")
+  REMINDER_TRIGGERED
 }
 
 
@@ -172,9 +171,9 @@ enum ActivityAction {
 // ============================================================
 
 enum GroupInviteStatus {
-  PENDING  @map("pending")
-  ACCEPTED @map("accepted")
-  EXPIRED  @map("expired")
+  PENDING
+  ACCEPTED
+  EXPIRED
 }
 
 
@@ -183,28 +182,28 @@ enum GroupInviteStatus {
 // ============================================================
 
 enum PremiumPlan {
-  MONTHLY  @map("monthly")
-  YEARLY   @map("yearly")
-  LIFETIME @map("lifetime")
+  MONTHLY
+  YEARLY
+  LIFETIME
 }
 
 enum PremiumStatus {
-  ACTIVE    @map("active")
-  CANCELLED @map("cancelled")
-  EXPIRED   @map("expired")
+  ACTIVE
+  CANCELLED
+  EXPIRED
 }
 
 enum PremiumPaymentMethod {
-  CASH          @map("cash")
-  BANK_TRANSFER @map("bank_transfer")
-  MOMO          @map("momo")
-  ZALOPAY       @map("zalopay")
-  VNPAY         @map("vnpay")
-  CREDIT_CARD   @map("credit_card")
-  PAYPAL        @map("paypal")
-  STRIPE        @map("stripe")
-  APPLE_PAY     @map("apple_pay")
-  GOOGLE_PAY    @map("google_pay")
+  CASH
+  BANK_TRANSFER
+  MOMO
+  ZALOPAY
+  VNPAY
+  CREDIT_CARD
+  PAYPAL
+  STRIPE
+  APPLE_PAY
+  GOOGLE_PAY
 }
 
 
@@ -213,14 +212,14 @@ enum PremiumPaymentMethod {
 // ============================================================
 
 enum ReferralStatus {
-  PENDING    @map("pending")
-  COMPLETED  @map("completed")
-  REWARDED   @map("rewarded")
+  PENDING
+  COMPLETED
+  REWARDED
 }
 
 enum ReferralRewardType {
-  PREMIUM_DAYS @map("premium_days")
-  POINTS       @map("points")
+  PREMIUM_DAYS
+  POINTS
 }
 
 
@@ -229,15 +228,15 @@ enum ReferralRewardType {
 // ============================================================
 
 enum PointTransactionType {
-  EARN   @map("earn")
-  REDEEM @map("redeem")
+  EARN
+  REDEEM
 }
 
 enum PointSource {
-  COMPLETE_PROFILE @map("complete_profile")
-  ADD_EXPENSE      @map("add_expense")
-  REFERRAL         @map("referral")
-  CHECK_IN         @map("check_in")
+  COMPLETE_PROFILE
+  ADD_EXPENSE
+  REFERRAL
+  CHECK_IN
 }
 
 
@@ -246,23 +245,23 @@ enum PointSource {
 // ============================================================
 
 enum ThemeType {
-  LIGHT @map("light")
-  DARK  @map("dark")
-  AUTO  @map("auto")
+  LIGHT
+  DARK
+  AUTO
 }
 
 enum FontSize {
-  SMALL  @map("small")
-  MEDIUM @map("medium")
-  LARGE  @map("large")
+  SMALL
+  MEDIUM
+  LARGE
 }
 
 enum AccentColor {
-  BLUE   @map("blue")
-  RED    @map("red")
-  GREEN  @map("green")
-  PURPLE @map("purple")
-  ORANGE @map("orange")
+  BLUE
+  RED
+  GREEN
+  PURPLE
+  ORANGE
 }
 
 

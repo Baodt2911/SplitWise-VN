@@ -1,5 +1,9 @@
-import { NotificationType, Prisma, RelatedType } from "@prisma/client";
-import { prisma } from "../configs";
+import {
+  NotificationType,
+  Prisma,
+  RelatedType,
+} from "../generated/prisma/client";
+import { prisma } from "../lib/prisma";
 import { StatusCodes } from "http-status-codes";
 
 export const getNotificationService = async (userId: string) => {

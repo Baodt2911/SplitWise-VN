@@ -1,6 +1,6 @@
 import { createActivityService } from "./activity.service";
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
+import { prisma } from "../lib/prisma";
 import { CreateSettlementDTO } from "../dtos";
 import { checkGroupMember } from "../middlewares";
 import {
@@ -9,7 +9,7 @@ import {
   RelatedType,
   SettlementPaymentMethod,
   SettlementStatus,
-} from "@prisma/client";
+} from "../generated/prisma/client";
 import { createNotificationService } from "./notification.service";
 
 export const createSettlementService = async (
@@ -399,7 +399,7 @@ const updateStatusSettlementService = async (
 export const updateSettlementService = {
   confirm: (userId: string, groupId: string, settlementId: string) =>
     updateStatusSettlementService(userId, groupId, settlementId, {
-      status: "CONFIRMED",
+      status: SettlementStatus.CONFIRMED,
     }),
 
   reject: (
@@ -409,7 +409,7 @@ export const updateSettlementService = {
     rejectionReason: string
   ) =>
     updateStatusSettlementService(userId, groupId, settlementId, {
-      status: "REJECTED",
+      status: SettlementStatus.REJECTED,
       reason: rejectionReason,
     }),
 

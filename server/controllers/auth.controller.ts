@@ -15,7 +15,6 @@ import { v4 as uuidv4 } from "uuid";
 export const loginController = catchAsync(
   async (req: Request<{}, {}, LoginDTO>, res: Response) => {
     const user = await loginService(req.body);
-
     const sessionId = uuidv4();
     const accessToken = generateAccessToken({ userId: user.id });
     const refreshToken = generateRefreshToken({ userId: user.id, sessionId });

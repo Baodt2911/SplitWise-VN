@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
+import { prisma } from "../lib/prisma";
 import { CreateExpenseDTO, UpdateExpenseDTO } from "../dtos";
-import { checkExpensePermission, checkGroupMember } from "../middlewares";
+import { checkGroupMember } from "../middlewares";
 import {
   ActivityAction,
   ExpenseCategory,
@@ -9,7 +9,7 @@ import {
   NotificationType,
   RelatedType,
   SettlementStatus,
-} from "@prisma/client";
+} from "../generated/prisma/client";
 import { createActivityService } from "./activity.service";
 import Decimal from "decimal.js";
 import { createNotificationService } from "./notification.service";

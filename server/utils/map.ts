@@ -1,4 +1,4 @@
-import { ExpenseCategory, ExpenseSplitType } from "@prisma/client";
+import { ExpenseCategory, ExpenseSplitType } from "../generated/prisma/client";
 import Decimal from "decimal.js";
 
 type ExpenseProps = {

@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
+import { prisma } from "../lib/prisma";
 import { CreateGroupDTO, UpdateGroupDTO } from "../dtos";
 import otpGenerator from "otp-generator";
 import {
@@ -11,14 +11,14 @@ import {
   NotificationType,
   RelatedType,
   SettlementStatus,
-  User,
-} from "@prisma/client";
+} from "../generated/prisma/client";
 import { v4 as uuidv4 } from "uuid";
 import { checkGroupAdmin } from "../middlewares";
 import { createActivityService } from "./activity.service";
 import { createNotificationService } from "./notification.service";
 import Decimal from "decimal.js";
 import { mapExpense } from "../utils/map";
+import { User } from "../generated/prisma/client";
 export const getAllGroupService = async (userId: string) => {
   const group = await prisma.group.findMany({
     where: {

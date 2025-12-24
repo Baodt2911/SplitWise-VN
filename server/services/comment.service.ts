@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
+import { prisma } from "../lib/prisma";
 import { CreateCommentDTO } from "../dtos";
 import { checkGroupMember } from "../middlewares";
 

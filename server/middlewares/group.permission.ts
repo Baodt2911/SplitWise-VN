@@ -1,8 +1,10 @@
 import { StatusCodes } from "http-status-codes";
-import { prisma } from "../configs";
-import { GroupMemberRole, GroupMemberStatus } from "@prisma/client";
+import { prisma } from "../lib/prisma";
+import { GroupMemberRole, GroupMemberStatus } from "../generated/prisma/client";
 
 export const checkGroupMember = async (userId: string, groupId: string) => {
+  console.log({ userId, groupId });
+
   const exists = await prisma.groupMember.findFirst({
     where: { userId, groupId, status: GroupMemberStatus.ACTIVE },
   });
