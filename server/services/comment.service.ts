@@ -2,6 +2,13 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../lib/prisma";
 import { CreateCommentDTO } from "../dtos";
 import { checkGroupMember } from "../middlewares";
+import { createActivityService } from "./activity.service";
+import {
+  ActivityAction,
+  NotificationType,
+  RelatedType,
+} from "../generated/prisma/client";
+import { createManyNotificationService } from "./notification.service";
 
 export const createCommentService = async (
   userId: string,
@@ -39,30 +46,67 @@ export const createCommentService = async (
       };
     }
   }
-  const comment = await prisma.comment.create({
-    data: {
-      expenseId,
-      userId,
-      ...data,
-    },
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-      user: {
-        select: {
-          fullName: true,
-          avatarUrl: true,
+
+  return await prisma.$transaction(async (tx) => {
+    const comment = await tx.comment.create({
+      data: {
+        expenseId,
+        userId,
+        ...data,
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        user: {
+          select: {
+            fullName: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
+    });
+
+    await createActivityService(
+      {
+        userId,
+        groupId,
+        action: ActivityAction.ADD_COMMENT,
+        description: "đã bình luận",
+        metadata: {
+          commentId: comment.id,
+          expenseId: expense.id,
+          preview: comment.content.slice(0, 50),
+        },
+      },
+      tx
+    );
+
+    const members = await tx.groupMember.findMany({
+      where: {
+        groupId,
+      },
+    });
+    // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
+    const membersFilter = members.filter((m) => m.userId !== userId);
+    await createManyNotificationService(
+      membersFilter.map((m) => ({
+        userId: m.userId,
+        type: NotificationType.COMMENT_ADDED,
+        title: "Bình luận mới",
+        body: `${expense.description}" có thêm bình luận mới từ ${comment.user.fullName}. Xem ngay!`,
+        relatedType: RelatedType.EXPENSE,
+        relatedId: expense.id,
+      })),
+      tx
+    );
+    return {
+      id: comment.id,
+      content: comment.content,
+      fullName: comment.user.fullName,
+      avatarUrl: comment.user.avatarUrl,
+    };
   });
-  return {
-    id: comment.id,
-    content: comment.content,
-    fullName: comment.user.fullName,
-    avatarUrl: comment.user.avatarUrl,
-  };
 };
 
 export const getCommentsService = async (

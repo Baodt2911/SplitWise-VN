@@ -3,6 +3,7 @@ import { Router } from "express";
 import { verifyAccessToken } from "../middlewares";
 import {
   changePasswordController,
+  getActivitiesController,
   updateProfileController,
   updateUserSettingsController,
 } from "../controllers";
@@ -13,6 +14,8 @@ import {
 } from "../schemas";
 
 const router = Router();
+
+router.get("/activites", getActivitiesController);
 
 router.patch(
   "/update-profile",

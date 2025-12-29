@@ -15,6 +15,8 @@ type ExpenseProps = {
   category: ExpenseCategory;
   expenseDate: Date;
   splitType: ExpenseSplitType;
+  receiptUrl: string | null;
+  notes: string | null;
   splits: {
     user: {
       fullName: string;
@@ -36,6 +38,8 @@ export const mapExpense = (userId: string, expense: ExpenseProps) => ({
   category: expense.category,
   expenseDate: expense.expenseDate,
   splitType: expense.splitType,
+  receiptUrl: expense.receiptUrl,
+  notes: expense.notes,
   splits: expense.splits.map((s) => ({
     id: s.id,
     userId: s.user.id,

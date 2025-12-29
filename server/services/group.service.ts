@@ -6,6 +6,7 @@ import {
   ActivityAction,
   ExpenseSplitType,
   GroupInviteStatus,
+  GroupMember,
   GroupMemberRole,
   GroupMemberStatus,
   NotificationType,
@@ -15,7 +16,10 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { checkGroupAdmin } from "../middlewares";
 import { createActivityService } from "./activity.service";
-import { createNotificationService } from "./notification.service";
+import {
+  createNotificationService,
+  createManyNotificationService,
+} from "./notification.service";
 import Decimal from "decimal.js";
 import { mapExpense } from "../utils/map";
 import { User } from "../generated/prisma/client";
@@ -128,6 +132,9 @@ export const getGroupService = async (userId: string, groupId: string) => {
         },
       },
       expenses: {
+        where: {
+          deletedAt: null,
+        },
         select: {
           id: true,
           description: true,
@@ -142,6 +149,8 @@ export const getGroupService = async (userId: string, groupId: string) => {
           category: true,
           expenseDate: true,
           splitType: true,
+          receiptUrl: true,
+          notes: true,
           splits: {
             select: {
               id: true,
@@ -268,25 +277,39 @@ export const createGroupService = async (
   const inviteCode = otpGenerator.generate(6, {
     specialChars: false,
   });
-  return await prisma.group.create({
-    data: {
-      ...data,
-      createdBy: userId,
-      inviteCode: inviteCode.toUpperCase(),
-      members: {
-        create: {
-          userId,
-          role: GroupMemberRole.ADMIN,
+  return await prisma.$transaction(async (tx) => {
+    const group = await tx.group.create({
+      data: {
+        ...data,
+        createdBy: userId,
+        inviteCode: inviteCode.toUpperCase(),
+        members: {
+          create: {
+            userId,
+            role: GroupMemberRole.ADMIN,
+          },
         },
       },
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      avatarUrl: true,
-      isPublic: true,
-    },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        avatarUrl: true,
+        isPublic: true,
+      },
+    });
+    await createActivityService(
+      {
+        userId,
+        action: ActivityAction.CREATE_GROUP,
+        description: "Đã tạo nhóm",
+        metadata: {
+          groupName: group.name,
+        },
+      },
+      tx
+    );
+    return group;
   });
 };
 
@@ -299,6 +322,17 @@ export const updateGroupService = async (
     where: {
       id: groupId,
     },
+    select: {
+      name: true,
+      description: true,
+      avatarUrl: true,
+      isPublic: true,
+      allowMemberDirectAdd: true,
+      allowMemberEdit: true,
+      requirePaymentConfirmation: true,
+      autoReminderEnabled: true,
+      reminderDays: true,
+    },
   });
 
   if (!existingGroup) {
@@ -309,25 +343,52 @@ export const updateGroupService = async (
   }
   await checkGroupAdmin(userId, groupId);
 
-  return await prisma.group.update({
-    where: { id: groupId },
-    data,
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      avatarUrl: true,
-      isPublic: true,
-      inviteCode: true,
-      allowMemberEdit: true,
-      allowMemberDirectAdd: true,
-      requirePaymentConfirmation: true,
-      autoReminderEnabled: true,
-      reminderDays: true,
-      createdBy: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+  return await prisma.$transaction(async (tx) => {
+    const group = await tx.group.update({
+      where: { id: groupId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        avatarUrl: true,
+        isPublic: true,
+        inviteCode: true,
+        allowMemberEdit: true,
+        allowMemberDirectAdd: true,
+        requirePaymentConfirmation: true,
+        autoReminderEnabled: true,
+        reminderDays: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await createActivityService(
+      {
+        userId,
+        groupId,
+        action: ActivityAction.UPDATE_GROUP,
+        description: "Đã cập nhật thông tin nhóm",
+        metadata: {
+          before: existingGroup,
+          after: {
+            name: group.name,
+            description: group.description,
+            avatarUrl: group.avatarUrl,
+            isPublic: group.isPublic,
+            allowMemberEdit: group.allowMemberEdit,
+            requirePaymentConfirmation: group.requirePaymentConfirmation,
+            autoReminderEnabled: group.autoReminderEnabled,
+            reminderDays: group.reminderDays,
+            allowMemberDirectAdd: group.allowMemberDirectAdd,
+          },
+        },
+      },
+      tx
+    );
+    return group;
   });
 };
 
@@ -345,13 +406,27 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
     };
   }
   await checkGroupAdmin(userId, groupId);
-  await prisma.group.update({
-    where: {
-      id: groupId,
-    },
-    data: {
-      deletedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.group.update({
+      where: {
+        id: groupId,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    await createActivityService(
+      {
+        userId,
+        action: ActivityAction.DELETE_GROUP,
+        description: "Đã xóa nhóm",
+        metadata: {
+          groupName: existingGroup.name,
+        },
+      },
+      tx
+    );
   });
   return true;
 };
@@ -364,6 +439,11 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
     select: {
       id: true,
       isPublic: true,
+      members: {
+        where: {
+          status: GroupMemberStatus.ACTIVE,
+        },
+      },
     },
   });
 
@@ -433,15 +513,17 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
       tx
     );
 
-    await createNotificationService(
-      {
-        userId,
+    // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
+    const members = existingGroup.members.filter((m) => m.userId !== userId);
+    await createManyNotificationService(
+      members.map((m) => ({
+        userId: m.userId,
         type: NotificationType.MEMBER_SELF_JOINED,
         title: "Nhóm có thành viên mới",
         body: `${targetUser.fullName} vừa tham gia nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: existingGroup.id,
-      },
+      })),
       tx
     );
   });
@@ -455,6 +537,11 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
     },
     select: {
       createdBy: true,
+      members: {
+        where: {
+          status: GroupMemberStatus.ACTIVE,
+        },
+      },
     },
   });
 
@@ -517,15 +604,17 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
       tx
     );
 
-    await createNotificationService(
-      {
-        userId,
+    // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
+    const members = existingGroup.members.filter((m) => m.userId !== userId);
+    await createManyNotificationService(
+      members.map((m) => ({
+        userId: m.userId,
         type: NotificationType.MEMBER_LEFT,
         title: "Thành viên rời nhóm",
         body: `${groupMember.user.fullName} đã rời khỏi nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
-      },
+      })),
       tx
     );
   });
@@ -535,6 +624,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
 const addMemberDirectlyService = async (
   userId: string,
   groupId: string,
+  members: GroupMember[],
   user: User
 ) => {
   //Check Invite tồn tại không
@@ -567,20 +657,25 @@ const addMemberDirectlyService = async (
         userId: userId,
         action: ActivityAction.ADD_MEMBER,
         description: `Đã thêm thành viên vào nhóm`,
-        metadata: { targetUserId: user.id },
+        metadata: {
+          targetUserId: user.id,
+          fullName: user.fullName,
+        },
       },
       tx
     );
 
-    await createNotificationService(
-      {
-        userId,
+    // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
+    const membersFilter = members.filter((m) => m.userId !== userId);
+    await createManyNotificationService(
+      membersFilter.map((m) => ({
+        userId: m.userId,
         type: NotificationType.MEMBER_ADDED,
         title: "Thành viên mới",
         body: `${user.fullName} đã được thêm vào nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
-      },
+      })),
       tx
     );
   });
@@ -613,7 +708,29 @@ const sendInviteTokensService = async (
         phone: user.phone,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), //7 ngày,
       },
+      select: {
+        id: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
     });
+
+    await createActivityService(
+      {
+        userId,
+        action: ActivityAction.INVITE_MEMBER,
+        description: "Đã gửi lời mời",
+        metadata: {
+          targetUserId: user.id,
+          fullName: user.fullName,
+        },
+      },
+      tx
+    );
 
     await createNotificationService(
       {
@@ -641,6 +758,11 @@ export const addMemberService = async (
     select: {
       allowMemberDirectAdd: true,
       createdBy: true,
+      members: {
+        where: {
+          status: GroupMemberStatus.ACTIVE,
+        },
+      },
     },
   });
 
@@ -691,7 +813,12 @@ export const addMemberService = async (
     existingGroup.allowMemberDirectAdd && targetUser.allowDirectAdd;
 
   if (allowDirect) {
-    await addMemberDirectlyService(userId, groupId, targetUser);
+    await addMemberDirectlyService(
+      userId,
+      groupId,
+      existingGroup.members,
+      targetUser
+    );
     return { added: true, method: "direct" };
   }
 
@@ -818,15 +945,23 @@ export const acceptInviteService = async (token: string, userId: string) => {
       tx
     );
 
-    await createNotificationService(
-      {
-        userId,
-        type: NotificationType.MEMBER_JOINED,
+    // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
+    const members = await tx.groupMember.findMany({
+      where: {
+        groupId: invite.groupId,
+        status: GroupMemberStatus.ACTIVE,
+      },
+    });
+    const membersFilter = members.filter((m) => m.userId !== userId);
+    await createManyNotificationService(
+      membersFilter.map((m) => ({
+        userId: m.userId,
+        type: NotificationType.MEMBER_ADDED,
         title: "Thành viên mới",
-        body: `${user.fullName} đã tham gia nhóm`,
+        body: `${user.fullName} đã được thêm vào nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: invite.groupId,
-      },
+      })),
       tx
     );
   });
@@ -889,7 +1024,10 @@ export const removeMemberService = async (
         userId: userId,
         action: ActivityAction.REMOVE_MEMBER,
         description: `Đã xóa thành viên khỏi nhóm`,
-        metadata: { targetUserId: memberId },
+        metadata: {
+          targetUserId: memberId,
+          fullName: groupMember.user.fullName,
+        },
       },
       tx
     );

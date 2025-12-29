@@ -2,6 +2,7 @@ import { Router } from "express";
 import { validateAll } from "../middlewares";
 import {
   createExpenseController,
+  deleteExpenseController,
   getDetailExpenseController,
   updateExpenseController,
 } from "../controllers";
@@ -39,6 +40,17 @@ router.patch(
     body: updateExpenseSchema,
   }),
   updateExpenseController
+);
+
+router.delete(
+  "/:expenseId/delete",
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      expenseId: z.uuid("Expense ID is required"),
+    }),
+  }),
+  deleteExpenseController
 );
 
 //COMMENT

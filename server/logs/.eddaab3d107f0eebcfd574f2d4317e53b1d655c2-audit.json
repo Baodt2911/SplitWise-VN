@@ -6,31 +6,6 @@
     "auditLog": "D:\\project\\SplitWiseVN\\server\\logs\\.eddaab3d107f0eebcfd574f2d4317e53b1d655c2-audit.json",
     "files": [
         {
-            "date": 1765357402456,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-10.log",
-            "hash": "96bf17302c9485ad1b3a516573df401125fcfe722f65e23e11f41e2391693a50"
-        },
-        {
-            "date": 1765468483927,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-11.log",
-            "hash": "fa0c1ffbefa414271d5988a49b0a7bf5036b482df12e87abd63ed92d7e6be64b"
-        },
-        {
-            "date": 1765524652446,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-12.log",
-            "hash": "74278d4e8951ce40356ec86e6f442dd6fa69b1c781c39621acbc49eeadb76ad8"
-        },
-        {
-            "date": 1765560377312,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-13.log",
-            "hash": "055e06e9630214080aed54861fe0741ca76fd394b7be356740cf86c501d1473b"
-        },
-        {
-            "date": 1765687377630,
-            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-14.log",
-            "hash": "bf21f978c37a942f090b7ef54e1d8e228dd870db2c12430539f1c60d11ffc187"
-        },
-        {
             "date": 1765874200848,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-16.log",
             "hash": "a1fcf0034234b0c132b6e25b5941e6ec25a240a3425c2b72dcf97126f80ea0ee"
@@ -49,6 +24,21 @@
             "date": 1766565989285,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-24.log",
             "hash": "766332929f82b73b86762a89d479992d2b07fce280bdf5c7e1a99fff1e51c1c2"
+        },
+        {
+            "date": 1766603740344,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-25.log",
+            "hash": "5526dd4109e8d9796f8a031956506f2ac72ab160281058160bd18e3a1cd953a6"
+        },
+        {
+            "date": 1766939565746,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-28.log",
+            "hash": "1623570431b42054a3153f0ff7e3af6a152e475e0ccec350e335c7587ec86d14"
+        },
+        {
+            "date": 1766945003508,
+            "name": "D:\\project\\SplitWiseVN\\server\\logs\\error-2025-12-29.log",
+            "hash": "ef3ab2fa924edad890b53a689119799f95deae7e436746bee17dfbf87eb9582c"
         }
     ],
     "hashType": "sha256"

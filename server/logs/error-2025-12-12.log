@@ -1,9 +1,0 @@
-{"level":"error","message":"Invalid phone","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T07:54:15.493Z"}
-{"level":"error","message":"Invalid phone","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:01:39.560Z"}
-{"level":"error","message":"Invalid phone","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:07:33.938Z"}
-{"level":"error","message":"Invalid phone","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:07:39.903Z"}
-{"level":"error","message":"Invalid password","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:07:49.880Z"}
-{"level":"error","message":"Invalid phone","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:09:02.157Z"}
-{"level":"error","message":"Invalid password","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:09:15.301Z"}
-{"level":"error","message":"Invalid password","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:28:57.392Z"}
-{"level":"error","message":"Invalid password","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2025-12-12T08:29:04.232Z"}

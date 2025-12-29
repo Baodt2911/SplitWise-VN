@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { validateAll, verifyAccessToken } from "../middlewares";
-import { readNotificationController } from "../controllers";
+import {
+  readAllNotificationsController,
+  readNotificationController,
+} from "../controllers";
 import z from "zod";
 
 const router = Router();
 
-router.get(
+router.patch(
   "/:notificationId/read",
-  verifyAccessToken,
   validateAll({
     params: z.object({
       notificationId: z.uuidv4("Notification ID is required"),
@@ -15,4 +17,6 @@ router.get(
   }),
   readNotificationController
 );
+
+router.patch("/read-all", readAllNotificationsController);
 export default router;

@@ -14,4 +14,5 @@ routers.use("/otp", otpRouter);
 routers.use("/group", groupBaseRouter);
 routers.use("/group/:groupId", verifyAccessToken, groupRouters);
 routers.use("/user", verifyAccessToken, userRouter);
+routers.use("/notifications", verifyAccessToken, notificationRouter);
 export default routers;

@@ -1,5 +1,6 @@
 import {
   createExpenseService,
+  deleteExpenseService,
   getDetailExpenseService,
   updateExpenseService,
 } from "../services";
@@ -54,6 +55,24 @@ export const updateExpenseController = catchAsync(
     );
     res.status(StatusCodes.OK).json({
       message: "Cập nhật chi phí thành công",
+      data,
+    });
+  }
+);
+
+export const deleteExpenseController = catchAsync(
+  async (
+    req: Request<{ groupId: string; expenseId: string }>,
+    res: Response
+  ) => {
+    const userId = req.user?.userId;
+    const data = await deleteExpenseService(
+      userId!,
+      req.params.groupId,
+      req.params.expenseId
+    );
+    res.status(StatusCodes.OK).json({
+      message: "Xóa chi phí thành công",
       data,
     });
   }
