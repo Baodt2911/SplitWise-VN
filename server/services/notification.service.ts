@@ -6,7 +6,7 @@ import {
 import { prisma } from "../lib/prisma";
 import { StatusCodes } from "http-status-codes";
 
-export const getNotificationService = async (userId: string) => {
+export const getNotificationsService = async (userId: string) => {
   return await prisma.notification.findMany({
     where: { userId },
   });

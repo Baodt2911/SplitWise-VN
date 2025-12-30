@@ -17,8 +17,7 @@ export const getActivitiesGroupController = catchAsync(
 export const getActivitiesController = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const groupId = req.params.groupId;
-    const activities = await getActivitiesService(userId!, groupId);
+    const activities = await getActivitiesService(userId!);
     res.status(StatusCodes.OK).json({
       activities,
     });

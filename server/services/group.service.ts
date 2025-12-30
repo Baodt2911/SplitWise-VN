@@ -23,6 +23,11 @@ import {
 import Decimal from "decimal.js";
 import { mapExpense } from "../utils/map";
 import { User } from "../generated/prisma/client";
+import {
+  emitNotificationToUser,
+  emitNotificationToUserInGroup,
+} from "../emitter/notification.emitter";
+import { io } from "../app";
 export const getAllGroupService = async (userId: string) => {
   const group = await prisma.group.findMany({
     where: {
@@ -527,6 +532,12 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
       tx
     );
   });
+
+  emitNotificationToUserInGroup(io, existingGroup.id, userId, {
+    type: NotificationType.MEMBER_SELF_JOINED,
+    relatedType: RelatedType.GROUP,
+    relatedId: existingGroup.id,
+  });
   return { joined: true };
 };
 
@@ -618,6 +629,12 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
       tx
     );
   });
+
+  emitNotificationToUserInGroup(io, groupId, userId, {
+    type: NotificationType.MEMBER_LEFT,
+    relatedType: RelatedType.GROUP,
+    relatedId: groupId,
+  });
   return true;
 };
 
@@ -679,6 +696,12 @@ const addMemberDirectlyService = async (
       tx
     );
   });
+
+  emitNotificationToUserInGroup(io, groupId, userId, {
+    type: NotificationType.MEMBER_ADDED,
+    relatedType: RelatedType.GROUP,
+    relatedId: groupId,
+  });
 };
 
 const sendInviteTokensService = async (
@@ -723,7 +746,7 @@ const sendInviteTokensService = async (
       {
         userId,
         action: ActivityAction.INVITE_MEMBER,
-        description: "Đã gửi lời mời",
+        description: "Đã gửi lời mời vào nhóm",
         metadata: {
           targetUserId: user.id,
           fullName: user.fullName,
@@ -956,14 +979,20 @@ export const acceptInviteService = async (token: string, userId: string) => {
     await createManyNotificationService(
       membersFilter.map((m) => ({
         userId: m.userId,
-        type: NotificationType.MEMBER_ADDED,
+        type: NotificationType.MEMBER_JOINED,
         title: "Thành viên mới",
-        body: `${user.fullName} đã được thêm vào nhóm`,
+        body: `${user.fullName} đã tham gia nhóm`,
         relatedType: RelatedType.GROUP,
         relatedId: invite.groupId,
       })),
       tx
     );
+  });
+
+  emitNotificationToUserInGroup(io, invite.groupId, userId, {
+    type: NotificationType.MEMBER_JOINED,
+    relatedType: RelatedType.GROUP,
+    relatedId: invite.groupId,
   });
   return { joined: true };
 };

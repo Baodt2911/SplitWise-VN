@@ -17,11 +17,38 @@ export const createActivityService = async (
   });
 };
 
-export const getActivitiesService = async (userId: string, groupId: string) => {
+export const getActivitiesGroupService = async (
+  userId: string,
+  groupId: string
+) => {
   await checkGroupMember(userId, groupId);
   const activities = await prisma.activity.findMany({
     where: {
       groupId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return activities;
+};
+
+export const getActivitiesService = async (userId: string) => {
+  const activities = await prisma.activity.findMany({
+    where: {
+      userId,
+      groupId: null,
+    },
+    select: {
+      id: true,
+      action: true,
+      description: true,
+      metadata: true,
+      createdAt: true,
+    },
+
+    orderBy: {
+      createdAt: "desc",
     },
   });
   return activities;

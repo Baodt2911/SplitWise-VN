@@ -1,10 +1,10 @@
-import { Socket } from "socket.io";
-import socketEvents from "../events";
-
-export const configSocket = (io: any) => {
+import socketEvents from "../emitter";
+import { verifyAccessTokenSocket } from "../middlewares";
+import { Server, Socket } from "socket.io";
+export const configSocket = (io: Server) => {
+  io.use(verifyAccessTokenSocket);
   io.on("connection", (socket: Socket) => {
     console.log("<<<<<Connected to socket>>>>> : ", socket.id);
-
     socketEvents(socket);
 
     socket.on("disconnect", () => {

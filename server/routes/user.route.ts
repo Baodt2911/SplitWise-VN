@@ -1,9 +1,9 @@
 import { validateAll } from "./../middlewares/validation.middleware";
 import { Router } from "express";
-import { verifyAccessToken } from "../middlewares";
 import {
   changePasswordController,
   getActivitiesController,
+  getNotificationsController,
   updateProfileController,
   updateUserSettingsController,
 } from "../controllers";
@@ -16,6 +16,7 @@ import {
 const router = Router();
 
 router.get("/activites", getActivitiesController);
+router.get("/notifications", getNotificationsController);
 
 router.patch(
   "/update-profile",

@@ -3,8 +3,19 @@ import { catchAsync } from "../helper/catchAsync";
 import {
   readNotificationService,
   readAllNotificationsService,
+  getNotificationsService,
 } from "../services";
 import { StatusCodes } from "http-status-codes";
+
+export const getNotificationsController = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    const notifications = await getNotificationsService(userId!);
+    res.status(StatusCodes.OK).json({
+      notifications,
+    });
+  }
+);
 
 export const readNotificationController = catchAsync(
   async (req: Request<{ notificationId: string }>, res: Response) => {

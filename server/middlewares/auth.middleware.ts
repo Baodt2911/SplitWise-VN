@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import jwt from "jsonwebtoken";
-import { CustomSocketType } from "../types";
 import { AccessJwtPayload, RefreshJwtPayload } from "../types/jwt";
+import { ExtendedError, Socket } from "socket.io";
 export const verifyAccessTokenSocket = (
-  socket: CustomSocketType,
-  next: NextFunction
+  socket: Socket,
+  next: (err?: ExtendedError) => void
 ) => {
   const accessToken: string = socket.handshake.auth.token;
   if (!accessToken) {
@@ -23,7 +23,7 @@ export const verifyAccessTokenSocket = (
 
       return next(new Error("Token không hợp lệ"));
     }
-    socket.user = decoded;
+    socket.data.user = decoded;
     next();
   });
 };
