@@ -18,6 +18,8 @@ import {
   createNotificationService,
 } from "./notification.service";
 import { mapExpense } from "../utils/map";
+import { emitNotificationToUserInGroup } from "../emitter/notification.emitter";
+import { io } from "../app";
 
 const buildSplits = (
   paidBy: string,
@@ -119,7 +121,7 @@ export const createExpenseService = async (
     };
   }
 
-  return await prisma.$transaction(async (tx) => {
+  const resultExpenses = await prisma.$transaction(async (tx) => {
     const splitKey = splitType.toUpperCase() as keyof typeof ExpenseSplitType;
     const categoryKey = category.toUpperCase() as keyof typeof ExpenseCategory;
     // ===== CALCULATE SPLITS =====
@@ -234,8 +236,17 @@ export const createExpenseService = async (
       })),
       tx
     );
+
     return mapExpense(userId, expense);
   });
+
+  emitNotificationToUserInGroup(io, groupId, userId, {
+    type: NotificationType.EXPENSE_ADDED,
+    relatedType: RelatedType.EXPENSE,
+    relatedId: resultExpenses.id,
+  });
+
+  return resultExpenses;
 };
 
 export const updateExpenseService = async (
@@ -357,7 +368,7 @@ export const updateExpenseService = async (
   }
 
   // Câp nhật
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     let resultExpenses;
     const splitKey = splitType?.toUpperCase() as keyof typeof ExpenseSplitType;
     const categoryKey = category?.toUpperCase() as keyof typeof ExpenseCategory;
@@ -570,8 +581,17 @@ export const updateExpenseService = async (
       })),
       tx
     );
+
     return resultExpenses;
   });
+
+  emitNotificationToUserInGroup(io, groupId, userId, {
+    type: NotificationType.EXPENSE_UPDATED,
+    relatedType: RelatedType.EXPENSE,
+    relatedId: result.id,
+  });
+
+  return result;
 };
 
 export const deleteExpenseService = async (
@@ -717,6 +737,12 @@ export const deleteExpenseService = async (
       })),
       tx
     );
+  });
+
+  emitNotificationToUserInGroup(io, groupId, userId, {
+    type: NotificationType.EXPENSE_DELETED,
+    relatedType: RelatedType.EXPENSE,
+    relatedId: expenseId,
   });
 };
 

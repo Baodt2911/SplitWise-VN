@@ -1072,5 +1072,11 @@ export const removeMemberService = async (
       },
       tx
     );
+
+    emitNotificationToUser(io, memberId, {
+      type: NotificationType.YOU_WERE_REMOVED,
+      relatedType: RelatedType.GROUP,
+      relatedId: groupId,
+    });
   });
 };

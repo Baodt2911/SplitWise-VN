@@ -26,6 +26,25 @@ export const getActivitiesGroupService = async (
     where: {
       groupId,
     },
+    select: {
+      id: true,
+      group: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+        },
+      },
+      action: true,
+      description: true,
+      metadata: true,
+      createdAt: true,
+    },
     orderBy: {
       createdAt: "desc",
     },

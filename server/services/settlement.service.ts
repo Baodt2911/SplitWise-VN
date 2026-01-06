@@ -11,6 +11,8 @@ import {
   SettlementStatus,
 } from "../generated/prisma/client";
 import { createNotificationService } from "./notification.service";
+import { emitNotificationToUser } from "../emitter/notification.emitter";
+import { io } from "../app";
 
 export const createSettlementService = async (
   userId: string,
@@ -66,7 +68,7 @@ export const createSettlementService = async (
 
   const { paymentMethod, ...other } = data;
   await checkGroupMember(userId, groupId);
-  await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const keyMethod =
       paymentMethod?.toUpperCase() as keyof typeof SettlementPaymentMethod;
 
@@ -127,6 +129,13 @@ export const createSettlementService = async (
       },
       tx
     );
+    return settlement;
+  });
+
+  emitNotificationToUser(io, data.payeeId, {
+    type: NotificationType.PAYMENT_REQUEST,
+    relatedType: RelatedType.SETTLEMENT,
+    relatedId: result.id,
   });
   return true;
 };
@@ -238,6 +247,12 @@ const disputeSettlementController = async (
       tx
     );
   });
+
+  emitNotificationToUser(io, settlement.payeeId, {
+    type: NotificationType.PAYMENT_DISPUTED,
+    relatedType: RelatedType.SETTLEMENT,
+    relatedId: settlementId,
+  });
 };
 
 const updateStatusSettlementService = async (
@@ -275,12 +290,17 @@ const updateStatusSettlementService = async (
     };
   }
 
-  if (settlement.status !== SettlementStatus.PENDING) {
+  if (settlement.status === status) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "Khoản thanh toán đã được xử lý trước đó",
     };
   }
+
+  const mapNotificationType = {
+    CONFIRMED: NotificationType.PAYMENT_CONFIRMED,
+    REJECTED: NotificationType.PAYMENT_REJECTED,
+  };
 
   await prisma.$transaction(async (tx) => {
     const updateData: {
@@ -364,11 +384,6 @@ const updateStatusSettlementService = async (
       tx
     );
 
-    const mapNotificationType = {
-      CONFIRMED: NotificationType.PAYMENT_CONFIRMED,
-      REJECTED: NotificationType.PAYMENT_REJECTED,
-    };
-
     const map_title_body = {
       title: {
         CONFIRMED: "Thanh toán đã được xác nhận",
@@ -392,6 +407,12 @@ const updateStatusSettlementService = async (
       },
       tx
     );
+  });
+
+  emitNotificationToUser(io, settlement.payerId, {
+    type: mapNotificationType[status],
+    relatedType: RelatedType.SETTLEMENT,
+    relatedId: settlementId,
   });
   return true;
 };
