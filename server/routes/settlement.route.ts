@@ -6,10 +6,22 @@ import {
   confirmSettlementController,
   createSettlementController,
   disputeSettlementController,
+  getSettlementController,
   rejectSettlementController,
 } from "../controllers";
 
 const router = Router({ mergeParams: true });
+
+router.get(
+  "/:settlementId",
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+      settlementId: z.uuid("Settlement ID is required"),
+    }),
+  }),
+  getSettlementController
+);
 router.post(
   "/create",
   validateAll({

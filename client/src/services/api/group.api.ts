@@ -1,4 +1,3 @@
-import * as SecureStore from "expo-secure-store";
 import { apiClient } from "./config";
 
 export interface PersonOweYou {
@@ -28,20 +27,11 @@ export interface GetGroupsParams {
 
 export const getGroups = async (params: GetGroupsParams): Promise<GroupsResponse> => {
   try {
-    // Get accessToken from SecureStore
-    const accessToken = await SecureStore.getItemAsync("accessToken");
-    
-    if (!accessToken) {
-      throw new Error("Bạn chưa đăng nhập");
-    }
-
+    // Interceptor automatically adds accessToken header
     const response = await apiClient.get<GroupsResponse>("/group/all", {
       params: {
         page: params.page,
         pageSize: params.pageSize,
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
       },
     });
     
@@ -117,18 +107,8 @@ export interface GroupDetailResponse {
 
 export const getGroupDetail = async (groupId: string): Promise<GroupDetailResponse> => {
   try {
-    // Get accessToken from SecureStore
-    const accessToken = await SecureStore.getItemAsync("accessToken");
-    
-    if (!accessToken) {
-      throw new Error("Bạn chưa đăng nhập");
-    }
-
-    const response = await apiClient.get<GroupDetailResponse>(`/group/${groupId}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    // Interceptor automatically adds accessToken header
+    const response = await apiClient.get<GroupDetailResponse>(`/group/${groupId}`);
     
     return response.data;
   } catch (error: any) {
@@ -150,6 +130,24 @@ export interface CreateGroupRequest {
 
 export interface CreateGroupResponse {
   message: string;
+  data: Group; // Server returns created group data
+}
+
+export interface UpdateGroupRequest {
+  name?: string;
+  description?: string;
+  avatarUrl?: string;
+  isPublic?: boolean;
+  allowMemberDirectAdd?: boolean;
+  allowMemberEdit?: boolean;
+  requirePaymentConfirmation?: boolean;
+  autoReminderEnabled?: boolean;
+  reminderDays?: number;
+}
+
+export interface UpdateGroupResponse {
+  message: string;
+  data: GroupDetail;
 }
 
 export interface ApiError {
@@ -159,14 +157,6 @@ export interface ApiError {
 
 export const createGroup = async (data: CreateGroupRequest): Promise<CreateGroupResponse | ApiError> => {
   try {
-    const accessToken = await SecureStore.getItemAsync("accessToken");
-    
-    if (!accessToken) {
-      return {
-        message: "Bạn chưa đăng nhập",
-      };
-    }
-
     // Prepare request body - convert empty string to undefined for optional fields
     const requestBody: CreateGroupRequest = {
       name: data.name,
@@ -175,15 +165,8 @@ export const createGroup = async (data: CreateGroupRequest): Promise<CreateGroup
       isPublic: data.isPublic ?? false,
     };
 
-    const response = await apiClient.post<CreateGroupResponse>(
-      "/group/create",
-      requestBody,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    // Interceptor automatically adds accessToken header
+    const response = await apiClient.post<CreateGroupResponse>("/group/create", requestBody);
     
     return response.data;
   } catch (error: any) {
@@ -192,6 +175,33 @@ export const createGroup = async (data: CreateGroupRequest): Promise<CreateGroup
     }
     
     const errorMessage = error.response?.data?.message || "Không thể tạo nhóm";
+    const field = error.response?.data?.field;
+    
+    return {
+      message: errorMessage,
+      field: field,
+    };
+  }
+};
+
+export const updateGroup = async (
+  groupId: string,
+  data: UpdateGroupRequest
+): Promise<UpdateGroupResponse | ApiError> => {
+  try {
+    // Interceptor automatically adds accessToken header
+    const response = await apiClient.patch<UpdateGroupResponse>(
+      `/group/${groupId}/update`,
+      data
+    );
+    
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+      throw new Error("Không thể kết nối đến server");
+    }
+    
+    const errorMessage = error.response?.data?.message || "Không thể cập nhật nhóm";
     const field = error.response?.data?.field;
     
     return {

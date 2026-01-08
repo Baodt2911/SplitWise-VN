@@ -2,8 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
@@ -26,7 +26,6 @@ enum GroupMemberStatus {
   REMOVED
 }
 
-
 // ============================================================
 // ENUM: Expense
 // ============================================================
@@ -47,7 +46,6 @@ enum ExpenseSplitType {
   SHARES
 }
 
-
 // ============================================================
 // ENUM: Settlement / Payments
 // ============================================================
@@ -67,7 +65,6 @@ enum SettlementPaymentMethod {
   VNPAY
 }
 
-
 // ============================================================
 // ENUM: Friendship
 // ============================================================
@@ -77,7 +74,6 @@ enum FriendshipStatus {
   ACCEPTED
   BLOCKED
 }
-
 
 // ============================================================
 // ENUM: Notification
@@ -122,7 +118,6 @@ enum RelatedType {
   COMMENT
 }
 
-
 // ============================================================
 // ENUM: Activity Logs
 // ============================================================
@@ -165,7 +160,6 @@ enum ActivityAction {
   REMINDER_TRIGGERED
 }
 
-
 // ============================================================
 // ENUM: GroupInvite
 // ============================================================
@@ -175,7 +169,6 @@ enum GroupInviteStatus {
   ACCEPTED
   EXPIRED
 }
-
 
 // ============================================================
 // ENUM: Premium Subscription
@@ -206,7 +199,6 @@ enum PremiumPaymentMethod {
   GOOGLE_PAY
 }
 
-
 // ============================================================
 // ENUM: Referral
 // ============================================================
@@ -221,7 +213,6 @@ enum ReferralRewardType {
   PREMIUM_DAYS
   POINTS
 }
-
 
 // ============================================================
 // ENUM: User Points
@@ -238,7 +229,6 @@ enum PointSource {
   REFERRAL
   CHECK_IN
 }
-
 
 // ============================================================
 // ENUM: User Settings (UI Preferences)
@@ -263,7 +253,6 @@ enum AccentColor {
   PURPLE
   ORANGE
 }
-
 
 // ============================================
 // MODELS
@@ -314,8 +303,8 @@ model User {
   settlementsPaid      Settlement[]          @relation("SettlementPayer")
   settlementsReceived  Settlement[]          @relation("SettlementPayee")
   settlementsConfirmed Settlement[]          @relation("SettlementConfirmer")
-  balancesPayer         Balance[]            @relation("BalancePayer")
-  balancesPayee         Balance[]            @relation("BalancePayee")
+  balancesPayer        Balance[]             @relation("BalancePayer")
+  balancesPayee        Balance[]             @relation("BalancePayee")
   friendshipsInitiated Friendship[]          @relation("FriendshipUser")
   friendshipsReceived  Friendship[]          @relation("FriendshipFriend")
   notifications        Notification[]
@@ -493,7 +482,7 @@ model Settlement {
 
   // Lý do từ chối
   rejectionReason String? @map("rejection_reason") @db.Text
-  
+
   // Lý do tranh chấp
   disputeReason String? @map("dispute_reason") @db.Text
 
@@ -535,21 +524,22 @@ model Balance {
   amount    Decimal  @db.Decimal(15, 2) // payer → payee nợ bao nhiêu
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
 
-  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  payer     User  @relation("BalancePayer", fields: [payerId], references: [id], onDelete: Cascade)
-  payee     User  @relation("BalancePayee", fields: [payeeId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer User  @relation("BalancePayer", fields: [payerId], references: [id], onDelete: Cascade)
+  payee User  @relation("BalancePayee", fields: [payeeId], references: [id], onDelete: Cascade)
+
   @@unique([groupId, payerId, payeeId])
   @@map("balances")
 }
 
-
+// Có thể bỏ
 model Friendship {
   id       String @id @default(uuid())
   userId   String @map("user_id")
   friendId String @map("friend_id")
 
   // Trạng thái
-   status FriendshipStatus @default(PENDING) // pending, accepted, blocked
+  status FriendshipStatus @default(PENDING) // pending, accepted, blocked
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()
@@ -577,7 +567,7 @@ model Notification {
 
   // Liên kết đến
   relatedType RelatedType? @map("related_type") // expense, settlement, group, user
-  relatedId   String? @map("related_id")
+  relatedId   String?      @map("related_id")
 
   // Trạng thái
   isRead Boolean   @default(false) @map("is_read")
@@ -708,7 +698,7 @@ model PremiumSubscription {
 
   // Thanh toán
   paymentMethod PremiumPaymentMethod? @map("payment_method")
-  transactionId String? @map("transaction_id") @db.VarChar(255)
+  transactionId String?               @map("transaction_id") @db.VarChar(255)
 
   // Hủy
   cancelledAt  DateTime? @map("cancelled_at") @db.Timestamp()
@@ -726,7 +716,7 @@ model PremiumSubscription {
   @@map("premium_subscriptions")
 }
 
-
+// Có thể bỏ
 model Referral {
   id         String  @id @default(uuid())
   referrerId String  @map("referrer_id")
@@ -751,7 +741,7 @@ model Referral {
   @@map("referrals")
 }
 
-
+// Có thể bỏ
 model UserPoint {
   id     String @id @default(uuid())
   userId String @map("user_id")
@@ -759,7 +749,7 @@ model UserPoint {
   points Int
 
   transactionType PointTransactionType @map("transaction_type")
-  source          PointSource         
+  source          PointSource
 
   description String? @db.Text
 
@@ -774,7 +764,6 @@ model UserPoint {
   @@index([transactionType])
   @@map("user_points")
 }
-
 
 model UserSettings {
   id     String @id @default(uuid())
@@ -800,9 +789,9 @@ model UserSettings {
   allowFriendRequests Boolean @default(true) @map("allow_friend_requests")
   showOnlineStatus    Boolean @default(true) @map("show_online_status")
 
-  theme       ThemeType  @default(LIGHT)
+  theme       ThemeType   @default(LIGHT)
   accentColor AccentColor @default(BLUE) @map("accent_color")
-  fontSize    FontSize    @default(MEDIUM) @map("font_size") 
+  fontSize    FontSize    @default(MEDIUM) @map("font_size")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()

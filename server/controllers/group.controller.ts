@@ -1,7 +1,7 @@
 import { leaveGroupService } from "./../services/group.service";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { CreateGroupDTO, UpdateGroupDTO } from "../dtos";
+import { CreateGroupDTO, QueryGroupDTO, UpdateGroupDTO } from "../dtos";
 import {
   createGroupService,
   deleteGroupService,
@@ -66,8 +66,11 @@ export const deleteGroupController = catchAsync(
 export const getAllGroupController = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-
-    const groups = await getAllGroupService(userId!);
+    const { page = 1, pageSize = 10 } = req.query as any as QueryGroupDTO;
+    const groups = await getAllGroupService(userId!, {
+      page: +page,
+      pageSize: +pageSize,
+    });
     res.status(StatusCodes.OK).json({
       groups,
     });

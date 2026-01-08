@@ -18,7 +18,6 @@ import { useToast } from "../../../hooks/useToast";
 
 export const HomeScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const { error: showError } = useToast();
 
@@ -42,22 +41,13 @@ export const HomeScreen = () => {
     reset,
   } = useGroupStore();
 
-  const translations = {
-    vi: {
-      overview: "Tổng quan",
-      youOwe: "Bạn đang nợ",
-      owedToYou: "Nợ bạn",
-      yourGroups: "Nhóm của bạn",
-    },
-    en: {
-      overview: "Overview",
-      youOwe: "You owe",
-      owedToYou: "Owed to you",
-      yourGroups: "Your groups",
-    },
+  const t = {
+    overview: "Tổng quan",
+    youOwe: "Bạn đang nợ",
+    owedToYou: "Nợ bạn",
+    yourGroups: "Nhóm của bạn",
   };
 
-  const t = useMemo(() => translations[language], [language]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Load groups
@@ -82,14 +72,14 @@ export const HomeScreen = () => {
       setHasMore(response.groups.length === pageSize);
       setCurrentPage(page);
     } catch (err: any) {
-      const errorMessage = err.message || (language === "vi" ? "Không thể tải danh sách nhóm" : "Failed to load groups");
+      const errorMessage = err.message || "Không thể tải danh sách nhóm";
       setError(errorMessage);
-      showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      showError(errorMessage, "Lỗi");
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [pageSize, language, showError]);
+  }, [pageSize, showError]);
 
   // Initial load - check store first
   useEffect(() => {

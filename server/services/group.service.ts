@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../lib/prisma";
-import { CreateGroupDTO, UpdateGroupDTO } from "../dtos";
+import { CreateGroupDTO, QueryGroupDTO, UpdateGroupDTO } from "../dtos";
 import otpGenerator from "otp-generator";
 import {
   ActivityAction,
@@ -21,14 +21,18 @@ import {
   createManyNotificationService,
 } from "./notification.service";
 import Decimal from "decimal.js";
-import { mapExpense } from "../utils/map";
 import { User } from "../generated/prisma/client";
 import {
   emitNotificationToUser,
   emitNotificationToUserInGroup,
 } from "../emitter/notification.emitter";
 import { io } from "../app";
-export const getAllGroupService = async (userId: string) => {
+export const getAllGroupService = async (
+  userId: string,
+  query: QueryGroupDTO
+) => {
+  const { page, pageSize } = query;
+  const skip = (page - 1) * pageSize;
   const group = await prisma.group.findMany({
     where: {
       members: {
@@ -63,6 +67,8 @@ export const getAllGroupService = async (userId: string) => {
     orderBy: {
       createdAt: "desc",
     },
+    skip,
+    take: pageSize,
   });
   const result = group.map((g) => ({
     id: g.id,
@@ -136,72 +142,6 @@ export const getGroupService = async (userId: string, groupId: string) => {
           role: "asc",
         },
       },
-      expenses: {
-        where: {
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          description: true,
-          amount: true,
-          currency: true,
-          paidBy: true,
-          paidByUser: {
-            select: {
-              fullName: true,
-            },
-          },
-          category: true,
-          expenseDate: true,
-          splitType: true,
-          receiptUrl: true,
-          notes: true,
-          splits: {
-            select: {
-              id: true,
-              user: {
-                select: {
-                  id: true,
-                  fullName: true,
-                },
-              },
-              amount: true,
-              shares: true,
-              percentage: true,
-            },
-          },
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      },
-      settlements: {
-        where: {
-          payeeId: userId,
-          status: SettlementStatus.CONFIRMED,
-        },
-        select: {
-          id: true,
-          payeeId: true,
-          payer: {
-            select: {
-              fullName: true,
-            },
-          },
-          payee: {
-            select: {
-              fullName: true,
-            },
-          },
-          amount: true,
-          status: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      },
     },
   });
 
@@ -220,58 +160,10 @@ export const getGroupService = async (userId: string, groupId: string) => {
     role: m.role,
   }));
 
-  const resultExpenses = group.expenses.map((e) => ({
-    ...mapExpense(userId, e),
-    yourCredits: group.settlements
-      .reduce((acc, b) => acc.plus(b.amount), new Decimal(0))
-      .toString(),
-  }));
-
-  // const resultExpenses = group.expenses.map((e) => ({
-  //   id: e.id,
-  //   description: e.description,
-  //   amount: e.amount.toString(),
-  //   currency: e.currency,
-  //   paidById: e.paidBy,
-  //   paidBy: e.paidByUser.fullName,
-  //   category: e.category,
-  //   expenseDate: e.expenseDate,
-  //   splitType: e.splitType,
-  //   splits: e.splits.map((s) => ({
-  //     id: s.id,
-  //     userId: s.user.id,
-  //     amount: s.amount.toString(),
-  //     shares: s.shares?.toString() || null,
-  //     percentage: s.percentage?.toString() || null,
-  //   })),
-  //   yourDebts: e.splits
-  //     .reduce((acc, b) => {
-  //       if (b.user.id === userId && e.paidBy !== userId) {
-  //         return acc.minus(b.amount);
-  //       }
-  //       return acc;
-  //     }, new Decimal(0))
-  //     .toString(),
-  //   yourCredits: group.settlements
-  //     .reduce((acc, b) => acc.plus(b.amount), new Decimal(0))
-  //     .toString(),
-  //   createdAt: e.createdAt,
-  //   updatedAt: e.updatedAt,
-  // }));
-
-  const resultSettlements = group.settlements.map((s) => ({
-    id: s.id,
-    payer: s.payer.fullName,
-    payee: s.payee.fullName,
-    amount: s.amount,
-  }));
-
   return {
     ...group,
     creator: group.creator?.fullName,
     members: resultMember,
-    expenses: resultExpenses,
-    settlements: [],
   };
 };
 
@@ -364,6 +256,7 @@ export const updateGroupService = async (
         requirePaymentConfirmation: true,
         autoReminderEnabled: true,
         reminderDays: true,
+        archivedAt: true,
         createdBy: true,
         createdAt: true,
         updatedAt: true,
@@ -505,6 +398,11 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
           leftAt: null,
         },
       });
+    } else {
+      throw {
+        status: StatusCodes.FORBIDDEN,
+        message: "Đã là thành viên không thể tham gia lại",
+      };
     }
 
     //Create activity

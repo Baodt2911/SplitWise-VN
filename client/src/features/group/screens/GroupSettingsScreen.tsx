@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ScrollView, Text, TouchableOpacity, View, Image, Switch, TextInput, Clipboard } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View, Image, Switch, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Icon } from "../../../components/common/Icon";
-import { getGroupDetail, type GroupDetail } from "../../../services/api/group.api";
+import { getGroupDetail, updateGroup, type GroupDetail } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { useGroupStore } from "../../../store/groupStore";
+import * as Clipboard from "expo-clipboard";
 
 export const GroupSettingsScreen = () => {
   const params = useLocalSearchParams<{ id: string }>();
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const currentUser = useAuthStore((state) => state.user);
   const { error: showError, success: showSuccess } = useToast();
@@ -30,17 +31,24 @@ export const GroupSettingsScreen = () => {
   const [allowMemberEdit, setAllowMemberEdit] = useState(false);
   const [requirePaymentConfirmation, setRequirePaymentConfirmation] = useState(false);
   const [autoReminderEnabled, setAutoReminderEnabled] = useState(false);
+  
+  // New settings
+  const [allowMemberDirectAdd, setAllowMemberDirectAdd] = useState(false);
+  const [reminderDays, setReminderDays] = useState(3);
+  const [tempReminderDays, setTempReminderDays] = useState("3");
+
+  // Edit states
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [infoState, setInfoState] = useState({ name: "", description: "", avatarUrl: "" });
 
   // Use refs to avoid dependency issues
   const showErrorRef = useRef(showError);
   const showSuccessRef = useRef(showSuccess);
-  const languageRef = useRef(language);
   
   useEffect(() => {
     showErrorRef.current = showError;
     showSuccessRef.current = showSuccess;
-    languageRef.current = language;
-  }, [showError, showSuccess, language]);
+  }, [showError, showSuccess]);
 
   // Load group detail - check store first, only call API if forceRefresh or not in store
   const loadGroupDetail = useCallback(async (forceRefresh = false) => {
@@ -55,11 +63,15 @@ export const GroupSettingsScreen = () => {
       const storedGroup = getGroupDetailFromStore(params.id);
       if (storedGroup) {
         // Use data from store, no API call needed
-        setGroup(storedGroup);
-        setIsPublic(storedGroup.isPublic);
-        setAllowMemberEdit(storedGroup.allowMemberEdit);
-        setRequirePaymentConfirmation(storedGroup.requirePaymentConfirmation);
-        setAutoReminderEnabled(storedGroup.autoReminderEnabled);
+        const safeStored = {
+          ...storedGroup,
+          members: Array.isArray(storedGroup.members) ? storedGroup.members : [],
+        };
+        setGroup(safeStored);
+        setIsPublic(safeStored.isPublic);
+        setAllowMemberEdit(safeStored.allowMemberEdit);
+        setRequirePaymentConfirmation(safeStored.requirePaymentConfirmation);
+        setAutoReminderEnabled(safeStored.autoReminderEnabled);
         setIsLoading(false);
         return; // Exit early, no API call
       }
@@ -69,16 +81,23 @@ export const GroupSettingsScreen = () => {
     try {
       setIsLoading(true);
       const response = await getGroupDetail(params.id);
-      setGroup(response.group);
-      setIsPublic(response.group.isPublic);
+      const safeGroup = {
+        ...response.group,
+        members: Array.isArray(response.group.members) ? response.group.members : [],
+      };
+      setGroup(safeGroup);
+      setIsPublic(safeGroup.isPublic);
       setAllowMemberEdit(response.group.allowMemberEdit);
       setRequirePaymentConfirmation(response.group.requirePaymentConfirmation);
       setAutoReminderEnabled(response.group.autoReminderEnabled);
+      setAllowMemberDirectAdd(response.group.allowMemberDirectAdd);
+      setReminderDays(response.group.reminderDays);
+      setTempReminderDays(String(response.group.reminderDays));
       // Save to store
-      setGroupDetail(params.id, response.group);
+      setGroupDetail(params.id, safeGroup);
     } catch (err: any) {
-      const errorMessage = err.message || (languageRef.current === "vi" ? "Không thể tải thông tin nhóm" : "Failed to load group");
-      showErrorRef.current(errorMessage, languageRef.current === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.message || "Không thể tải thông tin nhóm";
+      showErrorRef.current(errorMessage, "Lỗi");
     } finally {
       setIsLoading(false);
     }
@@ -90,11 +109,19 @@ export const GroupSettingsScreen = () => {
       const storedGroup = getGroupDetailFromStore(params.id);
       if (storedGroup) {
         // Use data from store, no API call needed
-        setGroup(storedGroup);
-        setIsPublic(storedGroup.isPublic);
-        setAllowMemberEdit(storedGroup.allowMemberEdit);
-        setRequirePaymentConfirmation(storedGroup.requirePaymentConfirmation);
-        setAutoReminderEnabled(storedGroup.autoReminderEnabled);
+        const safeStored = {
+          ...storedGroup,
+          members: Array.isArray(storedGroup.members) ? storedGroup.members : [],
+          expenses: Array.isArray(storedGroup.expenses) ? storedGroup.expenses : [],
+        };
+        setGroup(safeStored);
+        setIsPublic(safeStored.isPublic);
+        setAllowMemberEdit(safeStored.allowMemberEdit);
+        setRequirePaymentConfirmation(safeStored.requirePaymentConfirmation);
+        setAutoReminderEnabled(safeStored.autoReminderEnabled);
+        setAllowMemberDirectAdd(safeStored.allowMemberDirectAdd);
+        setReminderDays(safeStored.reminderDays);
+        setTempReminderDays(String(safeStored.reminderDays));
         setIsLoading(false);
       } else {
         // Not in store, load from API
@@ -106,11 +133,19 @@ export const GroupSettingsScreen = () => {
   // Update when store changes
   useEffect(() => {
     if (groupFromStore) {
-      setGroup(groupFromStore);
-      setIsPublic(groupFromStore.isPublic);
+      const safeStored = {
+        ...groupFromStore,
+        members: Array.isArray(groupFromStore.members) ? groupFromStore.members : [],
+        expenses: Array.isArray(groupFromStore.expenses) ? groupFromStore.expenses : [],
+      };
+      setGroup(safeStored);
+      setIsPublic(safeStored.isPublic);
       setAllowMemberEdit(groupFromStore.allowMemberEdit);
       setRequirePaymentConfirmation(groupFromStore.requirePaymentConfirmation);
       setAutoReminderEnabled(groupFromStore.autoReminderEnabled);
+      setAllowMemberDirectAdd(groupFromStore.allowMemberDirectAdd);
+      setReminderDays(groupFromStore.reminderDays);
+      setTempReminderDays(String(groupFromStore.reminderDays));
     }
   }, [groupFromStore]);
 
@@ -146,14 +181,101 @@ export const GroupSettingsScreen = () => {
     return colors[hash % colors.length];
   }, []);
 
+
+  // Pick image
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setInfoState(prev => ({ ...prev, avatarUrl: result.assets[0].uri }));
+    }
+  };
+
+  const startEditing = () => {
+    if (!group) return;
+    setInfoState({
+       name: group.name,
+       description: group.description || "",
+       avatarUrl: group.avatarUrl || ""
+    });
+    setIsEditingInfo(true);
+  };
+
+  const saveGroupInfo = async () => {
+     if (!group) return;
+     if (!infoState.name.trim()) {
+        showErrorRef.current("Tên nhóm không được để trống", "Lỗi");
+        return;
+     }
+     
+     const changes: any = {};
+     if (infoState.name !== group.name) changes.name = infoState.name;
+     if (infoState.description !== (group.description || "")) changes.description = infoState.description;
+     if (infoState.avatarUrl !== (group.avatarUrl || "")) changes.avatarUrl = infoState.avatarUrl;
+
+     if (Object.keys(changes).length > 0) {
+        try {
+            const result = await updateGroup(group.id, changes);
+            if ("data" in result) {
+                 const mergedGroup = { 
+                    ...group, 
+                    ...result.data, 
+                    members: group.members, 
+                    expenses: group.expenses 
+                 };
+                 setGroupDetail(group.id, mergedGroup);
+            } else if ("message" in result) {
+                showErrorRef.current(result.message, "Lỗi");
+            }
+        } catch (err: any) {
+            showErrorRef.current(err.message || "Lỗi", "Lỗi");
+        }
+     }
+     setIsEditingInfo(false);
+  };
+
+  // Handle update settings
+  const handleUpdateSettings = async (field: string, value: any) => {
+    if (!group) return;
+
+    try {
+      const result = await updateGroup(group.id, { [field]: value });
+      // Check if result has data (success)
+      if ("data" in result) {
+        // Update store with merged data (preserve members/expenses as API might not return them)
+        const mergedGroup = {
+           ...group,
+           ...result.data,
+           members: group.members, // Explicitly preserve members
+           expenses: group.expenses, // Explicitly preserve expenses
+        };
+        setGroupDetail(group.id, mergedGroup);
+      } else if ("message" in result) {
+         // Error case
+         showErrorRef.current(result.message, "Lỗi");
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || "Không thể cập nhật nhóm";
+      showErrorRef.current(errorMessage, "Lỗi");
+    }
+  };
+
   // Copy invite link
   const handleCopyLink = useCallback(async () => {
     if (!group) return;
     const inviteLink = `splitwise.vn/join/${group.inviteCode}`;
-    Clipboard.setString(inviteLink);
+    await Clipboard.setStringAsync(inviteLink);
     showSuccessRef.current(
-      languageRef.current === "vi" ? "Đã sao chép link" : "Link copied",
-      languageRef.current === "vi" ? "Thành công" : "Success"
+      "Đã sao chép link",
+      "Thành công"
     );
   }, [group]);
 
@@ -166,64 +288,7 @@ export const GroupSettingsScreen = () => {
 
   const isAdmin = getCurrentUserRole() === "ADMIN";
 
-  const translations = {
-    vi: {
-      title: "Cài đặt nhóm",
-      groupInfo: "Thông tin nhóm",
-      members: "Thành viên",
-      addMember: "Thêm thành viên",
-      privacy: "Quyền riêng tư",
-      public: "Công khai",
-      publicDesc: "Bất kỳ ai có link đều có thể tham gia",
-      private: "Riêng tư",
-      privateDesc: "Chỉ admin mới có thể mời thành viên",
-      newLink: "Link mới",
-      copy: "Sao chép",
-      createNew: "Tạo mới",
-      qrCode: "Mã QR",
-      options: "Tùy chọn",
-      allowMemberEdit: "Cho phép thành viên sửa/xóa",
-      requirePaymentConfirmation: "Yêu cầu xác nhận thanh toán",
-      autoNotifications: "Thông báo tự động",
-      data: "Dữ liệu",
-      exportData: "Xuất dữ liệu nhóm",
-      archiveGroup: "Lưu trữ nhóm",
-      dangerZone: "Vùng nguy hiểm",
-      leaveGroup: "Rời nhóm",
-      deleteGroup: "Xóa nhóm",
-      admin: "Admin",
-      member: "Thành viên",
-    },
-    en: {
-      title: "Group Settings",
-      groupInfo: "Group Information",
-      members: "Members",
-      addMember: "Add member",
-      privacy: "Privacy",
-      public: "Public",
-      publicDesc: "Anyone with a link can join",
-      private: "Private",
-      privateDesc: "Only admin can invite members",
-      newLink: "New Link",
-      copy: "Copy",
-      createNew: "Create New",
-      qrCode: "QR Code",
-      options: "Options",
-      allowMemberEdit: "Allow members to edit/delete",
-      requirePaymentConfirmation: "Require payment confirmation",
-      autoNotifications: "Automatic notifications",
-      data: "Data",
-      exportData: "Export group data",
-      archiveGroup: "Archive group",
-      dangerZone: "Danger Zone",
-      leaveGroup: "Leave group",
-      deleteGroup: "Delete group",
-      admin: "Admin",
-      member: "Member",
-    },
-  };
 
-  const t = translations[language];
 
   if (isLoading || !group) {
     return (
@@ -244,7 +309,7 @@ export const GroupSettingsScreen = () => {
       <View
         className="border-b"
         style={{
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           borderBottomColor: colors.border,
         }}
       >
@@ -260,7 +325,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.title}
+              Cài đặt nhóm
             </Text>
           </View>
 
@@ -268,6 +333,10 @@ export const GroupSettingsScreen = () => {
         </View>
       </View>
 
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 20 }}
@@ -275,14 +344,35 @@ export const GroupSettingsScreen = () => {
       >
         {/* Group Information Section */}
         <View
-          className="rounded-2xl mx-4 mt-4 p-6"
+          className="rounded-2xl mx-4 mt-4 p-6 relative"
           style={{ backgroundColor: colors.surface }}
         >
+          {/* Edit Actions - Absolute Top Right */}
+          {isAdmin && (
+             <View className="absolute top-4 right-4 z-10">
+                {!isEditingInfo ? (
+                   <TouchableOpacity onPress={startEditing} className="p-2">
+                      <Icon name="edit" size={20} color={colors.primary} />
+                   </TouchableOpacity>
+                ) : (
+                   <View className="flex-row gap-2">
+                       <TouchableOpacity onPress={saveGroupInfo} className="p-2 bg-primary rounded-full" style={{ backgroundColor: colors.primary }}>
+                          <Icon name="check" size={16} color="#FFF" />
+                       </TouchableOpacity>
+                       <TouchableOpacity onPress={() => setIsEditingInfo(false)} className="p-2 bg-gray-200 rounded-full" style={{ backgroundColor: colors.textSecondary }}>
+                          <Icon name="x" size={16} color="#FFF" />
+                       </TouchableOpacity>
+                   </View>
+                )}
+             </View>
+          )}
+
           <View className="items-center mb-4">
             <View className="relative">
-              {group.avatarUrl ? (
+              {/* Show Avatar - Use infoState avatarUrl if isEditingInfo, else group.avatarUrl */}
+              {(isEditingInfo ? infoState.avatarUrl : group.avatarUrl) ? (
                 <Image
-                  source={{ uri: group.avatarUrl }}
+                  source={{ uri: (isEditingInfo ? infoState.avatarUrl : group.avatarUrl) || undefined }}
                   style={{ width: 100, height: 100, borderRadius: 50 }}
                   resizeMode="cover"
                 />
@@ -301,33 +391,80 @@ export const GroupSettingsScreen = () => {
                   </Text>
                 </View>
               )}
-              <TouchableOpacity
-                className="absolute bottom-0 right-0 w-8 h-8 rounded-full items-center justify-center"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <Icon name="edit" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
+              
+              {/* Camera Icon Overlay in Edit Mode */}
+              {isEditingInfo && (
+                <TouchableOpacity
+                  onPress={pickImage}
+                  className="absolute inset-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+                >
+                  <Icon name="camera" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
-          <Text
-            className="text-xl text-center mb-2 font-bold"
-            style={{
-              color: colors.textPrimary,
-            }}
-          >
-            {group.name}
-          </Text>
+          {isEditingInfo ? (
+             <View className="w-full">
+                 <Text className="text-xs mb-1 text-center" style={{ color: colors.textSecondary }}>Tên nhóm</Text>
+                 <TextInput
+                   value={infoState.name}
+                   onChangeText={(text) => setInfoState(prev => ({...prev, name: text}))}
+                   className="text-xl text-center font-bold px-4 py-2 rounded-lg border mb-4"
+                   style={{ 
+                      color: colors.textPrimary,
+                      borderColor: colors.primary,
+                      backgroundColor: colors.background
+                   }}
+                 />
+                 
+                 <Text className="text-xs mb-1 text-center" style={{ color: colors.textSecondary }}>Mô tả</Text>
+                 <TextInput
+                   value={infoState.description}
+                   onChangeText={(text) => setInfoState(prev => ({...prev, description: text}))}
+                   className="text-sm text-center font-normal px-4 py-2 rounded-lg border"
+                   style={{ 
+                      color: colors.textPrimary,
+                      borderColor: colors.primary,
+                      backgroundColor: colors.background
+                   }}
+                   multiline
+                   numberOfLines={3}
+                 />
+             </View>
+          ) : (
+             <View className="items-center">
+                <Text
+                    className="text-xl text-center mb-2 font-bold"
+                    style={{
+                    color: colors.textPrimary,
+                    }}
+                >
+                    {group.name}
+                </Text>
 
-          {group.description && (
-            <Text
-              className="text-sm text-center font-normal"
-              style={{
-                color: colors.textSecondary,
-              }}
-            >
-              {group.description}
-            </Text>
+                {group.description ? (
+                    <Text
+                    className="text-sm text-center font-normal"
+                    style={{
+                        color: colors.textSecondary,
+                    }}
+                    >
+                    {group.description}
+                    </Text>
+                ) : (
+                    <Text
+                        className="text-sm text-center font-italic"
+                        style={{
+                        color: colors.textSecondary,
+                        fontStyle: 'italic'
+                        }}
+                    >
+                        Chưa có mô tả
+                    </Text>
+                )}
+             </View>
           )}
         </View>
 
@@ -344,7 +481,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.members} ({group.members.length})
+              Thành viên ({group.members.length})
             </Text>
           </View>
 
@@ -392,7 +529,7 @@ export const GroupSettingsScreen = () => {
                         color: colors.textPrimary,
                       }}
                     >
-                      {isCurrentUser ? (language === "vi" ? "Bạn" : "You") : member.fullName}
+                      {isCurrentUser ? "Bạn" : member.fullName}
                     </Text>
                     <Text
                       className="text-sm font-normal"
@@ -400,7 +537,7 @@ export const GroupSettingsScreen = () => {
                         color: member.role === "ADMIN" ? colors.primary : colors.textSecondary,
                       }}
                     >
-                      {member.role === "ADMIN" ? t.admin : t.member}
+                      {member.role === "ADMIN" ? "Admin" : "Thành viên"}
                     </Text>
                   </View>
                 </View>
@@ -427,34 +564,35 @@ export const GroupSettingsScreen = () => {
                   color: "#FFFFFF",
                 }}
               >
-                {t.addMember}
+                Thêm thành viên
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Privacy Settings Section */}
-        <View
-          className="rounded-2xl mx-4 mt-4 p-4"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <View className="flex-row items-center mb-4">
-            <Icon name="lock" size={20} color={colors.textPrimary} />
-            <Text
-              className="text-base ml-2"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {t.privacy}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            activeOpacity={0.7}
-            onPress={() => setIsPublic(true)}
+        {/* Privacy Settings Section - Admin Only */}
+        {isAdmin && (
+          <View
+            className="rounded-2xl mx-4 mt-4 p-4"
+            style={{ backgroundColor: colors.surface }}
           >
+            <View className="flex-row items-center mb-4">
+              <Icon name="lock" size={20} color={colors.textPrimary} />
+              <Text
+                className="text-base ml-2"
+                style={{
+                  color: colors.textPrimary,
+                }}
+              >
+                Quyền riêng tư
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              className="flex-row items-center justify-between py-3"
+              activeOpacity={0.7}
+              onPress={() => handleUpdateSettings("isPublic", true)}
+            >
             <View className="flex-1">
               <Text
                 className="text-base"
@@ -462,7 +600,7 @@ export const GroupSettingsScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {t.public}
+                Công khai
               </Text>
               <Text
                 className="text-sm mt-1"
@@ -470,7 +608,7 @@ export const GroupSettingsScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.publicDesc}
+                Bất kỳ ai có link đều có thể tham gia
               </Text>
             </View>
             <View
@@ -490,11 +628,11 @@ export const GroupSettingsScreen = () => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            activeOpacity={0.7}
-            onPress={() => setIsPublic(false)}
-          >
+            <TouchableOpacity
+              className="flex-row items-center justify-between py-3"
+              activeOpacity={0.7}
+              onPress={() => handleUpdateSettings("isPublic", false)}
+            >
             <View className="flex-1">
               <Text
                 className="text-base"
@@ -502,7 +640,7 @@ export const GroupSettingsScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {t.private}
+                Riêng tư
               </Text>
               <Text
                 className="text-sm mt-1"
@@ -510,7 +648,7 @@ export const GroupSettingsScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.privateDesc}
+                Chỉ admin mới có thể mời thành viên
               </Text>
             </View>
             <View
@@ -530,6 +668,7 @@ export const GroupSettingsScreen = () => {
             </View>
           </TouchableOpacity>
         </View>
+        )}
 
         {/* New Link Section */}
         <View
@@ -544,7 +683,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.newLink}
+              Link mới
             </Text>
           </View>
 
@@ -572,121 +711,134 @@ export const GroupSettingsScreen = () => {
                   color: "#FFFFFF",
                 }}
               >
-                {t.copy}
+                Sao chép
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              className="flex-1 py-3 rounded-xl"
-              style={{
-                backgroundColor: colors.background,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                className="text-center text-base"
-                style={{
-                  color: colors.primary,
-                }}
-              >
-                {t.createNew}
-              </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              className="flex-1 py-3 rounded-xl flex-row items-center justify-center"
-              style={{
-                backgroundColor: colors.background,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-              activeOpacity={0.7}
-            >
-              <Icon name="qrcode" size={20} color={colors.primary} />
+        {/* Options Section - Admin Only */}
+        {isAdmin && (
+          <View
+            className="rounded-2xl mx-4 mt-4 p-4"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <View className="flex-row items-center mb-4">
+              <Icon name="settings" size={20} color={colors.textPrimary} />
               <Text
                 className="text-base ml-2"
                 style={{
-                  color: colors.primary,
+                  color: colors.textPrimary,
                 }}
               >
-                {t.qrCode}
+                Tùy chọn
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            </View>
 
-        {/* Options Section */}
-        <View
-          className="rounded-2xl mx-4 mt-4 p-4"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <View className="flex-row items-center mb-4">
-            <Icon name="settings" size={20} color={colors.textPrimary} />
-            <Text
-              className="text-base ml-2"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {t.options}
-            </Text>
-          </View>
+            <View className="flex-row items-center justify-between ">
+              <Text
+                className="flex-1 text-base"
+                style={{
+                  color: colors.textPrimary,
+                }}
+              >
+                Cho phép thành viên sửa/xóa
+              </Text>
+              <Switch
+                value={allowMemberEdit}
+                onValueChange={(val) => handleUpdateSettings("allowMemberEdit", val)}
+                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                thumbColor={allowMemberEdit ? colors.primary : colors.textSecondary}
+              />
+            </View>
 
-          <View className="flex-row items-center justify-between ">
-            <Text
-              className="flex-1 text-base"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {t.allowMemberEdit}
-            </Text>
-            <Switch
-              value={allowMemberEdit}
-              onValueChange={setAllowMemberEdit}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={allowMemberEdit ? colors.primary : colors.textSecondary}
-            />
-          </View>
+            {/* Added allowMemberDirectAdd */}
+             <View className="flex-row items-center justify-between ">
+               <Text
+                 className="flex-1 text-base mr-4"
+                 style={{
+                   color: colors.textPrimary,
+                 }}
+               >
+                 Cho phép thêm thành viên trực tiếp
+               </Text>
+               <Switch
+                 value={allowMemberDirectAdd}
+                 onValueChange={(val) => handleUpdateSettings("allowMemberDirectAdd", val)}
+                 trackColor={{ false: colors.border, true: colors.primaryLight }}
+                 thumbColor={allowMemberDirectAdd ? colors.primary : colors.textSecondary}
+               />
+             </View>
 
-          <View className="flex-row items-center justify-between ">
-            <Text
-              className="flex-1 text-base"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {t.requirePaymentConfirmation}
-            </Text>
-            <Switch
-              value={requirePaymentConfirmation}
-              onValueChange={setRequirePaymentConfirmation}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={requirePaymentConfirmation ? colors.primary : colors.textSecondary}
-            />
-          </View>
+            <View className="flex-row items-center justify-between ">
+              <Text
+                className="flex-1 text-base"
+                style={{
+                  color: colors.textPrimary,
+                }}
+              >
+                Yêu cầu xác nhận thanh toán
+              </Text>
+              <Switch
+                value={requirePaymentConfirmation}
+                onValueChange={(val) => handleUpdateSettings("requirePaymentConfirmation", val)}
+                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                thumbColor={requirePaymentConfirmation ? colors.primary : colors.textSecondary}
+              />
+            </View>
 
-          <View className="flex-row items-center justify-between ">
-            <Text
-              className="flex-1 text-base"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {t.autoNotifications}
-            </Text>
-            <Switch
-              value={autoReminderEnabled}
-              onValueChange={setAutoReminderEnabled}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={autoReminderEnabled ? colors.primary : colors.textSecondary}
-            />
+            <View className="flex-row items-center justify-between ">
+              <Text
+                className="flex-1 text-base"
+                style={{
+                  color: colors.textPrimary,
+                }}
+              >
+                Thông báo tự động
+              </Text>
+              <Switch
+                value={autoReminderEnabled}
+                onValueChange={(val) => handleUpdateSettings("autoReminderEnabled", val)}
+                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                thumbColor={autoReminderEnabled ? colors.primary : colors.textSecondary}
+              />
+            </View>
+
+            {autoReminderEnabled && (
+                <View className="flex-row items-center justify-between mt-3">
+                   <Text 
+                      className="flex-1 text-base"
+                      style={{ color: colors.textPrimary }}
+                   >
+                       Số ngày nhắc nhở
+                   </Text>
+                   <TextInput
+                      value={tempReminderDays}
+                      onChangeText={setTempReminderDays}
+                      onEndEditing={() => {
+                          const num = parseInt(tempReminderDays);
+                          if (isNaN(num) || num < 1) {
+                              showErrorRef.current("Số ngày nhắc nhở phải lớn hơn hoặc bằng 1", "Lỗi");
+                              setTempReminderDays(String(reminderDays));
+                              return;
+                          }
+                          if (num !== reminderDays) {
+                              handleUpdateSettings("reminderDays", num);
+                          }
+                      }}
+                      keyboardType="numeric"
+                      className="w-16 text-center font-bold px-2 py-1 rounded border"
+                      style={{
+                          color: colors.textPrimary,
+                          borderColor: colors.border,
+                          backgroundColor: colors.background
+                      }}
+                   />
+                </View>
+            )}
           </View>
-        </View>
+        )}
 
         {/* Data Section */}
         <View
@@ -701,7 +853,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.data}
+              Dữ liệu
             </Text>
           </View>
 
@@ -715,7 +867,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.exportData}
+              Xuất dữ liệu nhóm
             </Text>
             <Icon name="chevronRight" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -730,7 +882,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {t.archiveGroup}
+              Lưu trữ nhóm
             </Text>
             <Icon name="chevronRight" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -758,7 +910,7 @@ export const GroupSettingsScreen = () => {
                 color: colors.danger,
               }}
             >
-              {t.leaveGroup}
+              Rời nhóm
             </Text>
           </TouchableOpacity>
 
@@ -774,12 +926,13 @@ export const GroupSettingsScreen = () => {
                   color: "#FFFFFF",
                 }}
               >
-                {t.deleteGroup}
+                Xóa nhóm
               </Text>
             </TouchableOpacity>
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

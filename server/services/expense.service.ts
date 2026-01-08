@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../lib/prisma";
-import { CreateExpenseDTO, UpdateExpenseDTO } from "../dtos";
+import { CreateExpenseDTO, QueryExpenseDTO, UpdateExpenseDTO } from "../dtos";
 import { checkGroupMember } from "../middlewares";
 import {
   ActivityAction,
@@ -744,6 +744,67 @@ export const deleteExpenseService = async (
     relatedType: RelatedType.EXPENSE,
     relatedId: expenseId,
   });
+};
+
+export const getExpenseGroupService = async (
+  userId: string,
+  groupId: string,
+  query: QueryExpenseDTO
+) => {
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+  });
+
+  if (!group)
+    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
+
+  await checkGroupMember(userId, groupId);
+
+  const { page, pageSize } = query;
+  const skip = (page - 1) * pageSize;
+  const expenses = await prisma.expense.findMany({
+    where: { groupId },
+    select: {
+      id: true,
+      description: true,
+      amount: true,
+      currency: true,
+      paidBy: true,
+      paidByUser: {
+        select: {
+          fullName: true,
+        },
+      },
+      category: true,
+      expenseDate: true,
+      splitType: true,
+      receiptUrl: true,
+      notes: true,
+      splits: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+          amount: true,
+          shares: true,
+          percentage: true,
+        },
+      },
+      createdAt: true,
+      updatedAt: true,
+    },
+    skip,
+    take: pageSize,
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return expenses.map((e) => mapExpense(userId, e));
 };
 
 export const getDetailExpenseService = async (

@@ -12,11 +12,9 @@ import { logout } from "../../../services/api/auth.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { ThemeModal } from "../components/ThemeModal";
-import { LanguageModal } from "../components/LanguageModal";
 
 export const ProfileScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -24,7 +22,6 @@ export const ProfileScreen = () => {
   const { alert } = useAlert();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
-  const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   // Mock data - will be replaced with real API calls later
   const bankAccount = {
@@ -59,19 +56,17 @@ export const ProfileScreen = () => {
     setIsLoggingOut(true);
     try {
       const result = await logout();
-      if ("message" in result) {
+      if ("message" in result && result.message) {
         // Logout successful
         await clearAuth();
         success("Đăng xuất thành công");
-        // Khi logout trong app, redirect đến login (không reset onboarding)
-        // Onboarding sẽ được reset khi app khởi động lại và không có auth
         router.replace("/auth/login");
-      } else {
+      } else if ("field" in result) {
         // Server error
-        error(result.message || "Đăng xuất thất bại");
+        const errorResult = result as { field?: string; message?: string };
+        error(errorResult.message || "Đăng xuất thất bại");
       }
     } catch (err: any) {
-      // Network error or other errors
       error(err.message || "Không thể kết nối đến server");
     } finally {
       setIsLoggingOut(false);
@@ -80,17 +75,15 @@ export const ProfileScreen = () => {
 
   const handleLogout = () => {
     alert(
-      language === "vi" 
-        ? "Bạn có chắc chắn muốn đăng xuất không?" 
-        : "Are you sure you want to logout?",
-      language === "vi" ? "Xác nhận đăng xuất" : "Confirm Logout",
+      "Bạn có chắc chắn muốn đăng xuất không?",
+      "Xác nhận đăng xuất",
       [
         {
-          text: language === "vi" ? "Hủy" : "Cancel",
+          text: "Hủy",
           style: "cancel",
         },
         {
-          text: language === "vi" ? "Đăng xuất" : "Logout",
+          text: "Đăng xuất",
           style: "destructive",
           onPress: performLogout,
         },
@@ -103,9 +96,6 @@ export const ProfileScreen = () => {
       case "theme":
         setThemeModalVisible(true);
         break;
-      case "language":
-        setLanguageModalVisible(true);
-        break;
       case "notifications":
       case "security":
       case "about":
@@ -117,11 +107,10 @@ export const ProfileScreen = () => {
   };
 
   const settingsItems = [
-    { key: "notifications", label: { vi: "Thông báo", en: "Notifications" }, icon: "bell" as const },
-    { key: "security", label: { vi: "Bảo mật", en: "Security" }, icon: "lock" as const },
-    { key: "theme", label: { vi: "Giao diện", en: "Interface" }, icon: "settings" as const },
-    { key: "language", label: { vi: "Ngôn ngữ", en: "Language" }, icon: "globe" as const },
-    { key: "about", label: { vi: "Về ứng dụng", en: "About app" }, icon: "info" as const },
+    { key: "notifications", label: "Thông báo", icon: "bell" as const },
+    { key: "security", label: "Bảo mật", icon: "lock" as const },
+    { key: "theme", label: "Giao diện", icon: "settings" as const },
+    { key: "about", label: "Về ứng dụng", icon: "info" as const },
   ];
 
   return (
@@ -176,25 +165,20 @@ export const ProfileScreen = () => {
         <View
           className="mx-4 mb-4 rounded-3xl px-4 py-6"
           style={{
-            backgroundColor: colors.surface,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
+            backgroundColor: colors.card,
           }}
         >
           {/* Bank Account Section */}
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
-              <Icon name="building" size={20} color="#F39C12" />
+              <Icon name="building" size={20} color={colors.primary} />
               <Text
-                className="text-lg font-bold ml-2"
+                className="text-xl font-extrabold ml-2"
                 style={{
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Tài khoản ngân hàng" : "Bank Account"}
+                Tài khoản ngân hàng
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
@@ -205,7 +189,7 @@ export const ProfileScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {bankAccount.bankName} {language === "vi" ? "STK:" : "Account:"}
+                  {bankAccount.bankName} STK:
                 </Text>
                 <Text
                   className="text-base font-normal"
@@ -226,7 +210,7 @@ export const ProfileScreen = () => {
                     color: colors.primaryText,
                   }}
                 >
-                  {language === "vi" ? "Sửa" : "Edit"}
+                  Sửa
                 </Text>
               </TouchableOpacity>
             </View>
@@ -235,27 +219,22 @@ export const ProfileScreen = () => {
           {/* Statistics Section */}
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
-              <Icon name="barChart" size={20} color="#F39C12" />
+              <Icon name="barChart" size={20} color={colors.primary} />
               <Text
-                className="text-lg font-bold ml-2"
+                className="text-xl font-extrabold ml-2"
                 style={{
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Thống kê" : "Statistics"}
+                Thống kê
               </Text>
             </View>
             <View className="flex-row gap-3">
               {/* Total Spent Card */}
               <View
-                className="flex-1 rounded-2xl px-4 py-4"
+                className="flex-1 rounded-2xl px-4 py-4 shadow-sm"
                 style={{
                   backgroundColor: colors.background,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  elevation: 2,
                 }}
               >
                 <Text
@@ -264,7 +243,7 @@ export const ProfileScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {language === "vi" ? "Tổng chi" : "Total Spent"}
+                  Tổng chi
                 </Text>
                 <Text
                   className="text-lg font-bold"
@@ -278,14 +257,9 @@ export const ProfileScreen = () => {
 
               {/* Total Received Card */}
               <View
-                className="flex-1 rounded-2xl px-4 py-4"
+                className="flex-1 rounded-2xl px-4 py-4 shadow-sm"
                 style={{
                   backgroundColor: colors.background,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  elevation: 2,
                 }}
               >
                 <Text
@@ -294,7 +268,7 @@ export const ProfileScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {language === "vi" ? "Tổng nhận" : "Total Received"}
+                  Tổng nhận
                 </Text>
                 <Text
                   className="text-lg font-bold"
@@ -311,14 +285,14 @@ export const ProfileScreen = () => {
           {/* Settings Section */}
           <View>
             <View className="flex-row items-center mb-3">
-              <Icon name="settings" size={20} color="#F39C12" />
+              <Icon name="settings" size={20} color={colors.primary} />
               <Text
-                className="text-lg font-bold ml-2"
+                className="text-xl font-extrabold ml-2"
                 style={{
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Cài đặt" : "Settings"}
+                Cài đặt
               </Text>
             </View>
             {settingsItems.map((item, index) => (
@@ -340,7 +314,7 @@ export const ProfileScreen = () => {
                       color: colors.textPrimary,
                     }}
                   >
-                    {item.label[language]}
+                    {item.label}
                   </Text>
                 </View>
                 <Icon name="chevronRight" size={20} color={colors.textSecondary} />
@@ -366,7 +340,7 @@ export const ProfileScreen = () => {
                   color: "#FFFFFF",
                 }}
               >
-                {language === "vi" ? "Đăng xuất" : "Logout"}
+                Đăng xuất
               </Text>
             )}
           </TouchableOpacity>
@@ -375,14 +349,9 @@ export const ProfileScreen = () => {
 
       <BottomNavBar />
 
-      {/* Modals */}
       <ThemeModal
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
-      />
-      <LanguageModal
-        visible={languageModalVisible}
-        onClose={() => setLanguageModalVisible(false)}
       />
     </SafeAreaView>
   );

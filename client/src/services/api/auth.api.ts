@@ -1,4 +1,3 @@
-import * as SecureStore from "expo-secure-store";
 import type { User } from "../../store/authStore";
 import { apiClient } from "./config";
 
@@ -49,21 +48,10 @@ export const login = async (data: LoginRequest): Promise<LoginResponse | ApiErro
       );
     }
     
-    // Server error - return error response instead of throwing
-    const errorMessage = error.response?.data?.message || "Đăng nhập thất bại";
-    let field: string | undefined;
-    
-    // Map server error messages to field names
-    const lowerMessage = errorMessage.toLowerCase();
-    if (lowerMessage.includes("invalid phone") || lowerMessage.includes("phone") || lowerMessage.includes("số điện thoại")) {
-      field = "phone";
-    } else if (lowerMessage.includes("invalid password") || lowerMessage.includes("password") || lowerMessage.includes("mật khẩu")) {
-      field = "password";
-    }
-    
+    // Use server response directly
     return {
-      message: errorMessage,
-      field,
+      message: error.response?.data?.message || "Đăng nhập thất bại",
+      field: error.response?.data?.field,
     };
   }
 };
@@ -80,51 +68,18 @@ export const register = async (data: RegisterRequest): Promise<RegisterResponse 
       );
     }
     
-    // Server error - return error response instead of throwing
-    const errorMessage = error.response?.data?.message || "Đăng ký thất bại";
-    let field: string | undefined;
-    
-    // Map server error messages to field names
-    const lowerMessage = errorMessage.toLowerCase();
-    if (lowerMessage.includes("phone") || lowerMessage.includes("số điện thoại")) {
-      field = "phone";
-    } else if (lowerMessage.includes("password") || lowerMessage.includes("mật khẩu")) {
-      field = "password";
-    } else if (lowerMessage.includes("email")) {
-      field = "email";
-    } else if (lowerMessage.includes("fullname") || lowerMessage.includes("full name") || lowerMessage.includes("họ tên")) {
-      field = "fullName";
-    }
-    
+    // Use server response directly
     return {
-      message: errorMessage,
-      field,
+      message: error.response?.data?.message || "Đăng ký thất bại",
+      field: error.response?.data?.field,
     };
   }
 };
 
 export const logout = async (): Promise<LogoutResponse | ApiError> => {
   try {
-    // Get accessToken from SecureStore
-    const accessToken = await SecureStore.getItemAsync("accessToken");
-    
-    if (!accessToken) {
-      return {
-        message: "Bạn chưa đăng nhập",
-      };
-    }
-
-    // Make logout request with Authorization header
-    const response = await apiClient.post<LogoutResponse>(
-      "/auth/logout",
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    
+    // Interceptor automatically adds accessToken header
+    const response = await apiClient.post<LogoutResponse>("/auth/logout", {});
     return response.data;
   } catch (error: any) {
     // Network error - throw to show connection issue

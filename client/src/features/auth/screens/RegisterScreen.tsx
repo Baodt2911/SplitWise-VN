@@ -16,7 +16,6 @@ import { register, type ApiError } from "../../../services/api/auth.api";
 
 const RegisterScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const { success, error: showError } = useToast();
 
@@ -26,7 +25,7 @@ const RegisterScreen = () => {
     setError,
     formState: { isSubmitting },
   } = useForm<RegisterFormData>({
-    resolver: zodResolver(createRegisterSchema(language)) as any,
+    resolver: zodResolver(createRegisterSchema()) as any,
     defaultValues: {
       fullName: "",
       phone: "",
@@ -52,10 +51,7 @@ const RegisterScreen = () => {
         const apiError = result as ApiError;
         
         // Show toast with error message
-        showError(
-          apiError.message,
-          language === "vi" ? "Lỗi" : "Error"
-        );
+        showError(apiError.message, "Lỗi");
         
         // Set error to form field to highlight with red border
         if (apiError.field) {
@@ -69,63 +65,38 @@ const RegisterScreen = () => {
       }
 
       // Success - Server automatically sends OTP after registration
-      success(
-        language === "vi" ? "Mã OTP đã được gửi đến số điện thoại của bạn." : "OTP code has been sent to your phone number.",
-        language === "vi" ? "Thành công" : "Success"
-      );
+      success("Mã OTP đã được gửi đến số điện thoại của bạn.", "Thành công");
       router.replace({
         pathname: "/auth/otp-verify",
         params: { phone: data.phone, type: "register" },
       });
     } catch (err: any) {
       // Network error or other unexpected errors
-      const errorMessage =
-        err.message ||
-        (language === "vi" ? "Đăng ký thất bại. Vui lòng thử lại." : "Registration failed. Please try again.");
-      showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.message || "Đăng ký thất bại. Vui lòng thử lại.";
+      showError(errorMessage, "Lỗi");
     }
   };
 
-  const translations = {
-    vi: {
-      title: "Tạo tài khoản mới",
-      subtitle: "Bắt đầu quản lý chi tiêu nhóm một cách dễ dàng.",
-      fullNameLabel: "Họ tên",
-      fullNamePlaceholder: "Nhập họ và tên",
-      phoneLabel: "Số điện thoại",
-      phonePlaceholder: "Nhập số điện thoại",
-      emailLabel: "Email (tùy chọn)",
-      emailPlaceholder: "Nhập email",
-      passwordLabel: "Mật khẩu",
-      passwordPlaceholder: "Nhập mật khẩu",
-      passwordHint: "ít nhất 8 ký tự",
-      confirmPasswordLabel: "Nhập lại mật khẩu",
-      confirmPasswordPlaceholder: "Nhập lại mật khẩu",
-      agreeToTerms: "Tôi đồng ý với Điều khoản và Chính sách bảo mật",
-      registerButton: "Đăng ký",
-      hasAccount: "Đã có tài khoản? Đăng nhập",
-    },
-    en: {
-      title: "Create new account",
-      subtitle: "Start managing group spending easily.",
-      fullNameLabel: "Full name",
-      fullNamePlaceholder: "Enter full name",
-      phoneLabel: "Phone number",
-      phonePlaceholder: "Enter phone number",
-      emailLabel: "Email (optional)",
-      emailPlaceholder: "Enter your email",
-      passwordLabel: "Password",
-      passwordPlaceholder: "Enter password",
-      passwordHint: "at least 8 characters",
-      confirmPasswordLabel: "Re-enter password",
-      confirmPasswordPlaceholder: "Re-enter password",
-      agreeToTerms: "I agree with Terms and Privacy Policy",
-      registerButton: "Register",
-      hasAccount: "Already have an account? Login",
-    },
+  const t = {
+    title: "Tạo tài khoản mới",
+    subtitle: "Bắt đầu quản lý chi tiêu nhóm một cách dễ dàng.",
+    fullNameLabel: "Họ tên",
+    fullNamePlaceholder: "Nhập họ và tên",
+    phoneLabel: "Số điện thoại",
+    phonePlaceholder: "Nhập số điện thoại",
+    emailLabel: "Email (tùy chọn)",
+    emailPlaceholder: "Nhập email",
+    passwordLabel: "Mật khẩu",
+    passwordPlaceholder: "Nhập mật khẩu",
+    passwordHint: "ít nhất 8 ký tự",
+    confirmPasswordLabel: "Nhập lại mật khẩu",
+    confirmPasswordPlaceholder: "Nhập lại mật khẩu",
+    agreeToTerms: "Tôi đồng ý với Điều khoản và Chính sách bảo mật",
+    registerButton: "Đăng ký",
+    hasAccount: "Đã có tài khoản?",
+    login: "Đăng nhập",
   };
 
-  const t = translations[language];
 
   const isDark = theme === "dark";
   
@@ -157,15 +128,7 @@ const RegisterScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: theme === "dark" ? 0.2 : 0.08,
-                shadowRadius: 8,
-                elevation: 2,
+                backgroundColor: colors.card ,               
               }}
             >
               {/* Header */}
@@ -304,7 +267,7 @@ const RegisterScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.hasAccount.split("?")[0]}?{" "}
+                {t.hasAccount}{" "}
               </Text>
               <TouchableOpacity onPress={() => router.push("/auth/login")}>
                 <Text
@@ -314,7 +277,7 @@ const RegisterScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {t.hasAccount.split("?")[1]?.trim() || (language === "vi" ? "Đăng nhập" : "Login")}
+                  {t.login}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -24,89 +24,46 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LanguageSelect } from "../components/LanguageToggle";
 import { OnboardingImage } from "../components/OnboardingImage";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { getThemeColors } from "../../../utils/themeColors";
-import type { AppLanguage, OnboardingSlide } from "../types";
+import type { OnboardingSlide } from "../types";
 import type { SharedValue } from "react-native-reanimated";
 
 const slides: OnboardingSlide[] = [
   {
     key: "welcome",
-    title: {
-      vi: "Nhóm bạn ăn uống",
-      en: "Dining with friends",
-    },
-    description: {
-      vi: "Chia tiền thông minh, không còn đau đầu tính toán ai nợ ai bao nhiêu",
-      en: "Split bills effortlessly and keep everyone clear on who owes what",
-    },
-    image: "welcome", // Using key to identify SVG
+    title: "Nhóm bạn ăn uống",
+    description: "Chia tiền thông minh, không còn đau đầu tính toán ai nợ ai bao nhiêu",
+    image: "welcome",
   },
   {
     key: "qr",
-    title: {
-      vi: "QR Code thanh toán",
-      en: "QR payment",
-    },
-    description: {
-      vi: "Thanh toán nhanh chóng. Quét QR và chuyển khoản ngay lập tức",
-      en: "Pay in seconds. Scan a QR code and settle your balance instantly",
-    },
+    title: "QR Code thanh toán",
+    description: "Thanh toán nhanh chóng. Quét QR và chuyển khoản ngay lập tức",
     image: "qr",
   },
   {
     key: "stats",
-    title: {
-      vi: "Biểu đồ chi tiêu",
-      en: "Spending insights",
-    },
-    description: {
-      vi: "Theo dõi chi tiêu, biết rõ bạn đang chi tiền vào đâu",
-      en: "Track where your money goes with clear charts and categories",
-    },
+    title: "Biểu đồ chi tiêu",
+    description: "Theo dõi chi tiêu, biết rõ bạn đang chi tiền vào đâu",
     image: "stats",
   },
   {
     key: "start",
-    title: {
-      vi: "Tất cả thiết bị",
-      en: "All your devices",
-    },
-    description: {
-      vi: "Sẵn sàng bắt đầu? Tạo nhóm đầu tiên và trải nghiệm ngay",
-      en: "Ready to start? Create your first group and enjoy the experience",
-    },
+    title: "Tất cả thiết bị",
+    description: "Sẵn sàng bắt đầu? Tạo nhóm đầu tiên và trải nghiệm ngay",
     image: "start",
   },
 ];
 
-const translations: Record<
-  AppLanguage,
-  {
-    skip: string;
-    next: string;
-    getStarted: string;
-    alreadyAccount: string;
-    startHint: string;
-  }
-> = {
-  vi: {
-    skip: "Bỏ qua",
-    next: "Tiếp tục",
-    getStarted: "Tạo tài khoản",
-    alreadyAccount: "Đã có tài khoản",
-    startHint: "Kết nối tới màn hình chính sau khi hoàn tất onboarding.",
-  },
-  en: {
-    skip: "Skip",
-    next: "Next",
-    getStarted: "Get started",
-    alreadyAccount: "Already have an account",
-    startHint: "Proceed to the main app after finishing onboarding.",
-  },
+const translations = {
+  skip: "Bỏ qua",
+  next: "Tiếp tục",
+  getStarted: "Tạo tài khoản",
+  alreadyAccount: "Đã có tài khoản",
+  startHint: "Kết nối tới màn hình chính sau khi hoàn tất onboarding.",
 };
 
 interface PaginationDotProps {
@@ -157,13 +114,10 @@ const PaginationDot = ({ index, scrollX, width, color }: PaginationDotProps) => 
 
 const OnboardingScreen = () => {
   const { width } = useWindowDimensions();
-  const language = usePreferencesStore((state) => state.language);
-  const setLanguage = usePreferencesStore((state) => state.setLanguage);
   const theme = usePreferencesStore((state) => state.theme);
   const setTheme = usePreferencesStore((state) => state.setTheme);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
-  const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
   const scrollX = useSharedValue(0);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
 
@@ -175,7 +129,7 @@ const OnboardingScreen = () => {
   const secondaryButtonOpacity = useSharedValue(0);
   const secondaryButtonTranslateY = useSharedValue(10);
 
-  const t = translations[language];
+  const t = translations;
   const isLastSlide = currentIndex === slides.length - 1;
   const colors = getThemeColors(theme);
 
@@ -244,15 +198,9 @@ const OnboardingScreen = () => {
     };
   });
 
-  // Close one dropdown when the other opens
+  // Handle theme dropdown
   const handleThemeOpenChange = (open: boolean) => {
     setThemeDropdownOpen(open);
-    if (open) setLanguageDropdownOpen(false);
-  };
-
-  const handleLanguageOpenChange = (open: boolean) => {
-    setLanguageDropdownOpen(open);
-    if (open) setThemeDropdownOpen(false);
   };
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -298,7 +246,7 @@ const OnboardingScreen = () => {
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
       
       {/* Overlay to close dropdowns when clicking outside */}
-      {(themeDropdownOpen || languageDropdownOpen) && (
+      {themeDropdownOpen && (
         <Pressable
           style={{
             position: "absolute",
@@ -310,7 +258,6 @@ const OnboardingScreen = () => {
           }}
           onPress={() => {
             setThemeDropdownOpen(false);
-            setLanguageDropdownOpen(false);
           }}
         />
       )}
@@ -327,17 +274,10 @@ const OnboardingScreen = () => {
               toggleAnimatedStyle,
             ]}
           >
-            <LanguageSelect
-              value={language}
-              onChange={setLanguage}
-              onOpenChange={handleLanguageOpenChange}
-              isOtherOpen={themeDropdownOpen}
-            />
             <ThemeToggle
               value={theme}
               onChange={setTheme}
               onOpenChange={handleThemeOpenChange}
-              isOtherOpen={languageDropdownOpen}
             />
           </Animated.View>
         ) : (
@@ -385,7 +325,7 @@ const OnboardingScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {slide.title[language]}
+              {slide.title}
             </Text>
             <Text
               className="mt-3 text-center text-base leading-6"
@@ -393,7 +333,7 @@ const OnboardingScreen = () => {
                 color: colors.textSecondary,
               }}
             >
-              {slide.description[language]}
+              {slide.description}
             </Text>
           </View>
         ))}

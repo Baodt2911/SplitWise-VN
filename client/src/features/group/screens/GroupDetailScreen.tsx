@@ -10,33 +10,41 @@ import { Icon } from "../../../components/common/Icon";
 import { getGroupDetail, type GroupDetail } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 import { useGroupStore } from "../../../store/groupStore";
-
+import { LinearGradient } from "expo-linear-gradient";
 export const GroupDetailScreen = () => {
   const params = useLocalSearchParams<{ id: string }>();
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const user = useAuthStore((state) => state.user);
   const colors = getThemeColors(theme);
   const { error: showError } = useToast();
   const getGroupDetailFromStore = useGroupStore((state) => state.getGroupDetail);
   const setGroupDetail = useGroupStore((state) => state.setGroupDetail);
   const groupFromStore = useGroupStore((state) => params.id ? state.groupDetails[params.id] : undefined);
+  
+  const gradientColors: [string, string] = [colors.primary, colors.primaryDark];
+  // Derived state from store - sanitization
+  const group = useMemo(() => {
+    if (!groupFromStore) return null;
+    return {
+      ...groupFromStore,
+      members: Array.isArray(groupFromStore.members) ? groupFromStore.members : [],
+      expenses: Array.isArray(groupFromStore.expenses) ? groupFromStore.expenses : [],
+    };
+  }, [groupFromStore]);
 
-  const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Loading state only for initial load when no data exists
+  const [initialLoading, setInitialLoading] = useState(!group);
   const [refreshing, setRefreshing] = useState(false);
 
   // Use refs to avoid dependency issues
   const showErrorRef = useRef(showError);
-  const languageRef = useRef(language);
   
   useEffect(() => {
     showErrorRef.current = showError;
-    languageRef.current = language;
-  }, [showError, language]);
+  }, [showError]);
 
   // Load group detail
-  const loadGroupDetail = useCallback(async (forceRefresh = false) => {
+  const loadGroupDetail = useCallback(async () => {
     if (!params.id) {
       showErrorRef.current("Không tìm thấy ID nhóm", "Lỗi");
       router.back();
@@ -44,49 +52,47 @@ export const GroupDetailScreen = () => {
     }
 
     try {
-      setIsLoading(true);
-      const response = await getGroupDetail(params.id);
-      setGroup(response.group);
-      // Save to store
-      setGroupDetail(params.id, response.group);
-    } catch (err: any) {
-      const errorMessage = err.message || (languageRef.current === "vi" ? "Không thể tải thông tin nhóm" : "Failed to load group");
-      showErrorRef.current(errorMessage, languageRef.current === "vi" ? "Lỗi" : "Error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [params.id, setGroupDetail]);
-
-  // Initial load - check store first, only call API if not in store
-  useEffect(() => {
-    if (params.id) {
-      const storedGroup = getGroupDetailFromStore(params.id);
-      if (storedGroup) {
-        // Use data from store, no API call needed
-        setGroup(storedGroup);
-        setIsLoading(false);
-      } else {
-        // Not in store, load from API
-        loadGroupDetail();
+      // Check store directly to avoid dependency cycle
+      const currentGroup = getGroupDetailFromStore(params.id);
+      
+      // Only show full screen loading if we have absolutely no data
+      if (!currentGroup) {
+        setInitialLoading(true);
       }
-    }
-  }, [params.id, getGroupDetailFromStore, loadGroupDetail]);
 
-  // Update when store changes
-  useEffect(() => {
-    if (groupFromStore) {
-      setGroup(groupFromStore);
+      const response = await getGroupDetail(params.id);
+      
+      // Sanitize data
+      const safeGroup = {
+        ...response.group,
+        members: Array.isArray(response.group.members) ? response.group.members : [],
+        expenses: Array.isArray(response.group.expenses) ? response.group.expenses : [],
+      };
+      
+      // Save to store
+      setGroupDetail(params.id, safeGroup);
+    } catch (err: any) {
+      const errorMessage = err.message || "Không thể tải thông tin nhóm";
+      // Only show error toast if we don't have data, or if it's a manual refresh 
+      const currentGroup = getGroupDetailFromStore(params.id);
+      if (!currentGroup || refreshing) {
+        showErrorRef.current(errorMessage, "Lỗi");
+      }
+    } finally {
+      setInitialLoading(false);
     }
-  }, [groupFromStore]);
+  }, [params.id, setGroupDetail, getGroupDetailFromStore, refreshing]);
+
+  // Initial load - Always fetch fresh data (Stale-while-revalidate)
+  useEffect(() => {
+    loadGroupDetail();
+  }, [loadGroupDetail]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      await loadGroupDetail();
-    } finally {
-      setRefreshing(false);
-    }
+    await loadGroupDetail();
+    setRefreshing(false);
   }, [loadGroupDetail]);
 
   // Get group icon
@@ -147,16 +153,16 @@ export const GroupDetailScreen = () => {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return language === "vi" ? "Hôm nay" : "Today";
+      return "Hôm nay";
     }
     if (date.toDateString() === yesterday.toDateString()) {
-      return language === "vi" ? "Hôm qua" : "Yesterday";
+      return "Hôm qua";
     }
 
     const day = date.getDate();
     const month = date.getMonth() + 1;
     return `${day}/${month}`;
-  }, [language]);
+  }, []);
 
   // Format currency
   const formatCurrency = useCallback((amount: string) => {
@@ -169,179 +175,150 @@ export const GroupDetailScreen = () => {
 
   // Render expense item
   const renderExpenseItem = useCallback(({ item }: { item: GroupDetail["expenses"][0] }) => {
-    // yourDebts already has negative sign in the data (e.g., "-120000")
-    // yourCredits is positive (e.g., "150000")
     const hasDebt = item.yourDebts && item.yourDebts !== "0";
     const hasCredit = item.yourCredits && item.yourCredits !== "0";
 
     // Get expense icon based on category
-    const getExpenseIcon = () => {
-      const categoryIcons: Record<string, string> = {
-        FOOD: "☕",
-        TRANSPORT: "🚗",
-        ACCOMMODATION: "🏠",
-        ENTERTAINMENT: "🎬",
-        SHOPPING: "🛍️",
-        OTHER: "📝",
-      };
-      return categoryIcons[item.category] || "📝";
+    const categoryIcons: Record<string, string> = {
+      FOOD: "utensils",
+      TRANSPORT: "car",
+      ACCOMMODATION: "bed",
+      ENTERTAINMENT: "movie",
+      SHOPPING: "shoppingBag",
+      OTHER: "fileText",
     };
-
-    // Calculate split count based on amount comparison
-    // If total splits amount = expense amount → paidBy is included in splits → count = splits.length
-    // If total splits amount < expense amount → paidBy is NOT in splits → count = splits.length + 1
-    let splitCount = 1; // Default to 1 (at least paidBy)
     
+    // Icon background colors (pastel)
+    const categoryColors: Record<string, string> = {
+      FOOD: "bg-orange-50 text-orange-500",
+      TRANSPORT: "bg-blue-50 text-blue-500",
+      ACCOMMODATION: "bg-red-50 text-red-500",
+      ENTERTAINMENT: "bg-purple-50 text-purple-500",
+      SHOPPING: "bg-pink-50 text-pink-500",
+      OTHER: "bg-gray-50 text-gray-500",
+    };
+    
+    const iconName = categoryIcons[item.category] || "fileText";
+    // We'll manage colors manually since NativeWind dynamic class names might not work perfectly with interpolation
+    // Using inline styles for dynamic colors based on the map above, adapting to theme colors where possible
+    
+    let iconBgColor = "#F3F4F6"; // gray-50
+    let iconColor = "#6B7280"; // gray-500
+    
+    switch(item.category) {
+      case "FOOD": iconBgColor = "#FFF7ED"; iconColor = "#F97316"; break; // orange
+      case "TRANSPORT": iconBgColor = "#EFF6FF"; iconColor = "#3B82F6"; break; // blue
+      case "ACCOMMODATION": iconBgColor = "#FEF2F2"; iconColor = "#EF4444"; break; // red
+      case "ENTERTAINMENT": iconBgColor = "#FAF5FF"; iconColor = "#A855F7"; break; // purple
+      case "SHOPPING": iconBgColor = "#FDF2F8"; iconColor = "#EC4899"; break; // pink
+      default: break;
+    }
+
+    // Calculate split count
+    let splitCount = 1; 
     if (item.splits && item.splits.length > 0) {
-      // Calculate total amount of splits
-      const totalSplitAmount = item.splits.reduce((sum, split) => {
-        const splitAmount = parseFloat(split.amount || "0");
-        return sum + splitAmount;
-      }, 0);
-      
-      // Parse expense amount
+      const totalSplitAmount = item.splits.reduce((sum, split) => sum + parseFloat(split.amount || "0"), 0);
       const expenseAmount = parseFloat(item.amount || "0");
-      
-      // Compare amounts (with small tolerance for floating point errors)
-      const tolerance = 0.01;
-      if (Math.abs(totalSplitAmount - expenseAmount) < tolerance) {
-        // Amounts are equal → paidBy is included in splits
+      if (Math.abs(totalSplitAmount - expenseAmount) < 0.01) {
         splitCount = item.splits.length;
       } else {
-        // Split amount < expense amount → paidBy is NOT in splits
         splitCount = item.splits.length + 1;
       }
     } else {
-      // No splits data, estimate based on debt/credit
       splitCount = hasDebt || hasCredit ? 2 : 2;
     }
 
-    // Always show "Chia X người" format
-    const getSplitTypeText = () => {
-      return language === "vi" ? `Chia ${splitCount} người` : `Split ${splitCount} people`;
-    };
-
     return (
       <TouchableOpacity
-        className="rounded-2xl p-4 mb-3"
+        className="flex-col gap-3 rounded-xl p-4 mb-3 shadow-sm"
         style={{
           backgroundColor: colors.surface,
-
         }}
         activeOpacity={0.7}
       >
-        {/* Top Section */}
-        <View className="flex-row items-start mb-3">
-          {/* Icon */}
-          <View
-            className="w-12 h-12 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: "#E3F2FD" }}
-          >
-            <Text className="text-2xl">{getExpenseIcon()}</Text>
-          </View>
-
-          {/* Expense Name and Amount */}
-          <View className="flex-1 flex-row items-start justify-between">
-            <View className="flex-1 mr-2">
-              <Text
-                className="text-lg font-bold"
-                style={{
-                  color: colors.textPrimary,
-                }}
-                numberOfLines={1}
+        <View className="flex-row items-start justify-between">
+          <View className="flex-row items-center gap-3">
+             {/* Icon Box */}
+            <View 
+              className="flex items-center justify-center rounded-lg w-10 h-10 shrink-0"
+              style={{ backgroundColor: iconBgColor }}
+            >
+              <Icon name={iconName as any} size={20} color={iconColor} />
+            </View>
+            
+            {/* Content */}
+            <View className="flex-col">
+              <Text 
+                className="text-base font-semibold"
+                style={{ color: colors.textPrimary }}
               >
                 {item.description}
               </Text>
-            </View>
-            <View className="items-end">
-              <Text
-                className="text-lg font-bold"
-                style={{
-                  color: colors.textPrimary,
-                }}
+              <Text 
+                className="text-sm font-normal mt-0.5"
+                style={{ color: colors.textSecondary }}
               >
-                {formatCurrency(item.amount)}
-              </Text>
-              <Text
-                className="text-xs mt-1 font-normal"
-                style={{
-                  color: colors.textSecondary,
-                }}
-              >
-                {item.paidById === user?.id 
-                  ? (language === "vi" ? "Bạn trả" : "You paid")
-                  : `${item.paidBy} ${language === "vi" ? "trả" : "paid"}`
-                }
+                {formatCurrency(item.amount)} · {item.paidById === user?.id ? "Bạn trả" : `${item.paidBy} trả`}
               </Text>
             </View>
+          </View>
+
+          {/* Date */}
+          <View className="text-right flex-col items-end">
+             <View 
+               className="rounded px-1.5 py-0.5 mb-1"
+               style={{ backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }}
+             >
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  {formatDate(item.expenseDate)}
+                </Text>
+             </View>
           </View>
         </View>
 
-        {/* Divider */}
-        <View
-          className="h-px mb-3"
-          style={{ backgroundColor: colors.border }}
-        />
-
-        {/* Bottom Section */}
-        <View className="flex-row items-center justify-between">
-          {/* Date */}
-          <Text
-            className="text-sm font-bold"
-            style={{
-              color: colors.textPrimary,
-            }}
-          >
-            {formatDate(item.expenseDate)}
-          </Text>
-
-          {/* Split Info and User's Share - grouped together */}
-          <View className="flex-row items-center gap-4">
-            <Text
-              className="text-xs font-normal"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              {getSplitTypeText()}
+        {/* Footer (Split info) */}
+        <View 
+          className="flex-row items-center justify-between text-sm pt-3 border-t border-dashed"
+          style={{ borderColor: colors.border + "60" }} // Semi-transparent border
+        >
+          <View className="px-2 py-1 rounded" style={{ backgroundColor: theme === 'dark' ? '#333' : '#F3F4F6' }}>
+            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+              Chia {splitCount} người
             </Text>
-
-            {/* User's Share */}
-            {(hasDebt || hasCredit) && (
-              <Text
-                className="text-base font-bold"
-                style={{
-                  color: hasCredit ? "#22C55E" : "#EF4444", // Green for credits, Red for debts
-                }}
-              >
-                {language === "vi" ? "Bạn: " : "You: "}
-                {hasCredit ? "+" : ""}
-                {formatCurrency(hasCredit ? item.yourCredits : item.yourDebts)}
-              </Text>
-            )}
           </View>
+          
+          {(hasDebt || hasCredit) && (
+            <Text 
+              className="font-bold text-sm"
+              style={{ color: hasCredit ? "#22C55E" : "#EF4444" }}
+            >
+              Bạn: {formatCurrency(hasCredit ? item.yourCredits : item.yourDebts)}
+            </Text>
+          )}
         </View>
       </TouchableOpacity>
     );
-  }, [language, colors, formatDate, formatCurrency, user]);
+  }, [colors, formatDate, formatCurrency, user, theme]);
 
   // Render list header
   const renderListHeader = useCallback(() => {
     if (!group) return null;
 
     return (
-      <View className=" pt-4 pb-2">
-        {/* Group Members Section */}
+      <View className="w-full px-4 pt-6">
+        {/* Members Section */}
         <View className="mb-6">
-          <Text
-            className="text-base mb-3 font-medium"
-            style={{
-              color: colors.textPrimary,
-            }}
-          >
-            {group.members.length} {language === "vi" ? "thành viên" : "members"}
-          </Text>
+          <View className="flex-row justify-between items-center mb-3">
+             <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
+               {group.members.length} thành viên
+             </Text>
+             <TouchableOpacity>
+               <Text className="text-sm font-semibold" style={{ color: colors.primary }}>Quản lý</Text>
+             </TouchableOpacity>
+          </View>
+          
           <View className="flex-row items-center">
+            <View className="flex-row" style={{ marginLeft: 8 }}> 
             {group.members.map((member, index) => {
               const initials = getMemberInitials(member.fullName);
               const avatarColor = getMemberAvatarColor(member.id);
@@ -349,31 +326,24 @@ export const GroupDetailScreen = () => {
               return (
                 <View
                   key={member.id}
-                  className="w-12 h-12 rounded-full items-center justify-center"
+                  className="w-10 h-10 rounded-full items-center justify-center border-2"
                   style={{
                     backgroundColor: avatarColor,
-                    marginLeft: index > 0 ? -8 : 0,
-                    borderWidth: 2,
-                    borderColor: "#FFFFFF",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 2,
-                    elevation: 1,
+                    borderColor: colors.background,
+                    marginLeft: -8, // Negative margin for overlap
+                    zIndex: index,
                   }}
                 >
                   {member.avatarUrl ? (
                     <Image
                       source={{ uri: member.avatarUrl }}
-                      style={{ width: 44, height: 44, borderRadius: 22 }}
+                      style={{ width: 36, height: 36, borderRadius: 18 }}
                       resizeMode="cover"
                     />
                   ) : (
                     <Text
-                      className="text-base font-extrabold"
-                      style={{
-                        color: textColor,
-                      }}
+                      className="text-sm font-bold"
+                      style={{ color: textColor }}
                     >
                       {initials}
                     </Text>
@@ -381,42 +351,53 @@ export const GroupDetailScreen = () => {
                 </View>
               );
             })}
-            {/* Add member button */}
-            <TouchableOpacity
-              className="w-12 h-12 rounded-full items-center justify-center"
+             {/* Add member button */}
+             <TouchableOpacity
+              className="w-10 h-10 rounded-full items-center justify-center border-2 border-dashed ml-2"
               style={{
-                backgroundColor: colors.surface,
-                marginLeft: group.members.length > 0 ? -8 : 0,
-                borderWidth: 2,
-                borderColor: "#FFFFFF",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-                elevation: 1,
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                zIndex: 100
               }}
               activeOpacity={0.7}
             >
-              <Icon name="userPlus" size={18} color={colors.textSecondary} />
+              <Icon name="plus" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
+            </View>
+           
           </View>
         </View>
 
-        {/* Recent Expenses Section */}
-        <Text
-          className="text-lg font-semibold ml-2 mb-4"
-          style={{
-            color: colors.textPrimary,
-          }}
-        >
-          {language === "vi" ? "Chi phí gần đây" : "Recent Expenses"}
-        </Text>
+        {/* Thanh toan (Payment) Section Placeholder - based on image */}
+        {/* Only show if we had real settlement data, for now static visual as requested */}
+        
+        {
+        group.expenses.length > 0 && (
+        <View className="bg-card rounded-xl shadow-sm border border-border overflow-hidden mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+             <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
+                 <Icon name="lightbulb" size={20} color="#F59E0B" />
+                 <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>Thanh toán</Text>
+             </View>
 
+        </View> 
+          )
+        }
+       
+
+        {/* Expenses Header */}
+        {
+        group.expenses.length > 0 && (
+        <View className="flex-row items-center gap-2 mb-4">
+           <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+             Chi phí gần đây
+           </Text>
+        </View>
+          )
+        }
       </View>
     );
-  }, [group, language, colors, getMemberInitials, getMemberAvatarColor, getMemberTextColor]);
+  }, [group, colors, getMemberInitials, getMemberAvatarColor, getMemberTextColor]);
 
-  // Refresh control - must be before early returns
   const refreshControl = useMemo(() => {
     return (
       <RefreshControl
@@ -428,7 +409,7 @@ export const GroupDetailScreen = () => {
     );
   }, [refreshing, handleRefresh, colors.primary]);
 
-  if (isLoading && !group) {
+  if (initialLoading && !group) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
@@ -444,13 +425,8 @@ export const GroupDetailScreen = () => {
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
         <View className="flex-1 items-center justify-center px-4">
-          <Text
-            className="text-base text-center font-normal"
-            style={{
-              color: colors.textSecondary,
-            }}
-          >
-            {language === "vi" ? "Không tìm thấy nhóm" : "Group not found"}
+          <Text className="text-base text-center font-normal" style={{ color: colors.textSecondary }}>
+            Không tìm thấy nhóm
           </Text>
         </View>
       </SafeAreaView>
@@ -458,95 +434,74 @@ export const GroupDetailScreen = () => {
   }
 
   return (
-    <SafeAreaView className="flex-1 px-2" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-      {/* Header */}
-      <View
-        style={{
-          backgroundColor: colors.background,
-          borderBottomColor: colors.border,
-          borderBottomWidth: 1,
-        }}
-      >
-        <View className="flex-row items-center justify-between px-4 py-4">
-          {/* Back Button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Icon name="arrowLeft" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-
-          {/* Group Name - Centered */}
-          <View className="flex-1 items-center px-4">
-            <Text
-              className="text-lg font-bold"
-              style={{
-                color: colors.textPrimary,
-              }}
-              numberOfLines={1}
-            >
+      {/* Header - Fixed/Sticky */}
+      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.surface, zIndex: 50, shadowColor: "#000", shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.05, elevation: 1 }}>
+         <View className="flex-row items-center justify-between px-4 h-14 border-b" style={{ borderColor: colors.border }}>
+            <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 items-center justify-center hover:bg-gray-100 rounded-full">
+               <Icon name="arrowLeft" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+            
+            <Text className="text-lg font-bold flex-1 text-center" style={{ color: colors.textPrimary }} numberOfLines={1}>
               {group.name}
             </Text>
-          </View>
+            
+            <TouchableOpacity onPress={() => router.push(`/group/${params.id}/settings`)} className="w-10 h-10 items-center justify-center rounded-full">
+               <Icon name="settings" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+         </View>
+      </SafeAreaView>
 
-          {/* Settings Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => router.push(`/group/${params.id}/settings`)}
-          >
-            <Icon name="settings" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+      {/* Main Content */}
+      <View className="flex-1">
+          {group.expenses.length === 0 ? (
+             <View className="flex-1 mt-6 px-4">
+               {/* Show members even if empty */}
+               {renderListHeader()}
+               <Text className="text-base text-center font-normal mt-10" style={{ color: colors.textSecondary }}>
+                 Chưa có chi phí nào
+               </Text>
+             </View>
+          ) : (
+             <FlatList
+                data={group.expenses}
+                renderItem={renderExpenseItem}
+                keyExtractor={(item) => item.id}
+                ListHeaderComponent={renderListHeader}
+                refreshControl={refreshControl}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+                showsVerticalScrollIndicator={false}
+             />
+          )}
       </View>
-
-      {/* Content */}
-      {group.expenses.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-4">
-          <Text
-            className="text-base text-center font-normal"
-            style={{
-              color: colors.textSecondary,
-            }}
-          >
-            {language === "vi" ? "Chưa có chi phí nào" : "No expenses yet"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={group.expenses}
-          renderItem={renderExpenseItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderListHeader}
-          refreshControl={refreshControl}
-          contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: 16 }}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
-          initialNumToRender={10}
-          windowSize={10}
-        />
-      )}
-
-      {/* FAB Button */}
-      <TouchableOpacity
-        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center"
-        style={{
-          backgroundColor: colors.primary,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }}
-        activeOpacity={0.8}
-        onPress={() => router.push(`/group/${params.id}/add-expense`)}
-      >
-        <Icon name="plus" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
-    </SafeAreaView>
+      
+      {/* Bottom Action Button - Fixed */}
+      <View className="absolute bottom-0 left-0 right-0 p-4 pt-2 bg-gradient-to-t" style={{ backgroundColor: colors.background }}>
+         <SafeAreaView edges={['bottom']}>
+            <TouchableOpacity
+               activeOpacity={0.9}
+               onPress={() => router.push(`/group/${params.id}/add-expense`)}
+            >           
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="w-full h-14 rounded-xl flex-row items-center justify-center gap-2 shadow-lg shadow-primary/30"
+              style={{
+                borderRadius: 16,
+              }}
+            >
+                <Icon name="plus" size={24} color="#FFFFFF" />
+               <Text className="font-bold text-white tracking-wide">
+                 Thêm chi phí
+               </Text>
+            </LinearGradient>
+            </TouchableOpacity>
+         </SafeAreaView>
+      </View>
+    </View>
   );
 };
 

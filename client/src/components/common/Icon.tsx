@@ -42,6 +42,14 @@ import {
   AlertTriangle,
   Link,
   Delete,
+  Camera,
+  Utensils,
+  Car,
+  BedDouble,
+  Clapperboard,
+  ShoppingBag,
+  FileText,
+  Lightbulb,
   type LucideIcon,
 } from "lucide-react-native";
 import { getThemeColors } from "../../utils/themeColors";
@@ -99,6 +107,16 @@ const iconMap: Record<string, LucideIcon> = {
   database: Database,
   alertTriangle: AlertTriangle,
   link: Link,
+  camera: Camera,
+  lightbulb: Lightbulb,
+
+  // Categories (added for GroupDetail)
+  utensils: Utensils,
+  car: Car,
+  bed: BedDouble,
+  movie: Clapperboard,
+  shoppingBag: ShoppingBag,
+  fileText: FileText,
 };
 
 export type IconName = keyof typeof iconMap;

@@ -23,37 +23,37 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    function ({ addUtilities }) {
-      addUtilities({
-        '.font-normal': { 
-          fontFamily: 'BeVietnamPro',
-        },
-        '.font-light': { 
-          fontFamily: 'BeVietnamProLight',
-        },
-        '.font-thin': { 
-          fontFamily: 'BeVietnamProThin',
-        },
-        '.font-extralight': { 
-          fontFamily: 'BeVietnamProExtraLight',
-        },
-        '.font-medium': { 
-          fontFamily: 'BeVietnamProMedium',
-        },
-        '.font-semibold': { 
-          fontFamily: 'BeVietnamProSemiBold',
-        },
-        '.font-bold': { 
-          fontFamily: 'BeVietnamProBold',
-        },
-        '.font-extrabold': { 
-          fontFamily: 'BeVietnamProExtraBold',
-        },
-        '.font-black': { 
-          fontFamily: 'BeVietnamProBlack',
-        },
-      });
-    },
-  ],
+  // plugins: [
+  //   function ({ addUtilities }) {
+  //     addUtilities({
+  //       '.font-normal': { 
+  //         fontFamily: 'BeVietnamPro',
+  //       },
+  //       '.font-light': { 
+  //         fontFamily: 'BeVietnamProLight',
+  //       },
+  //       '.font-thin': { 
+  //         fontFamily: 'BeVietnamProThin',
+  //       },
+  //       '.font-extralight': { 
+  //         fontFamily: 'BeVietnamProExtraLight',
+  //       },
+  //       '.font-medium': { 
+  //         fontFamily: 'BeVietnamProMedium',
+  //       },
+  //       '.font-semibold': { 
+  //         fontFamily: 'BeVietnamProSemiBold',
+  //       },
+  //       '.font-bold': { 
+  //         fontFamily: 'BeVietnamProBold',
+  //       },
+  //       '.font-extrabold': { 
+  //         fontFamily: 'BeVietnamProExtraBold',
+  //       },
+  //       '.font-black': { 
+  //         fontFamily: 'BeVietnamProBlack',
+  //       },
+  //     });
+  //   },
+  // ],
 }

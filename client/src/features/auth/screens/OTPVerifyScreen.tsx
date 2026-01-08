@@ -16,7 +16,6 @@ import { verifyOtpRegister, sendOtpRegister } from "../../../services/api/otp.ap
 
 const OTPVerifyScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const params = useLocalSearchParams<{ phone?: string; type?: "register" | "forgot-password" }>();
   const { success, error } = useToast();
@@ -26,7 +25,7 @@ const OTPVerifyScreen = () => {
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<OtpFormData>({
-    resolver: zodResolver(createOtpSchema(language)),
+    resolver: zodResolver(createOtpSchema()),
     mode: "onBlur",
     defaultValues: {
       otp: "",
@@ -36,61 +35,39 @@ const OTPVerifyScreen = () => {
   const onSubmit = async (data: OtpFormData) => {
     try {
       if (!params.phone) {
-        error(
-          language === "vi" ? "Thiếu số điện thoại." : "Phone number is missing.",
-          language === "vi" ? "Lỗi" : "Error"
-        );
+        error("Thiếu số điện thoại.", "Lỗi");
         return;
       }
 
       if (params.type === "register") {
         // Verify OTP for registration
         await verifyOtpRegister({ phone: params.phone, otp: data.otp });
-        success(
-          language === "vi" ? "Xác minh OTP thành công! Vui lòng đăng nhập." : "OTP verification successful! Please login.",
-          language === "vi" ? "Thành công" : "Success"
-        );
+        success("Xác minh OTP thành công! Vui lòng đăng nhập.", "Thành công");
         router.replace("/auth/login");
       } else if (params.type === "forgot-password") {
         // TODO: Implement verify OTP for forgot password
-        success(
-          language === "vi" ? "Xác minh OTP thành công!" : "OTP verification successful!",
-          language === "vi" ? "Thành công" : "Success"
-        );
+        success("Xác minh OTP thành công!", "Thành công");
         router.push("/auth/reset-password");
       } else {
-        error(
-          language === "vi" ? "Loại xác minh không hợp lệ." : "Invalid verification type.",
-          language === "vi" ? "Lỗi" : "Error"
-        );
+        error("Loại xác minh không hợp lệ.", "Lỗi");
       }
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        (language === "vi" ? "Mã OTP không đúng. Vui lòng thử lại." : "Invalid OTP. Please try again.");
-      error(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.response?.data?.message || "Mã OTP không đúng. Vui lòng thử lại.";
+      error(errorMessage, "Lỗi");
     }
   };
 
   const handleResend = async () => {
     if (!params.phone) {
-      error(
-        language === "vi" ? "Thiếu số điện thoại để gửi lại mã." : "Phone number is missing to resend OTP.",
-        language === "vi" ? "Lỗi" : "Error"
-      );
+      error("Thiếu số điện thoại để gửi lại mã.", "Lỗi");
       return;
     }
     try {
       await sendOtpRegister(params.phone);
-      success(
-        language === "vi" ? "Mã OTP đã được gửi lại!" : "OTP has been re-sent!",
-        language === "vi" ? "Thành công" : "Success"
-      );
+      success("Mã OTP đã được gửi lại!", "Thành công");
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        (language === "vi" ? "Gửi lại mã OTP thất bại." : "Failed to resend OTP.");
-      error(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.response?.data?.message || "Gửi lại mã OTP thất bại.";
+      error(errorMessage, "Lỗi");
     }
   };
 
@@ -103,26 +80,15 @@ const OTPVerifyScreen = () => {
     return `+84 ${phone}`;
   };
 
-  const translations = {
-    vi: {
-      title: "Xác thực",
-      instruction: "Nhập mã OTP",
-      sentTo: "Mã xác thực đã được gửi đến số điện thoại",
-      didntReceive: "Không nhận được mã?",
-      resend: "Gửi lại mã",
-      confirmButton: "Xác nhận",
-    },
-    en: {
-      title: "Verify",
-      instruction: "Enter OTP code",
-      sentTo: "The verification code has been sent to phone number",
-      didntReceive: "Didn't receive the code?",
-      resend: "Resend code",
-      confirmButton: "Confirm",
-    },
+  const t = {
+    title: "Xác thực",
+    instruction: "Nhập mã OTP",
+    sentTo: "Mã xác thực đã được gửi đến số điện thoại",
+    didntReceive: "Không nhận được mã?",
+    resend: "Gửi lại mã",
+    confirmButton: "Xác nhận",
   };
 
-  const t = translations[language];
   const isDark = theme === "dark";
   
   // Gradient colors based on theme
@@ -153,15 +119,7 @@ const OTPVerifyScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: theme === "dark" ? 0.2 : 0.08,
-                shadowRadius: 8,
-                elevation: 2,
+                backgroundColor: colors.card,       
               }}
             >
               {/* Header */}
@@ -188,7 +146,7 @@ const OTPVerifyScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {t.sentTo} {formatPhone(params.phone)}
+                  {t.sentTo + "\n" + formatPhone(params.phone)}
                 </Text>
               </View>
 

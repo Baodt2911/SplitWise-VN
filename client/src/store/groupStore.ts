@@ -13,6 +13,7 @@ interface GroupState {
   refreshTrigger: number;
   setGroups: (groups: Group[]) => void;
   addGroups: (groups: Group[]) => void;
+  prependGroup: (group: Group) => void; // Add new group at the beginning
   setGroupDetail: (groupId: string, groupDetail: GroupDetail) => void;
   getGroupDetail: (groupId: string) => GroupDetail | undefined;
   updateGroupDetail: (groupId: string, updater: (detail: GroupDetail) => GroupDetail) => void;
@@ -41,6 +42,10 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   
   addGroups: (groups) => set((state) => ({
     groups: [...state.groups, ...groups],
+  })),
+  
+  prependGroup: (group) => set((state) => ({
+    groups: [group, ...state.groups],
   })),
   
   setGroupDetail: (groupId, groupDetail) => set((state) => ({

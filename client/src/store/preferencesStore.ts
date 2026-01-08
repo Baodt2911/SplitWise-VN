@@ -8,7 +8,6 @@ interface PreferencesState {
   language: AppLanguage;
   theme: AppTheme;
   hasCompletedOnboarding: boolean;
-  setLanguage: (language: AppLanguage) => void;
   setTheme: (theme: AppTheme) => void;
   toggleTheme: () => void;
   setHasCompletedOnboarding: (completed: boolean) => void;
@@ -20,7 +19,6 @@ export const usePreferencesStore = create<PreferencesState>()(
       language: "vi",
       theme: "light",
       hasCompletedOnboarding: false,
-      setLanguage: (language) => set({ language }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => {
         const current = get().theme;
@@ -32,12 +30,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       name: "preferences",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        language: state.language,
         theme: state.theme,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
       }),
     },
   ),
 );
-
 

@@ -1,15 +1,31 @@
-import { Router } from "express";
+import { query, Router } from "express";
 import { validateAll } from "../middlewares";
 import {
   createExpenseController,
   deleteExpenseController,
   getDetailExpenseController,
+  getExpenseGroupController,
   updateExpenseController,
 } from "../controllers";
 import z from "zod";
-import { createExpenseSchema, updateExpenseSchema } from "../schemas";
+import {
+  createExpenseSchema,
+  queryExpenseSchema,
+  updateExpenseSchema,
+} from "../schemas";
 import commmentRouter from "./comment.route";
 const router = Router({ mergeParams: true });
+
+router.get(
+  "/",
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    query: queryExpenseSchema,
+  }),
+  getExpenseGroupController
+);
 router.get(
   "/:expenseId",
   validateAll({

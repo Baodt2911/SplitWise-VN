@@ -23,6 +23,7 @@ export const updateGroupSchema = z
 
       .or(z.literal("")),
     isPublic: z.boolean(),
+    allowMemberDirectAdd: z.boolean(),
     allowMemberEdit: z.boolean(),
     requirePaymentConfirmation: z.boolean(),
     autoReminderEnabled: z.boolean(),

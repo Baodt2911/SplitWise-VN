@@ -6,8 +6,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import type { AppLanguage, AppTheme } from "../types";
-import { usePreferencesStore } from "../../../store/preferencesStore";
+import type { AppTheme } from "../types";
 import { getThemeColors } from "../../../utils/themeColors";
 
 interface ThemeToggleProps {
@@ -18,17 +17,16 @@ interface ThemeToggleProps {
 }
 
 const OPTIONS: { 
-  label: Record<AppLanguage, string>; 
+  label: string; 
   icon: string; 
   code: AppTheme 
 }[] = [
-  { label: { vi: "Sáng", en: "Light" }, icon: "☀️", code: "light" },
-  { label: { vi: "Tối", en: "Dark" }, icon: "🌙", code: "dark" },
+  { label: "Sáng", icon: "☀️", code: "light" },
+  { label: "Tối", icon: "🌙", code: "dark" },
 ];
 
 export const ThemeToggle = ({ value, onChange, onOpenChange, isOtherOpen }: ThemeToggleProps) => {
   const [open, setOpen] = useState(false);
-  const language = usePreferencesStore((state) => state.language);
   const current = OPTIONS.find((o) => o.code === value) ?? OPTIONS[0];
   const colors = getThemeColors(value);
 
@@ -71,11 +69,6 @@ export const ThemeToggle = ({ value, onChange, onOpenChange, isOtherOpen }: Them
     onOpenChange?.(false);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    onOpenChange?.(false);
-  };
-
   return (
     <View className="relative" style={{ zIndex: open ? 100 : 40, overflow: "visible" }}>
       <TouchableOpacity
@@ -95,7 +88,7 @@ export const ThemeToggle = ({ value, onChange, onOpenChange, isOtherOpen }: Them
             color: colors.textPrimary,
           }}
         >
-          {current.label[language]}
+          {current.label}
         </Text>
         <Text
           className="text-xs"
@@ -140,7 +133,7 @@ export const ThemeToggle = ({ value, onChange, onOpenChange, isOtherOpen }: Them
                     color: isActive ? colors.primary : colors.textPrimary,
                   }}
                 >
-                  {option.label[language]}
+                  {option.label}
                 </Text>
               </TouchableOpacity>
             );

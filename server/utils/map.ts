@@ -1,4 +1,8 @@
-import { ExpenseCategory, ExpenseSplitType } from "../generated/prisma/client";
+import {
+  Comment,
+  ExpenseCategory,
+  ExpenseSplitType,
+} from "../generated/prisma/client";
 import Decimal from "decimal.js";
 
 type ExpenseProps = {
@@ -51,6 +55,14 @@ export const mapExpense = (userId: string, expense: ExpenseProps) => ({
     .reduce((acc, b) => {
       if (b.user.id === userId && expense.paidBy !== userId) {
         return acc.minus(b.amount);
+      }
+      return acc;
+    }, new Decimal(0))
+    .toString(),
+  yourCredits: expense.splits
+    .reduce((acc, b) => {
+      if (b.user.id !== userId && expense.paidBy === userId) {
+        return acc.plus(b.amount);
       }
       return acc;
     }, new Decimal(0))

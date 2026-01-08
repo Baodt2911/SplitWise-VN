@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
-import { View, Text, Pressable, Animated } from "react-native";
+import { useEffect } from "react";
+import { View, Text, Pressable } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { useToastStore } from "../../store/toastStore";
 import { getThemeColors } from "../../utils/themeColors";
 import { usePreferencesStore } from "../../store/preferencesStore";
@@ -8,23 +13,19 @@ const ToastItem = ({ toast }: { toast: { id: string; type: string; message: stri
   const { hide } = useToastStore();
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const slideAnim = useRef(new Animated.Value(-100)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  
+  const translateY = useSharedValue(-100);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    translateY.value = withTiming(0, { duration: 300 });
+    opacity.value = withTiming(1, { duration: 300 });
   }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
 
   const getToastColors = () => {
     switch (toast.type) {
@@ -58,45 +59,29 @@ const ToastItem = ({ toast }: { toast: { id: string; type: string; message: stri
   const toastColors = getToastColors();
 
   const handleHide = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    translateY.value = withTiming(-100, { duration: 200 });
+    opacity.value = withTiming(0, { duration: 200 });
+    // Call hide after animation completes
+    setTimeout(() => {
       hide(toast.id);
-    });
+    }, 200);
   };
 
   return (
     <Animated.View
       className="mb-3"
-      style={{
-        transform: [{ translateY: slideAnim }],
-        opacity: opacityAnim,
-      }}
+      style={animatedStyle}
     >
       <Pressable
         onPress={handleHide}
-        className="rounded-xl py-3.5 px-3 min-w-[300px] max-w-[90%]"
+        className="rounded-xl py-5 px-3 min-w-[80%] max-w-[90%] min-h-8 max-h-32 shadow-md"
         style={{
           backgroundColor: colors.surface,
           borderLeftWidth: 4,
           borderLeftColor: toastColors.border,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 3,
         }}
       >
-        <View className="flex-row items-start">
+        <View className="flex flex-row items-start">
           <View
             className="w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5"
             style={{
@@ -129,7 +114,6 @@ const ToastItem = ({ toast }: { toast: { id: string; type: string; message: stri
               style={{
                 color: colors.textSecondary,
               }}
-              numberOfLines={8}
             >
               {toast.message}
             </Text>

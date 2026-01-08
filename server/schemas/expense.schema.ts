@@ -200,3 +200,29 @@ export const updateExpenseSchema = z
     }
   })
   .strict();
+
+export const queryExpenseSchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .positive("Page must be a positive integer")
+    .default(1),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive("Page size must be a positive integer")
+    .default(10),
+  category: z
+    .enum([
+      "food",
+      "transport",
+      "entertainment",
+      "accommodation",
+      "shopping",
+      "other",
+    ])
+    .optional(),
+  expenseDateFrom: z.coerce.date().optional(),
+  expenseDateTo: z.coerce.date().optional(),
+  paidBy: z.string().optional(),
+});

@@ -10,24 +10,20 @@ import { usePreferencesStore } from "../../../store/preferencesStore";
 import { TextInput } from "../../auth/components/TextInput";
 import { Icon } from "../../../components/common/Icon";
 import { createGroupSchema, type CreateGroupFormData } from "../schemas/group.schema";
-import { createGroup, type ApiError } from "../../../services/api/group.api";
+import { createGroup, type ApiError, type CreateGroupResponse } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
+import { useGroupStore } from "../../../store/groupStore";
 
 interface CreateGroupBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateGroup?: (data: CreateGroupFormData) => void | Promise<void>;
-  onSuccess?: () => void;
 }
 
 export const CreateGroupBottomSheet = ({
   isOpen,
   onClose,
-  onCreateGroup,
-  onSuccess,
 }: CreateGroupBottomSheetProps) => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -38,7 +34,7 @@ export const CreateGroupBottomSheet = ({
   const gradientColors: [string, string] = [colors.primary, colors.primaryDark];
 
   const methods = useForm<CreateGroupFormData>({
-    resolver: zodResolver(createGroupSchema(language)),
+    resolver: zodResolver(createGroupSchema()),
     defaultValues: {
       name: "",
       description: "",
@@ -110,11 +106,6 @@ export const CreateGroupBottomSheet = ({
 
   const onSubmit = async (data: CreateGroupFormData) => {
     try {
-      // Call custom handler if provided
-      if (onCreateGroup) {
-        await onCreateGroup(data);
-        return;
-      }
 
       // Default: Call API
       const result = await createGroup({
@@ -127,10 +118,7 @@ export const CreateGroupBottomSheet = ({
       // Check if result is an error
       if ("field" in result) {
         const apiError = result as ApiError;
-        showError(
-          apiError.message,
-          language === "vi" ? "Lỗi" : "Error"
-        );
+        showError(apiError.message, "Lỗi");
         
         // Set error to form field if field is specified
         if (apiError.field) {
@@ -142,58 +130,48 @@ export const CreateGroupBottomSheet = ({
         return;
       }
 
-      // Success
-      success(
-        language === "vi" ? "Tạo nhóm thành công!" : "Group created successfully!",
-        language === "vi" ? "Thành công" : "Success"
-      );
+      // Success - add new group to store directly (no need to refetch)
+      const successResult = result as CreateGroupResponse;
+      if (successResult.data) {
+        const { prependGroup } = useGroupStore.getState();
+        prependGroup({
+          ...successResult.data,
+          memberCount: 1,
+          expenseCount: 0,
+          peopleOweYou: [],
+          totalPeopleOweYou: "",
+          yourDebts: "",
+        });
+      }
+      
+      success(successResult.message, "Thành công");
       
       // Reset form and close
       resetForm();
       setImageUri(null);
       onClose();
-      onSuccess?.();
     } catch (err: any) {
       // Network error or other unexpected errors
-      const errorMessage = err.message || (language === "vi" ? "Không thể kết nối đến server" : "Cannot connect to server");
-      showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.message || "Không thể kết nối đến server";
+      showError(errorMessage, "Lỗi");
     }
   };
 
-  const translations = {
-    vi: {
-      title: "Tạo nhóm mới",
-      groupName: "Tên nhóm",
-      groupNamePlaceholder: "Nhập tên nhóm",
-      description: "Mô tả",
-      descriptionPlaceholder: "Nhập mô tả (tùy chọn)",
-      avatar: "Ảnh đại diện",
-      avatarHint: "Chọn ảnh đại diện cho nhóm",
-      isPublic: "Công khai",
-      isPublicHint: "Cho phép mọi người tìm thấy nhóm này",
-      createButton: "Tạo nhóm",
-      cancel: "Hủy",
-      selectImage: "Chọn ảnh",
-      removeImage: "Xóa ảnh",
-    },
-    en: {
-      title: "Create new group",
-      groupName: "Group name",
-      groupNamePlaceholder: "Enter group name",
-      description: "Description",
-      descriptionPlaceholder: "Enter description (optional)",
-      avatar: "Avatar",
-      avatarHint: "Select avatar for the group",
-      isPublic: "Public",
-      isPublicHint: "Allow others to find this group",
-      createButton: "Create group",
-      cancel: "Cancel",
-      selectImage: "Select image",
-      removeImage: "Remove image",
-    },
+  const t = {
+    title: "Tạo nhóm mới",
+    groupName: "Tên nhóm",
+    groupNamePlaceholder: "Nhập tên nhóm",
+    description: "Mô tả",
+    descriptionPlaceholder: "Nhập mô tả (tùy chọn)",
+    avatar: "Ảnh đại diện",
+    avatarHint: "Chọn ảnh đại diện cho nhóm",
+    isPublic: "Công khai",
+    isPublicHint: "Cho phép mọi người tìm thấy nhóm này",
+    createButton: "Tạo nhóm",
+    cancel: "Hủy",
+    selectImage: "Chọn ảnh",
+    removeImage: "Xóa ảnh",
   };
-
-  const t = translations[language];
 
   return (
     <BottomSheet

@@ -9,7 +9,6 @@ interface CreateGroupButtonProps {
 
 export const CreateGroupButton = ({ onPress }: CreateGroupButtonProps) => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
 
   const gradientColors: [string, string] = [colors.primary, colors.primaryDark];
@@ -28,7 +27,7 @@ export const CreateGroupButton = ({ onPress }: CreateGroupButtonProps) => {
             color: colors.primaryText,
           }}
         >
-          {language === "vi" ? "Tạo nhóm" : "Create group"}
+         Tạo nhóm
         </Text>
       </LinearGradient>
     </TouchableOpacity>

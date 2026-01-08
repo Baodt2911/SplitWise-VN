@@ -94,7 +94,7 @@ export const OTPInput = ({ name, control, length = 6 }: OTPInputProps) => {
 
         return (
           <View>
-            <View className="flex-row justify-between mb-2" style={{ gap: 12 }}>
+            <View className="flex-row justify-between mb-2 gap-2">
               {Array.from({ length }).map((_, index) => (
                 <RNTextInput
                   key={index}
@@ -110,21 +110,13 @@ export const OTPInput = ({ name, control, length = 6 }: OTPInputProps) => {
                   }}
                   keyboardType="numeric"
                   maxLength={1}
-                  className="w-14 h-16 rounded-2xl border text-center text-xl font-bold"
+                  className="flex-1 rounded-2xl border text-center text-xl font-bold"
                   style={{
                     backgroundColor: colors.surface,
                     borderColor: error ? colors.danger : colors.border,
                     borderWidth: error ? 1.5 : 1,
                     color: colors.textPrimary,
                     fontSize: 20,
-                    shadowColor: isDark ? "#000" : "#000",
-                    shadowOffset: {
-                      width: 0,
-                      height: 2,
-                    },
-                    shadowOpacity: isDark ? 0.3 : 0.08,
-                    shadowRadius: 4,
-                    elevation: 2,
                   }}
                   selectTextOnFocus
                 />

@@ -16,7 +16,6 @@ import { sendOtpRegister } from "../../../services/api/otp.api";
 
 const ForgotPasswordScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const { success, error } = useToast();
 
@@ -25,7 +24,7 @@ const ForgotPasswordScreen = () => {
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<ForgotPasswordFormData>({
-    resolver: zodResolver(createForgotPasswordSchema(language)),
+    resolver: zodResolver(createForgotPasswordSchema()),
     mode: "onBlur",
     defaultValues: {
       phone: "",
@@ -37,42 +36,27 @@ const ForgotPasswordScreen = () => {
       // TODO: Replace with actual forgot password API
       await sendOtpRegister(data.phone);
 
-      success(
-        language === "vi" ? "Mã OTP đã được gửi đến số điện thoại của bạn." : "OTP code has been sent to your phone number.",
-        language === "vi" ? "Thành công" : "Success"
-      );
+      success("Mã OTP đã được gửi đến số điện thoại của bạn.", "Thành công");
       router.push({
         pathname: "/auth/otp-verify",
         params: { phone: data.phone, type: "forgot-password" },
       });
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        (language === "vi" ? "Gửi mã OTP thất bại. Vui lòng thử lại." : "Failed to send OTP. Please try again.");
-      error(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.response?.data?.message || "Gửi mã OTP thất bại. Vui lòng thử lại.";
+      error(errorMessage, "Lỗi");
     }
   };
 
-  const translations = {
-    vi: {
-      title: "Quên mật khẩu",
-      subtitle: "Nhập số điện thoại để nhận mã OTP đặt lại mật khẩu",
-      phoneLabel: "Số điện thoại",
-      phonePlaceholder: "Nhập số điện thoại",
-      sendOtpButton: "Gửi mã OTP",
-      rememberPassword: "Nhớ mật khẩu? Đăng nhập",
-    },
-    en: {
-      title: "Forgot password",
-      subtitle: "Enter your phone number to receive OTP code to reset password",
-      phoneLabel: "Phone number",
-      phonePlaceholder: "Enter your phone number",
-      sendOtpButton: "Send OTP",
-      rememberPassword: "Remember password? Login",
-    },
+  const t = {
+    title: "Quên mật khẩu",
+    subtitle: "Nhập số điện thoại để nhận mã OTP đặt lại mật khẩu",
+    phoneLabel: "Số điện thoại",
+    phonePlaceholder: "Nhập số điện thoại",
+    sendOtpButton: "Gửi mã OTP",
+    rememberPassword: "Nhớ mật khẩu?",
+    login: "Đăng nhập",
   };
 
-  const t = translations[language];
   const isDark = theme === "dark";
   
   // Gradient colors based on theme
@@ -104,14 +88,6 @@ const ForgotPasswordScreen = () => {
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
                 backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: theme === "dark" ? 0.2 : 0.08,
-                shadowRadius: 8,
-                elevation: 2,
               }}
             >
               {/* Header */}
@@ -158,7 +134,7 @@ const ForgotPasswordScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.rememberPassword.split("?")[0]}?{" "}
+                {t.rememberPassword}{" "}
               </Text>
               <TouchableOpacity onPress={() => router.push("/auth/login")}>
                 <Text
@@ -167,7 +143,7 @@ const ForgotPasswordScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {t.rememberPassword.split("?")[1]?.trim() || (language === "vi" ? "Đăng nhập" : "Login")}
+                  {t.login}
                 </Text>
               </TouchableOpacity>
             </View>

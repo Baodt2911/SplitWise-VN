@@ -14,6 +14,59 @@ import { createNotificationService } from "./notification.service";
 import { emitNotificationToUser } from "../emitter/notification.emitter";
 import { io } from "../app";
 
+export const getSettlementService = async (
+  userId: string,
+  groupId: string,
+  settlementId: string
+) => {
+  const existingGroup = await prisma.group.findUnique({
+    where: {
+      id: groupId,
+    },
+  });
+  if (!existingGroup) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Không tìm thấy nhóm",
+    };
+  }
+
+  await checkGroupMember(userId, groupId);
+  const settlement = await prisma.settlement.findFirst({
+    where: {
+      id: settlementId,
+      OR: [{ payeeId: userId }, { payerId: userId }],
+    },
+    select: {
+      id: true,
+      payee: {
+        select: {
+          id: true,
+          fullName: true,
+        },
+      },
+      payer: {
+        select: {
+          id: true,
+          fullName: true,
+        },
+      },
+      amount: true,
+      currency: true,
+      status: true,
+      rejectionReason: true,
+      disputeReason: true,
+      paymentDate: true,
+      paymentMethod: true,
+      notes: true,
+      confirmedBy: true,
+      confirmedAt: true,
+      createdAt: true,
+    },
+  });
+  return settlement || {};
+};
+
 export const createSettlementService = async (
   userId: string,
   groupId: string,
@@ -24,6 +77,7 @@ export const createSettlementService = async (
       id: groupId,
     },
     select: {
+      requirePaymentConfirmation: true,
       balances: {
         where: {
           payerId: userId,
@@ -65,7 +119,7 @@ export const createSettlementService = async (
       message: "Thanh toán trước đó chưa được xử lý",
     };
   }
-
+  const isRequireConfirm = existingGroup.requirePaymentConfirmation;
   const { paymentMethod, ...other } = data;
   await checkGroupMember(userId, groupId);
   const result = await prisma.$transaction(async (tx) => {
@@ -77,6 +131,9 @@ export const createSettlementService = async (
         groupId,
         payerId: userId,
         paymentMethod: SettlementPaymentMethod[keyMethod],
+        status: isRequireConfirm
+          ? SettlementStatus.PENDING
+          : SettlementStatus.CONFIRMED,
         ...other,
       },
       select: {
@@ -85,6 +142,7 @@ export const createSettlementService = async (
         currency: true,
         payer: {
           select: {
+            id: true,
             fullName: true,
           },
         },
@@ -97,12 +155,34 @@ export const createSettlementService = async (
       },
     });
 
+    // Nếu không yêu cầu xác nhận thì cập nhật luôn balance
+    if (!isRequireConfirm) {
+      await prisma.balance.update({
+        where: {
+          groupId_payerId_payeeId: {
+            groupId,
+            payerId: settlement.payer.id,
+            payeeId: settlement.payee.id,
+          },
+        },
+        data: {
+          amount: {
+            decrement: settlement.amount,
+          },
+        },
+      });
+    }
+
     await createActivityService(
       {
         groupId,
         userId: userId, // actor = payer
-        action: ActivityAction.CREATE_PAYMENT,
-        description: "Đã tạo yêu cầu thanh toán",
+        action: isRequireConfirm
+          ? ActivityAction.CREATE_PAYMENT
+          : ActivityAction.CONFIRM_PAYMENT,
+        description: isRequireConfirm
+          ? "Đã tạo yêu cầu thanh toán"
+          : "Đã thanh toán",
         metadata: {
           settlementId: settlement.id,
           payeeId: settlement.payee.id,
@@ -117,13 +197,23 @@ export const createSettlementService = async (
     await createNotificationService(
       {
         userId: data.payeeId, // người nhận tiền
-        type: NotificationType.PAYMENT_REQUEST,
-        title: "Yêu cầu xác nhận thanh toán",
-        body: `${
-          settlement.payer.fullName
-        } đã thanh toán ${settlement.amount.toString()} ${
-          settlement.currency
-        }. Vui lòng xác nhận đã nhận tiền.`,
+        type: isRequireConfirm
+          ? NotificationType.PAYMENT_REQUEST
+          : NotificationType.PAYMENT_CONFIRMED,
+        title: isRequireConfirm
+          ? "Yêu cầu xác nhận thanh toán"
+          : "Đã nhận thanh toán",
+        body: isRequireConfirm
+          ? `${
+              settlement.payer.fullName
+            } đã thanh toán ${settlement.amount.toString()} ${
+              settlement.currency
+            }. Vui lòng xác nhận đã nhận tiền.`
+          : `${
+              settlement.payer.fullName
+            } đã thanh toán ${settlement.amount.toString()} ${
+              settlement.currency
+            } cho bạn.`,
         relatedType: RelatedType.SETTLEMENT,
         relatedId: settlement.id,
       },
@@ -133,7 +223,9 @@ export const createSettlementService = async (
   });
 
   emitNotificationToUser(io, data.payeeId, {
-    type: NotificationType.PAYMENT_REQUEST,
+    type: isRequireConfirm
+      ? NotificationType.PAYMENT_REQUEST
+      : NotificationType.PAYMENT_CONFIRMED,
     relatedType: RelatedType.SETTLEMENT,
     relatedId: result.id,
   });
@@ -290,7 +382,10 @@ const updateStatusSettlementService = async (
     };
   }
 
-  if (settlement.status === status) {
+  if (
+    settlement.status === SettlementStatus.CONFIRMED ||
+    settlement.status === SettlementStatus.REJECTED
+  ) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "Khoản thanh toán đã được xử lý trước đó",

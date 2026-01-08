@@ -15,8 +15,6 @@ export const GroupCard = memo(({
 }: GroupCardProps) => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const language = usePreferencesStore((state) => state.language);
-
   // Memoize calculations
   const { status, amount, statusText, statusColor, groupIcon, iconBgColor, showStatus } = useMemo(() => {
     const yourDebts = parseFloat(group.yourDebts || "0");
@@ -45,20 +43,18 @@ export const GroupCard = memo(({
         currency: "VND",
       }).format(amount);
 
-      return language === "vi" 
-        ? `${maxDebtPerson.fullName} nợ bạn ${formattedAmount}`
-        : `${maxDebtPerson.fullName} owes you ${formattedAmount}`;
+      return `${maxDebtPerson.fullName} nợ bạn ${formattedAmount}`;
     };
 
     const getStatusText = () => {
       if (status === "owe") {
-        return language === "vi" ? "Bạn nợ" : "You owe";
+        return "Bạn nợ";
       }
       if (status === "owed") {
         const personText = getPersonOweYouText();
-        return personText || (language === "vi" ? "nợ bạn" : "owes you");
+        return personText || "nợ bạn";
       }
-      return language === "vi" ? "Đã thanh toán" : "Paid";
+      return "Đã thanh toán";
     };
 
     const getStatusColor = () => {
@@ -89,7 +85,7 @@ export const GroupCard = memo(({
       iconBgColor: getIconBgColor(),
       showStatus,
     };
-  }, [group, language, colors]);
+  }, [group, colors]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -140,7 +136,7 @@ export const GroupCard = memo(({
             color: colors.textSecondary,
           }}
         >
-          {group.memberCount} {language === "vi" ? "thành viên" : "members"} • {group.expenseCount} {language === "vi" ? "chi phí" : "expenses"}
+          {group.memberCount} thành viên • {group.expenseCount} chi phí
         </Text>
         {showStatus && (
           <View className="flex-row items-center">

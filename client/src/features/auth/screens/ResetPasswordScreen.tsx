@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
@@ -15,7 +15,6 @@ import { useToast } from "../../../hooks/useToast";
 
 const ResetPasswordScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const { success, error } = useToast();
 
@@ -24,7 +23,7 @@ const ResetPasswordScreen = () => {
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(createResetPasswordSchema(language)),
+    resolver: zodResolver(createResetPasswordSchema()),
     mode: "onBlur",
     defaultValues: {
       password: "",
@@ -37,43 +36,25 @@ const ResetPasswordScreen = () => {
       // TODO: Implement reset password API
       console.log("Reset password:", data);
       
-      success(
-        language === "vi" ? "Đặt lại mật khẩu thành công!" : "Password reset successful!",
-        language === "vi" ? "Thành công" : "Success"
-      );
+      success("Đặt lại mật khẩu thành công!", "Thành công");
       router.replace("/auth/login");
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        (language === "vi" ? "Đặt lại mật khẩu thất bại. Vui lòng thử lại." : "Password reset failed. Please try again.");
-      error(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.response?.data?.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.";
+      error(errorMessage, "Lỗi");
     }
   };
 
-  const translations = {
-    vi: {
-      title: "Đặt lại mật khẩu",
-      subtitle: "Nhập mật khẩu mới của bạn",
-      passwordLabel: "Mật khẩu mới",
-      passwordPlaceholder: "Nhập mật khẩu mới",
-      passwordHint: "ít nhất 8 ký tự",
-      confirmPasswordLabel: "Nhập lại mật khẩu",
-      confirmPasswordPlaceholder: "Nhập lại mật khẩu",
-      resetButton: "Đặt lại mật khẩu",
-    },
-    en: {
-      title: "Reset password",
-      subtitle: "Enter your new password",
-      passwordLabel: "New password",
-      passwordPlaceholder: "Enter new password",
-      passwordHint: "at least 8 characters",
-      confirmPasswordLabel: "Re-enter password",
-      confirmPasswordPlaceholder: "Re-enter password",
-      resetButton: "Reset password",
-    },
+  const t = {
+    title: "Đặt lại mật khẩu",
+    subtitle: "Nhập mật khẩu mới của bạn",
+    passwordLabel: "Mật khẩu mới",
+    passwordPlaceholder: "Nhập mật khẩu mới",
+    passwordHint: "ít nhất 8 ký tự",
+    confirmPasswordLabel: "Nhập lại mật khẩu",
+    confirmPasswordPlaceholder: "Nhập lại mật khẩu",
+    resetButton: "Đặt lại mật khẩu",
   };
 
-  const t = translations[language];
   const isDark = theme === "dark";
   
   // Gradient colors based on theme
@@ -104,15 +85,7 @@ const ResetPasswordScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000" : "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: theme === "dark" ? 0.2 : 0.08,
-                shadowRadius: 8,
-                elevation: 2,
+                backgroundColor: colors.card,      
               }}
             >
               {/* Header */}

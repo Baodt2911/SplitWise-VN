@@ -13,22 +13,22 @@ import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useGroupStore } from "../../../store/groupStore";
 import { Icon, type IconName } from "../../../components/common/Icon";
 import { CreateGroupBottomSheet } from "./CreateGroupBottomSheet";
-import type { CreateGroupFormData } from "../schemas/group.schema";
+
 
 interface NavItem {
   key: string;
-  label: { vi: string; en: string };
+  label: string;
   icon: IconName;
   route: string;
   isCenter?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { key: "home", label: { vi: "Trang chủ", en: "Home" }, icon: "home", route: "/home" },
-  { key: "search", label: { vi: "Tìm kiếm", en: "Search" }, icon: "search", route: "/groups" },
-  { key: "group", label: { vi: "Nhóm", en: "Group" }, icon: "plus", route: "/groups", isCenter: true },
-  { key: "statistics", label: { vi: "Thống kê", en: "Statistics" }, icon: "barChart", route: "/stats" },
-  { key: "profile", label: { vi: "Hồ sơ", en: "Profile" }, icon: "user", route: "/profile" },
+  { key: "home", label: "Trang chủ", icon: "home", route: "/home" },
+  { key: "search", label: "Tìm kiếm", icon: "search", route: "/groups" },
+  { key: "group", label: "Nhóm", icon: "plus", route: "/groups", isCenter: true },
+  { key: "statistics", label: "Thống kê", icon: "barChart", route: "/stats" },
+  { key: "profile", label: "Hồ sơ", icon: "user", route: "/profile" },
 ];
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -38,11 +38,10 @@ interface NavItemComponentProps {
   item: NavItem;
   active: boolean;
   colors: ReturnType<typeof getThemeColors>;
-  language: "vi" | "en";
   onCenterPress?: () => void;
 }
 
-const NavItemComponent = ({ item, active, colors, language, onCenterPress }: NavItemComponentProps) => {
+const NavItemComponent = ({ item, active, colors, onCenterPress }: NavItemComponentProps) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.7);
   const indicatorOpacity = useSharedValue(0);
@@ -145,7 +144,7 @@ const NavItemComponent = ({ item, active, colors, language, onCenterPress }: Nav
           color: active ? colors.primary : colors.textSecondary,
         }}
       >
-        {item.label[language]}
+        {item.label}
       </Text>
     </AnimatedTouchableOpacity>
   );
@@ -153,12 +152,10 @@ const NavItemComponent = ({ item, active, colors, language, onCenterPress }: Nav
 
 export const BottomNavBar = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const pathname = usePathname();
   const segments = useSegments();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-  const triggerRefresh = useGroupStore((state) => state.triggerRefresh);
 
   const isActive = (route: string) => {
     // Get the last segment from current path
@@ -181,17 +178,12 @@ export const BottomNavBar = () => {
   return (
     <>
       <View
-        className="absolute bottom-0 left-0 right-0 flex-row items-end justify-around rounded-3xl px-4 py-3"
+        className="absolute bottom-0 left-0 right-0 flex-row items-end justify-around rounded-3xl px-4 py-3 shadow-lg"
         style={{
           backgroundColor: colors.surface,
           marginHorizontal: 16,
           marginBottom: 20,
           paddingBottom: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 12,
           minHeight: 70,
         }}
       >
@@ -203,7 +195,6 @@ export const BottomNavBar = () => {
               item={item}
               active={active}
               colors={colors}
-              language={language}
               onCenterPress={item.isCenter ? () => setIsCreateGroupOpen(true) : undefined}
             />
           );
@@ -214,12 +205,7 @@ export const BottomNavBar = () => {
       <CreateGroupBottomSheet
         isOpen={isCreateGroupOpen}
         onClose={() => setIsCreateGroupOpen(false)}
-        onSuccess={() => {
-          // Trigger refresh of groups list
-          triggerRefresh();
-        }}
       />
     </>
   );
 };
-

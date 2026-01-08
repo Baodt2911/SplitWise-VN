@@ -3,11 +3,27 @@ import {
   deleteExpenseService,
   getDetailExpenseService,
   updateExpenseService,
+  getExpenseGroupService,
 } from "../services";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { CreateExpenseDTO, UpdateExpenseDTO } from "../dtos";
+import { CreateExpenseDTO, QueryExpenseDTO, UpdateExpenseDTO } from "../dtos";
 import { StatusCodes } from "http-status-codes";
+
+export const getExpenseGroupController = catchAsync(
+  async (req: Request<{ groupId: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    const { page = 1, pageSize = 10 } = req.query as any as QueryExpenseDTO;
+    const expenses = await getExpenseGroupService(userId!, req.params.groupId, {
+      ...req.query,
+      page: +page,
+      pageSize: +pageSize,
+    });
+    res.status(StatusCodes.OK).json({
+      expenses,
+    });
+  }
+);
 
 export const getDetailExpenseController = catchAsync(
   async (

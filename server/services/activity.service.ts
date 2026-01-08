@@ -19,12 +19,14 @@ export const createActivityService = async (
 
 export const getActivitiesGroupService = async (
   userId: string,
-  groupId: string
+  groupId: string,
+  action?: ActivityAction
 ) => {
   await checkGroupMember(userId, groupId);
   const activities = await prisma.activity.findMany({
     where: {
       groupId,
+      action,
     },
     select: {
       id: true,
@@ -56,10 +58,21 @@ export const getActivitiesService = async (userId: string) => {
   const activities = await prisma.activity.findMany({
     where: {
       userId,
-      groupId: null,
+      // groupId: null,
     },
     select: {
       id: true,
+      group: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          fullName: true,
+        },
+      },
       action: true,
       description: true,
       metadata: true,

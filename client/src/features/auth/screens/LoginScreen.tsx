@@ -17,7 +17,6 @@ import { useAuthStore } from "../../../store/authStore";
 
 const LoginScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const { success, error: showError } = useToast();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -28,7 +27,7 @@ const LoginScreen = () => {
     setError,
     formState: { isSubmitting },
   } = useForm<LoginFormData>({
-    resolver: zodResolver(createLoginSchema(language)),
+    resolver: zodResolver(createLoginSchema()),
     mode: "onBlur",
     defaultValues: {
       phone: "",
@@ -48,10 +47,7 @@ const LoginScreen = () => {
         const apiError = result as ApiError;
         
         // Show toast with error message
-        showError(
-          apiError.message,
-          language === "vi" ? "Lỗi" : "Error"
-        );
+        showError(apiError.message, "Lỗi");
         
         // Set error to form field to highlight with red border
         if (apiError.field === "phone") {
@@ -78,49 +74,30 @@ const LoginScreen = () => {
         sessionId: loginResponse.sessionId,
       });
 
-      success(
-        language === "vi" ? "Đăng nhập thành công!" : "Login successful!",
-        language === "vi" ? "Đăng nhập" : "Login"
-      );
+      success("Đăng nhập thành công!", "Đăng nhập");
       // Navigate to home after successful login
       router.replace("/(tabs)/home");
     } catch (err: any) {
       // Network error or other unexpected errors
-      const errorMessage =
-        err.message ||
-        (language === "vi" ? "Đăng nhập thất bại. Vui lòng thử lại." : "Login failed. Please try again.");
-      showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      showError(errorMessage, "Lỗi");
     }
   };
 
-  const translations = {
-    vi: {
-      title: "Đăng nhập",
-      subtitle: "Nhập số điện thoại và mật khẩu để đăng nhập",
-      phoneLabel: "Số điện thoại",
-      phonePlaceholder: "Nhập số điện thoại",
-      passwordLabel: "Mật khẩu",
-      passwordPlaceholder: "Nhập mật khẩu",
-      loginButton: "Đăng nhập",
-      forgotPassword: "Quên mật khẩu?",
-      orLoginWith: "Hoặc đăng nhập bằng",
-      noAccount: "Chưa có tài khoản? Đăng ký",
-    },
-    en: {
-      title: "Login",
-      subtitle: "Enter your phone number and password to log in",
-      phoneLabel: "Phone number",
-      phonePlaceholder: "Enter your phone number",
-      passwordLabel: "Password",
-      passwordPlaceholder: "Enter your password",
-      loginButton: "Log In",
-      forgotPassword: "Forgot password?",
-      orLoginWith: "Or login with",
-      noAccount: "Don't have an account? Sign Up",
-    },
+  const t = {
+    title: "Chào mừng trở lại",
+    subtitle: "Nhập số điện thoại và mật khẩu để đăng nhập",
+    phoneLabel: "Số điện thoại",
+    phonePlaceholder: "Nhập số điện thoại",
+    passwordLabel: "Mật khẩu",
+    passwordPlaceholder: "Nhập mật khẩu",
+    loginButton: "Đăng nhập",
+    forgotPassword: "Quên mật khẩu?",
+    orLoginWith: "Hoặc đăng nhập bằng",
+    noAccount: "Chưa có tài khoản?",
+    signUp: "Đăng ký",
   };
 
-  const t = translations[language];
 
   const isDark = theme === "dark";
   
@@ -155,17 +132,9 @@ const LoginScreen = () => {
           >
             {/* Form Container */}
             <View
-              className="rounded-3xl px-5 pt-6 pb-5"
+              className="rounded-3xl px-5 pt-6 pb-5 "
               style={{
                 backgroundColor: colors.card,
-                shadowColor: theme === "dark" ? "#000 not-allowed" : "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: theme === "dark" ? 0.2 : 0.08,
-                shadowRadius: 8,
-                elevation: 2,
               }}
             >
               {/* Header */}
@@ -299,7 +268,7 @@ const LoginScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.noAccount.split("?")[0]}?{" "}
+                {t.noAccount}{" "}
               </Text>
               <TouchableOpacity onPress={() => router.push("/auth/register")}>
                 <Text
@@ -309,7 +278,7 @@ const LoginScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {t.noAccount.split("?")[1]?.trim() || (language === "vi" ? "Đăng ký" : "Sign Up")}
+                  {t.signUp}
                 </Text>
               </TouchableOpacity>
             </View>

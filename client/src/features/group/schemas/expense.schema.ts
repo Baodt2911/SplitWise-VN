@@ -1,36 +1,28 @@
 import { z } from "zod";
 
-export const createExpenseSchema = (language: "vi" | "en") => {
-  const isVi = language === "vi";
-  
+export const createExpenseSchema = () => {
   return z.object({
-    description: z.string().min(1, isVi ? "Mô tả là bắt buộc" : "Description is required"),
+    description: z.string().min(1, "Mô tả là bắt buộc"),
     amount: z
       .string()
-      .min(1, isVi ? "Số tiền là bắt buộc" : "Amount is required")
+      .min(1, "Số tiền là bắt buộc")
       .refine((val) => {
         const num = parseFloat(val.replace(/,/g, ""));
         return !isNaN(num) && num > 0;
-      }, isVi ? "Số tiền phải lớn hơn 0" : "Amount must be greater than 0"),
+      }, "Số tiền phải lớn hơn 0"),
     currency: z.string().optional(),
-    paidBy: z.string().min(1, isVi ? "Người trả là bắt buộc" : "Payer is required"),
+    paidBy: z.string().min(1, "Người trả là bắt buộc"),
     category: z.enum(
       ["food", "transport", "entertainment", "accommodation", "shopping", "other"],
-      {
-        errorMap: () => ({
-          message: isVi ? "Danh mục không hợp lệ" : "Invalid category",
-        }),
-      }
+      { message: "Danh mục không hợp lệ" }
     ),
     splitType: z.enum(["equal", "exact", "percentage", "shares"], {
-      errorMap: () => ({
-        message: isVi ? "Cách chia không hợp lệ" : "Invalid split type",
-      }),
+      message: "Cách chia không hợp lệ",
     }),
     expenseDate: z.date().optional(),
     receiptUrl: z.string().optional(),
     notes: z.string().optional(),
-    selectedMembers: z.array(z.string()).min(1, isVi ? "Chọn ít nhất một người" : "Select at least one person"),
+    selectedMembers: z.array(z.string()).min(1, "Chọn ít nhất một người"),
   });
 };
 

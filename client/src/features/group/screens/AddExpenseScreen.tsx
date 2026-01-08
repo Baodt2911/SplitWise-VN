@@ -30,25 +30,24 @@ import { useToast } from "../../../hooks/useToast";
 import { useGroupStore } from "../../../store/groupStore";
 
 const CATEGORIES = [
-  { value: "food", labelVi: "Ăn uống", labelEn: "Food & Drink" },
-  { value: "transport", labelVi: "Giao thông", labelEn: "Transport" },
-  { value: "entertainment", labelVi: "Giải trí", labelEn: "Entertainment" },
-  { value: "accommodation", labelVi: "Chỗ ở", labelEn: "Accommodation" },
-  { value: "shopping", labelVi: "Mua sắm", labelEn: "Shopping" },
-  { value: "other", labelVi: "Khác", labelEn: "Other" },
+  { value: "food", label: "Ăn uống" },
+  { value: "transport", label: "Giao thông" },
+  { value: "entertainment", label: "Giải trí" },
+  { value: "accommodation", label: "Chỗ ở" },
+  { value: "shopping", label: "Mua sắm" },
+  { value: "other", label: "Khác" },
 ] as const;
 
 const SPLIT_TYPES = [
-  { value: "equal", labelVi: "Chia đều", labelEn: "Split equally" },
-  { value: "exact", labelVi: "Theo số tiền", labelEn: "By amount" },
-  { value: "percentage", labelVi: "Theo %", labelEn: "By percentage" },
-  { value: "shares", labelVi: "Theo phần", labelEn: "By share" },
+  { value: "equal", label: "Chia đều" },
+  { value: "exact", label: "Theo số tiền" },
+  { value: "percentage", label: "Theo %" },
+  { value: "shares", label: "Theo phần" },
 ] as const;
 
 export const AddExpenseScreen = () => {
   const params = useLocalSearchParams<{ id: string }>();
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const colors = getThemeColors(theme);
   const user = useAuthStore((state) => state.user);
   const { success, error: showError } = useToast();
@@ -72,15 +71,13 @@ export const AddExpenseScreen = () => {
 
   // Use refs to avoid dependency issues
   const showErrorRef = useRef(showError);
-  const languageRef = useRef(language);
 
   useEffect(() => {
     showErrorRef.current = showError;
-    languageRef.current = language;
-  }, [showError, language]);
+  }, [showError]);
 
   const methods = useForm<CreateExpenseFormData>({
-    resolver: zodResolver(createExpenseSchema(language)),
+    resolver: zodResolver(createExpenseSchema()),
     defaultValues: {
       description: "",
       amount: "",
@@ -142,8 +139,8 @@ export const AddExpenseScreen = () => {
             setValue("paidBy", user.id);
           }
         } catch (err: any) {
-          const errorMessage = err.message || (languageRef.current === "vi" ? "Không thể tải thông tin nhóm" : "Failed to load group");
-          showErrorRef.current(errorMessage, languageRef.current === "vi" ? "Lỗi" : "Error");
+          const errorMessage = err.message || "Không thể tải thông tin nhóm";
+          showErrorRef.current(errorMessage, "Lỗi");
         } finally {
           setIsLoading(false);
         }
@@ -308,8 +305,8 @@ export const AddExpenseScreen = () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       showError(
-        language === "vi" ? "Cần quyền truy cập thư viện ảnh" : "Need photo library permission",
-        language === "vi" ? "Lỗi" : "Error"
+        "Cần quyền truy cập thư viện ảnh",
+        "Lỗi"
       );
       return;
     }
@@ -342,12 +339,12 @@ export const AddExpenseScreen = () => {
   const getMemberName = useCallback(
     (userId: string) => {
       if (userId === user?.id) {
-        return language === "vi" ? "Bạn" : "You";
+        return "Bạn";
       }
       const member = allMembers.find((m) => m.userId === userId);
       return member?.fullName || "";
     },
-    [allMembers, user?.id, language]
+    [allMembers, user?.id]
   );
 
   // Get member initials
@@ -414,8 +411,8 @@ export const AddExpenseScreen = () => {
       // Validate amount
       if (!cleanAmount || cleanAmount === "" || cleanAmount === "0") {
         showError(
-          language === "vi" ? "Vui lòng nhập số tiền lớn hơn 0" : "Please enter amount greater than 0",
-          language === "vi" ? "Lỗi" : "Error"
+          "Vui lòng nhập số tiền lớn hơn 0",
+          "Lỗi"
         );
         setIsSubmitting(false);
         return;
@@ -425,8 +422,8 @@ export const AddExpenseScreen = () => {
       const amountNum = parseFloat(cleanAmount);
       if (isNaN(amountNum) || amountNum <= 0 || !isFinite(amountNum)) {
         showError(
-          language === "vi" ? "Số tiền không hợp lệ" : "Invalid amount",
-          language === "vi" ? "Lỗi" : "Error"
+          "Số tiền không hợp lệ",
+          "Lỗi"
         );
         setIsSubmitting(false);
         return;
@@ -439,8 +436,8 @@ export const AddExpenseScreen = () => {
       // Validate splits array
       if (!splits || splits.length === 0) {
         showError(
-          language === "vi" ? "Vui lòng chọn ít nhất một người để chia" : "Please select at least one person to split with",
-          language === "vi" ? "Lỗi" : "Error"
+          "Vui lòng chọn ít nhất một người để chia",
+          "Lỗi"
         );
         setIsSubmitting(false);
         return;
@@ -472,17 +469,17 @@ export const AddExpenseScreen = () => {
         }
         
         success(
-          language === "vi" ? "Tạo chi phí thành công" : "Expense created successfully",
-          language === "vi" ? "Thành công" : "Success"
+          "Tạo chi phí thành công",
+          "Thành công"
         );
         router.back();
       } else {
-        const errorMessage = ("message" in result ? result.message : undefined) || (language === "vi" ? "Không thể tạo chi phí" : "Failed to create expense");
-        showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+        const errorMessage = ("message" in result ? result.message : undefined) || "Không thể tạo chi phí";
+        showError(errorMessage, "Lỗi");
       }
     } catch (err: any) {
-      const errorMessage = err.message || (language === "vi" ? "Không thể tạo chi phí" : "Failed to create expense");
-      showError(errorMessage, language === "vi" ? "Lỗi" : "Error");
+      const errorMessage = err.message || "Không thể tạo chi phí";
+      showError(errorMessage, "Lỗi");
     } finally {
       setIsSubmitting(false);
     }
@@ -510,7 +507,7 @@ export const AddExpenseScreen = () => {
               color: colors.textSecondary,
             }}
           >
-            {language === "vi" ? "Không tìm thấy nhóm" : "Group not found"}
+            Không tìm thấy nhóm
           </Text>
         </View>
       </SafeAreaView>
@@ -542,7 +539,8 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Thêm chi phí" : "Add Expense"}
+
+              Thêm chi phí
             </Text>
           </View>
 
@@ -565,7 +563,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Mô tả" : "Description"}
+              Mô tả
             </Text>
             <Controller
               control={control}
@@ -576,7 +574,7 @@ export const AddExpenseScreen = () => {
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
-                    placeholder={language === "vi" ? "VD: Ăn trưa, xăng xe..." : "E.g., Lunch, gas..."}
+                    placeholder="VD: Ăn trưa, xăng xe..."
                     placeholderTextColor={colors.textTertiary}
                     className="rounded-2xl border-2 px-4 py-4"
                     style={{
@@ -609,7 +607,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Số tiền" : "Amount"}
+              Số tiền
             </Text>
             <Controller
               control={control}
@@ -620,7 +618,7 @@ export const AddExpenseScreen = () => {
                     value={value || ""}
                     onPress={() => setShowAmountKeypad(true)}
                     error={!!errors.amount}
-                    placeholder={language === "vi" ? "Nhập số tiền" : "Enter amount"}
+                    placeholder="Nhập số tiền"
                   />
                   {errors.amount && (
                     <Text
@@ -645,7 +643,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Người trả" : "Payer"}
+              Người trả
             </Text>
             <Controller
               control={control}
@@ -667,7 +665,7 @@ export const AddExpenseScreen = () => {
                         color: value ? colors.textPrimary : colors.textTertiary,
                       }}
                     >
-                      {value ? getMemberName(value) : language === "vi" ? "Chọn người trả" : "Select payer"}
+                      {value ? getMemberName(value) : "Chọn người trả"}
                     </Text>
                     <Icon name="chevronDown" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
@@ -695,7 +693,7 @@ export const AddExpenseScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Chia cho" : "Split among"}
+                Chia cho
               </Text>
               <TouchableOpacity onPress={selectAllMembers} activeOpacity={0.7}>
                 <Text
@@ -704,7 +702,7 @@ export const AddExpenseScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {language === "vi" ? "Chọn tất cả" : "Select all"}
+                  Chọn tất cả
                 </Text>
               </TouchableOpacity>
             </View>
@@ -768,7 +766,7 @@ export const AddExpenseScreen = () => {
                               color: colors.textPrimary,
                             }}
                           >
-                            {isCurrentUser ? (language === "vi" ? "Bạn" : "You") : member.fullName}
+                            {isCurrentUser ? "Bạn" : member.fullName}
                           </Text>
                           {!showInput && (
                             <Text
@@ -821,7 +819,7 @@ export const AddExpenseScreen = () => {
                                     color: colors.textTertiary,
                                   }}
                                 >
-                                  {language === "vi" ? "Số tiền" : "Amount"}
+                                  Số tiền
                                 </Text>
                                 <RNTextInput
                                   value={exactAmounts[member.userId] || ""}
@@ -869,7 +867,7 @@ export const AddExpenseScreen = () => {
                                     color: colors.textTertiary,
                                   }}
                                 >
-                                  {language === "vi" ? "Phần trăm (%)" : "Percentage (%)"}
+                                  Phần trăm (%)
                                 </Text>
                                 <View className="flex-row items-center gap-2">
                                   <RNTextInput
@@ -935,7 +933,7 @@ export const AddExpenseScreen = () => {
                                     color: colors.textTertiary,
                                   }}
                                 >
-                                  {language === "vi" ? "Số phần" : "Shares"}
+                                  Số phần
                                 </Text>
                                 <RNTextInput
                                   value={shares[member.userId] || ""}
@@ -1000,7 +998,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Cách chia" : "Split method"}
+              Cách chia
             </Text>
             <View className="flex-row flex-wrap gap-3">
               {SPLIT_TYPES.map((type) => {
@@ -1035,7 +1033,7 @@ export const AddExpenseScreen = () => {
                         textAlign: "center",
                       }}
                     >
-                      {language === "vi" ? type.labelVi : type.labelEn}
+                      {type.label}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -1051,7 +1049,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Ngày" : "Date"}
+              Ngày
             </Text>
             <Controller
               control={control}
@@ -1091,7 +1089,8 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Danh mục" : "Category"}
+
+              Danh mục
             </Text>
             <Controller
               control={control}
@@ -1113,7 +1112,7 @@ export const AddExpenseScreen = () => {
                       color: colors.textPrimary,
                     }}
                   >
-                    {CATEGORIES.find((c) => c.value === value)?.[language === "vi" ? "labelVi" : "labelEn"] || ""}
+                    {CATEGORIES.find((c) => c.value === value)?.label || ""}
                   </Text>
                   <Icon name="chevronDown" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1129,7 +1128,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Thêm ảnh hóa đơn" : "Add receipt image"}
+              Thêm ảnh hóa đơn
             </Text>
             {imageUri ? (
               <View className="relative">
@@ -1172,7 +1171,7 @@ export const AddExpenseScreen = () => {
                     marginBottom: 4,
                   }}
                 >
-                  {language === "vi" ? "Thêm ảnh hóa đơn" : "Add receipt image"}
+                  Thêm ảnh hóa đơn
                 </Text>
                 <Text
                   className="text-center font-normal"
@@ -1181,7 +1180,7 @@ export const AddExpenseScreen = () => {
                     color: colors.textTertiary,
                   }}
                 >
-                  {language === "vi" ? "Chạm để chọn ảnh" : "Tap to select image"}
+                  Chạm để chọn ảnh
                 </Text>
               </TouchableOpacity>
             )}
@@ -1195,7 +1194,7 @@ export const AddExpenseScreen = () => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Ghi chú thêm (tùy chọn)" : "Add notes (optional)"}
+              Ghi chú thêm (tùy chọn)
             </Text>
             <Controller
               control={control}
@@ -1205,7 +1204,7 @@ export const AddExpenseScreen = () => {
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
-                  placeholder={language === "vi" ? "Thêm ghi chú ở đây..." : "Add notes here..."}
+                  placeholder="Thêm ghi chú ở đây..."
                   placeholderTextColor={colors.textTertiary}
                   multiline
                   numberOfLines={4}
@@ -1254,7 +1253,7 @@ export const AddExpenseScreen = () => {
                 color: "#FFFFFF",
               }}
             >
-              {language === "vi" ? "Lưu chi phí" : "Save expense"}
+              Lưu chi phí
             </Text>
           )}
         </TouchableOpacity>
@@ -1279,7 +1278,7 @@ export const AddExpenseScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Chọn ngày" : "Select Date"}
+                Chọn ngày
               </Text>
               <TouchableOpacity onPress={() => setShowDatePicker(false)}>
                 <Icon name="x" size={24} color={colors.textPrimary} />
@@ -1307,11 +1306,11 @@ export const AddExpenseScreen = () => {
                         color: isSelected ? "#FFFFFF" : colors.textSecondary,
                       }}
                     >
-                      {days === -2 ? (language === "vi" ? "2 ngày trước" : "2 days ago") :
-                       days === -1 ? (language === "vi" ? "Hôm qua" : "Yesterday") :
-                       days === 0 ? (language === "vi" ? "Hôm nay" : "Today") :
-                       days === 1 ? (language === "vi" ? "Ngày mai" : "Tomorrow") :
-                       (language === "vi" ? "2 ngày sau" : "2 days later")}
+                      {days === -2 ? "2 ngày trước" :
+                       days === -1 ? "Hôm qua" :
+                       days === 0 ? "Hôm nay" :
+                       days === 1 ? "Ngày mai" :
+                       "2 ngày sau"}
                     </Text>
                     <Text
                       className="font-bold"
@@ -1349,7 +1348,7 @@ export const AddExpenseScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Chọn danh mục" : "Select Category"}
+                Chọn danh mục
               </Text>
               <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
                 <Icon name="x" size={24} color={colors.textPrimary} />
@@ -1378,7 +1377,7 @@ export const AddExpenseScreen = () => {
                         color: isSelected ? "#FFFFFF" : colors.textPrimary,
                       }}
                     >
-                      {language === "vi" ? category.labelVi : category.labelEn}
+                      {category.label}
                     </Text>
                     {isSelected && (
                       <Icon name="check" size={20} color="#FFFFFF" />
@@ -1410,7 +1409,7 @@ export const AddExpenseScreen = () => {
                   color: colors.textPrimary,
                 }}
               >
-                {language === "vi" ? "Chọn người trả" : "Select Payer"}
+                Chọn người trả
               </Text>
               <TouchableOpacity onPress={() => setShowPayerPicker(false)}>
                 <Icon name="x" size={24} color={colors.textPrimary} />
@@ -1464,7 +1463,7 @@ export const AddExpenseScreen = () => {
                         color: isSelected ? "#FFFFFF" : colors.textPrimary,
                       }}
                     >
-                      {isCurrentUser ? (language === "vi" ? "Bạn" : "You") : member.fullName}
+                      {isCurrentUser ? "Bạn" : member.fullName}
                     </Text>
                     {isSelected && (
                       <Icon name="check" size={20} color="#FFFFFF" />

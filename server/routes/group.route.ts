@@ -137,6 +137,4 @@ router.post(
   acceptInviteController
 );
 
-
-
 export default router;

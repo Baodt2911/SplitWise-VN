@@ -10,29 +10,24 @@ interface ThemeModalProps {
 
 const THEME_OPTIONS: {
   code: AppTheme;
-  label: { vi: string; en: string };
-  emoji: string;
+  label: string;
 }[] = [
   {
     code: "system",
-    label: { vi: "Mặc định theo thiết bị", en: "Default according to device" },
-    emoji: "⚙️",
+    label: "Mặc định theo thiết bị",
   },
   {
     code: "light",
-    label: { vi: "Sáng", en: "Light" },
-    emoji: "☀️",
+    label: "Sáng",
   },
   {
     code: "dark",
-    label: { vi: "Tối", en: "Dark" },
-    emoji: "🌙",
+    label: "Tối",
   },
 ];
 
 export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
   const theme = usePreferencesStore((state) => state.theme);
-  const language = usePreferencesStore((state) => state.language);
   const setTheme = usePreferencesStore((state) => state.setTheme);
   const colors = getThemeColors(theme);
 
@@ -70,7 +65,7 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
                 color: colors.textPrimary,
               }}
             >
-              {language === "vi" ? "Chọn giao diện" : "Choose interface"}
+              Chọn giao diện
             </Text>
           </View>
 
@@ -105,10 +100,6 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
                       />
                     )}
                   </View>
-
-                  {/* Emoji */}
-                  <Text className="text-xl mr-3">{option.emoji}</Text>
-
                   {/* Label */}
                   <Text
                     className="text-base flex-1"
@@ -116,7 +107,7 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
                       color: isSelected ? colors.primary : colors.textPrimary,
                     }}
                   >
-                    {option.label[language]}
+                    {option.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -135,7 +126,7 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
                 color: colors.primary,
               }}
             >
-              {language === "vi" ? "HỦY" : "CANCEL"}
+              HỦY
             </Text>
           </TouchableOpacity>
         </Pressable>

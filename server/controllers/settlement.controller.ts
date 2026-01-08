@@ -2,7 +2,32 @@ import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { CreateSettlementDTO } from "../dtos";
 import { StatusCodes } from "http-status-codes";
-import { createSettlementService, updateSettlementService } from "../services";
+import {
+  createSettlementService,
+  getSettlementService,
+  updateSettlementService,
+} from "../services";
+
+export const getSettlementController = catchAsync(
+  async (
+    req: Request<
+      { groupId: string; settlementId: string },
+      {},
+      CreateSettlementDTO
+    >,
+    res: Response
+  ) => {
+    const userId = req.user?.userId;
+    const settlement = await getSettlementService(
+      userId!,
+      req.params.groupId,
+      req.params.settlementId
+    );
+    res.status(StatusCodes.OK).json({
+      settlement,
+    });
+  }
+);
 
 export const createSettlementController = catchAsync(
   async (

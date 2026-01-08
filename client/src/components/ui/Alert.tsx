@@ -14,13 +14,13 @@ export const Alert = () => {
 
   const getAlertType = () => {
     // Determine alert type based on title
-    if (title?.toLowerCase().includes("thành công") || title?.toLowerCase().includes("success")) {
+    if (title?.toLowerCase().includes("success")) {
       return "success";
     }
-    if (title?.toLowerCase().includes("lỗi") || title?.toLowerCase().includes("error")) {
+    if (title?.toLowerCase().includes("error")) {
       return "error";
     }
-    if (title?.toLowerCase().includes("cảnh báo") || title?.toLowerCase().includes("warning")) {
+    if (title?.toLowerCase().includes("warning")) {
       return "warning";
     }
     return "info";

@@ -1,4 +1,3 @@
-import * as SecureStore from "expo-secure-store";
 import { apiClient } from "./config";
 
 export interface CreateExpenseRequest {
@@ -33,14 +32,6 @@ export const createExpense = async (
   data: CreateExpenseRequest
 ): Promise<CreateExpenseResponse | ApiError> => {
   try {
-    const accessToken = await SecureStore.getItemAsync("accessToken");
-    
-    if (!accessToken) {
-      return {
-        message: "Bạn chưa đăng nhập",
-      };
-    }
-
     // Ensure amount is a valid string number
     const requestBody = {
       ...data,
@@ -53,14 +44,10 @@ export const createExpense = async (
       })),
     };
 
+    // Interceptor automatically adds accessToken header
     const response = await apiClient.post<CreateExpenseResponse>(
       `/group/${groupId}/expenses/create`,
-      requestBody,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+      requestBody
     );
     
     return response.data;

@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { getValidationMessages } from "../utils/validationMessages";
-import type { AppLanguage } from "../../onboarding/types";
 
-export const createLoginSchema = (language: AppLanguage) => {
-  const messages = getValidationMessages(language);
+export const createLoginSchema = () => {
+  const messages = getValidationMessages();
   return z.object({
     phone: z
       .string()
@@ -13,8 +12,8 @@ export const createLoginSchema = (language: AppLanguage) => {
   });
 };
 
-export const createRegisterSchema = (language: AppLanguage) => {
-  const messages = getValidationMessages(language);
+export const createRegisterSchema = () => {
+  const messages = getValidationMessages();
   return z
     .object({
       fullName: z.string().min(1, messages.required).min(2, messages.minLength(2)),
@@ -26,7 +25,7 @@ export const createRegisterSchema = (language: AppLanguage) => {
       password: z.string().min(1, messages.required).min(8, messages.password),
       confirmPassword: z.string().min(1, messages.required),
       agreeToTerms: z.boolean().refine((val) => val === true, {
-        message: language === "vi" ? "Bạn phải đồng ý với điều khoản" : "You must agree to the terms",
+        message: "Bạn phải đồng ý với điều khoản",
       }),
     })
     .refine((data) => data.password === data.confirmPassword, {
@@ -35,8 +34,8 @@ export const createRegisterSchema = (language: AppLanguage) => {
     });
 };
 
-export const createOtpSchema = (language: AppLanguage) => {
-  const messages = getValidationMessages(language);
+export const createOtpSchema = () => {
+  const messages = getValidationMessages();
   return z.object({
     otp: z
       .string()
@@ -45,8 +44,8 @@ export const createOtpSchema = (language: AppLanguage) => {
   });
 };
 
-export const createForgotPasswordSchema = (language: AppLanguage) => {
-  const messages = getValidationMessages(language);
+export const createForgotPasswordSchema = () => {
+  const messages = getValidationMessages();
   return z.object({
     phone: z
       .string()
@@ -55,8 +54,8 @@ export const createForgotPasswordSchema = (language: AppLanguage) => {
   });
 };
 
-export const createResetPasswordSchema = (language: AppLanguage) => {
-  const messages = getValidationMessages(language);
+export const createResetPasswordSchema = () => {
+  const messages = getValidationMessages();
   return z
     .object({
       password: z.string().min(1, messages.required).min(8, messages.password),
