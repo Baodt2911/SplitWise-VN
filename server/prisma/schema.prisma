@@ -34,8 +34,13 @@ enum ExpenseCategory {
   FOOD
   TRANSPORT
   ENTERTAINMENT
-  ACCOMMODATION
+  HOUSING
+  TRAVEL
   SHOPPING
+  HEALTH
+  EDUCATION
+  PETS
+  GIFTS
   OTHER
 }
 
@@ -260,9 +265,9 @@ enum AccentColor {
 
 model User {
   id                String  @id @default(uuid())
-  phone             String  @unique @db.VarChar(15)
-  email             String? @unique @db.VarChar(255)
-  passwordHash      String  @map("password_hash") @db.VarChar(255)
+  phone             String? @unique @db.VarChar(15)
+  email             String  @unique @db.VarChar(255)
+  password          String  @map("password") @db.VarChar(255)
   fullName          String  @map("full_name") @db.VarChar(100)
   avatarUrl         String? @map("avatar_url") @db.Text
   googleId          String? @unique @map("google_id") @db.VarChar(255)
@@ -390,6 +395,22 @@ model GroupMember {
   @@map("group_members")
 }
 
+model ExpenseSubCategory {
+  id       String          @id @default(uuid())
+  parent   ExpenseCategory
+  key      String          @db.VarChar(100)
+  name     String
+  icon     String?
+  isActive Boolean         @default(true)
+
+  expenses Expense[]
+
+  @@unique([parent, name], name: "parent_name")
+  @@index([parent, name])
+  @@index([parent, isActive])
+  @@map("expense_sub_categories")
+}
+
 model Expense {
   id      String @id @default(uuid())
   groupId String @map("group_id")
@@ -403,7 +424,8 @@ model Expense {
   paidBy String @map("paid_by")
 
   // Phân loại
-  category ExpenseCategory @default(OTHER) // food, transport, entertainment, accommodation, shopping, other
+  category      ExpenseCategory @default(OTHER)
+  subCategoryId String?         @map("sub_category_id")
 
   // Ngày chi
   expenseDate DateTime @default(now()) @map("expense_date") @db.Date
@@ -423,16 +445,18 @@ model Expense {
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
 
   // Relations
-  group      Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidByUser User           @relation("ExpensePaidBy", fields: [paidBy], references: [id], onDelete: Cascade)
-  creator    User           @relation("ExpenseCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  splits     ExpenseSplit[]
-  comments   Comment[]
+  group       Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidByUser  User                @relation("ExpensePaidBy", fields: [paidBy], references: [id], onDelete: Cascade)
+  creator     User                @relation("ExpenseCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  subCategory ExpenseSubCategory? @relation(fields: [subCategoryId], references: [id])
+  splits      ExpenseSplit[]
+  comments    Comment[]
 
-  @@index([groupId, expenseDate(sort: Desc), deletedAt])
-  @@index([paidBy, deletedAt])
-  @@index([category, deletedAt])
-  @@index([expenseDate(sort: Desc), deletedAt])
+  @@index([groupId, deletedAt, expenseDate])
+  @@index([groupId, deletedAt, createdAt])
+  @@index([groupId, category, deletedAt])
+  @@index([groupId, subCategoryId, deletedAt])
+  @@index([groupId, paidBy, deletedAt])
   @@map("expenses")
 }
 

@@ -82,6 +82,7 @@ export const createExpenseService = async (
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
     select: {
       members: {
@@ -122,21 +123,19 @@ export const createExpenseService = async (
   }
 
   const resultExpenses = await prisma.$transaction(async (tx) => {
-    const splitKey = splitType.toUpperCase() as keyof typeof ExpenseSplitType;
-    const categoryKey = category.toUpperCase() as keyof typeof ExpenseCategory;
     // ===== CALCULATE SPLITS =====
     const splitData = buildSplits(
       other.paidBy,
       splits,
-      ExpenseSplitType[splitKey],
+      splitType,
       new Decimal(other.amount)
     );
 
     const expense = await tx.expense.create({
       data: {
         ...other,
-        splitType: ExpenseSplitType[splitKey],
-        category: ExpenseCategory[categoryKey],
+        splitType,
+        category,
         groupId,
         createdBy: userId,
         splits: {
@@ -256,7 +255,7 @@ export const updateExpenseService = async (
   data: UpdateExpenseDTO
 ) => {
   const group = await prisma.group.findUnique({
-    where: { id: groupId },
+    where: { id: groupId, deletedAt: null },
     select: {
       createdBy: true,
       allowMemberEdit: true,
@@ -370,9 +369,6 @@ export const updateExpenseService = async (
   // Câp nhật
   const result = await prisma.$transaction(async (tx) => {
     let resultExpenses;
-    const splitKey = splitType?.toUpperCase() as keyof typeof ExpenseSplitType;
-    const categoryKey = category?.toUpperCase() as keyof typeof ExpenseCategory;
-
     const updateExpense = await tx.expense.update({
       where: {
         id: expenseId,
@@ -380,8 +376,8 @@ export const updateExpenseService = async (
       data: {
         paidBy,
         ...other,
-        ...(splitType && { splitType: ExpenseSplitType[splitKey] }),
-        ...(category && { category: ExpenseCategory[categoryKey] }),
+        ...(splitType && { splitType }),
+        ...(category && { category }),
         ...(amount !== undefined && { amount }),
       },
       select: {
@@ -431,9 +427,7 @@ export const updateExpenseService = async (
       }[];
 
       const finalAmount = amount || expense.amount;
-      const finalSplitType = splitType
-        ? ExpenseSplitType[splitKey]
-        : expense.splitType;
+      const finalSplitType = splitType ? splitType : expense.splitType;
 
       const newSplits = buildSplits(
         paidBy || expense.paidByUser.id,
@@ -600,7 +594,7 @@ export const deleteExpenseService = async (
   expenseId: string
 ) => {
   const group = await prisma.group.findUnique({
-    where: { id: groupId },
+    where: { id: groupId, deletedAt: null },
     select: {
       createdBy: true,
       allowMemberEdit: true,
@@ -751,19 +745,47 @@ export const getExpenseGroupService = async (
   groupId: string,
   query: QueryExpenseDTO
 ) => {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-  });
-
-  if (!group)
-    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
-
   await checkGroupMember(userId, groupId);
 
-  const { page, pageSize } = query;
+  const {
+    page,
+    pageSize,
+    category,
+    expenseDateFrom,
+    expenseDateTo,
+    paidBy,
+    q,
+    sort,
+    order,
+  } = query;
+  const startDate = expenseDateFrom && new Date(expenseDateFrom);
+  const endDate = expenseDateTo && new Date(expenseDateTo);
+
+  const mapOrderBy = {
+    createdAt: {
+      createdAt: order || "desc",
+    },
+    expenseDate: {
+      expenseDate: order || "desc",
+    },
+  };
+
   const skip = (page - 1) * pageSize;
   const expenses = await prisma.expense.findMany({
-    where: { groupId },
+    where: {
+      groupId,
+      category,
+      expenseDate: {
+        gte: startDate,
+        lt: endDate,
+      },
+      paidBy,
+      description: {
+        contains: q,
+        mode: "insensitive",
+      },
+      deletedAt: null,
+    },
     select: {
       id: true,
       description: true,
@@ -799,9 +821,7 @@ export const getExpenseGroupService = async (
     },
     skip,
     take: pageSize,
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: mapOrderBy[sort || "createdAt"],
   });
 
   return expenses.map((e) => mapExpense(userId, e));
@@ -812,16 +832,9 @@ export const getDetailExpenseService = async (
   groupId: string,
   expenseId: string
 ) => {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-  });
-
-  if (!group)
-    throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy nhóm" };
   await checkGroupMember(userId, groupId);
-
   const expense = await prisma.expense.findUnique({
-    where: { id: expenseId },
+    where: { id: expenseId, deletedAt: null },
     select: {
       id: true,
       description: true,

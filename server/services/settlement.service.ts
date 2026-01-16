@@ -22,6 +22,7 @@ export const getSettlementService = async (
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
   });
   if (!existingGroup) {
@@ -75,6 +76,7 @@ export const createSettlementService = async (
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
     select: {
       requirePaymentConfirmation: true,
@@ -123,14 +125,11 @@ export const createSettlementService = async (
   const { paymentMethod, ...other } = data;
   await checkGroupMember(userId, groupId);
   const result = await prisma.$transaction(async (tx) => {
-    const keyMethod =
-      paymentMethod?.toUpperCase() as keyof typeof SettlementPaymentMethod;
-
     const settlement = await tx.settlement.create({
       data: {
         groupId,
         payerId: userId,
-        paymentMethod: SettlementPaymentMethod[keyMethod],
+        paymentMethod: data.paymentMethod,
         status: isRequireConfirm
           ? SettlementStatus.PENDING
           : SettlementStatus.CONFIRMED,

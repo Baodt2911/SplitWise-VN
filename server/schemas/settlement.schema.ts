@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import { z } from "zod";
+import { SettlementPaymentMethod } from "../generated/prisma/enums";
 // Zod schema for creating settlement
 export const createSettlementSchema = z
   .object({
@@ -12,7 +13,12 @@ export const createSettlementSchema = z
       }),
     currency: z.string().optional(),
     paymentMethod: z
-      .enum(["cash", "bank_transfer", "momo", "zalopay", "vnpay"])
+      .preprocess(
+        (val) => (typeof val === "string" ? val.toUpperCase() : val),
+        z.enum(SettlementPaymentMethod, {
+          message: "Invalid settlement payment method",
+        })
+      )
       .optional(),
     notes: z.string().optional(),
   })

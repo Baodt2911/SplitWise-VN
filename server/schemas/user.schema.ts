@@ -1,22 +1,5 @@
 import { AccentColor, FontSize, ThemeType } from "../generated/prisma/client";
 import { z } from "zod";
-export const loginSchema = z.object({
-  phone: z.string().min(1, "Phone number is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
-export const registerSchema = z
-  .object({
-    phone: z.string().min(1, "Phone number is required"),
-    password: z.string().min(6, "Password must be at least 6 characters long"),
-    fullName: z.string().min(1, "Full name is required"),
-    email: z
-      .email("Invalid email format")
-      .optional()
-      .or(z.literal(""))
-      .transform((v) => v || undefined),
-  })
-  .strict();
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(6, "Current password is required"),

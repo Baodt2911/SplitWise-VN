@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import { z } from "zod";
+import { ExpenseCategory, ExpenseSplitType } from "../generated/prisma/enums";
 
 // Zod schema for split item
 const splitSchema = z
@@ -32,15 +33,15 @@ export const createExpenseSchema = z
       }),
     currency: z.string().optional(),
     paidBy: z.string().min(1, "PaidBy is required"),
-    category: z.enum([
-      "food",
-      "transport",
-      "entertainment",
-      "accommodation",
-      "shopping",
-      "other",
-    ]),
-    splitType: z.enum(["equal", "exact", "percentage", "shares"]),
+    category: z.preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase() : val),
+      z.enum(ExpenseCategory, { message: "Invalid expense category" })
+    ),
+    subCategoryId: z.string().optional(),
+    splitType: z.preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase() : val),
+      z.enum(ExpenseSplitType, { message: "Invalid expense split type" })
+    ),
     expenseDate: z.coerce.date().optional(),
     receiptUrl: z
       .url("Receipt URL must be a valid URL")
@@ -52,10 +53,10 @@ export const createExpenseSchema = z
   .superRefine((data, ctx) => {
     const { splitType, splits, amount } = data;
     // equal → không check thêm
-    if (splitType === "equal") return;
+    if (splitType === ExpenseSplitType.EQUAL) return;
 
     // exact → tất cả splits phải có amount
-    if (splitType === "exact") {
+    if (splitType === ExpenseSplitType.EXACT) {
       const total = splits.reduce(
         (sum, s) => sum.plus(s.amount ?? 0),
         new Decimal(0)
@@ -71,7 +72,7 @@ export const createExpenseSchema = z
     }
 
     // percentage → tổng = 100
-    if (splitType === "percentage") {
+    if (splitType === ExpenseSplitType.PERCENTAGE) {
       const total = splits.reduce(
         (sum, s) => sum.plus(s.percentage ?? 0),
         new Decimal(0)
@@ -87,7 +88,7 @@ export const createExpenseSchema = z
     }
 
     // shares → tổng shares > 0
-    if (splitType === "shares") {
+    if (splitType === ExpenseSplitType.SHARES) {
       const totalShares = splits.reduce(
         (sum, s) => sum.plus(s.shares ?? 0),
         new Decimal(0)
@@ -114,15 +115,15 @@ export const updateExpenseSchema = z
         message: "Amount must be a positive number",
       }),
     paidBy: z.string().min(1, "PaidBy is required"),
-    category: z.enum([
-      "food",
-      "transport",
-      "entertainment",
-      "accommodation",
-      "shopping",
-      "other",
-    ]),
-    splitType: z.enum(["equal", "exact", "percentage", "shares"]),
+    category: z.preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase() : val),
+      z.enum(ExpenseCategory, { message: "Invalid expense category" })
+    ),
+    subCategoryId: z.string().optional(),
+    splitType: z.preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase() : val),
+      z.enum(ExpenseSplitType, { message: "Invalid expense split type" })
+    ),
     expenseDate: z.coerce.date(),
     receiptUrl: z.url("Receipt URL must be a valid URL").or(z.literal("")),
     notes: z.string(),
@@ -132,7 +133,7 @@ export const updateExpenseSchema = z
   .superRefine((data, ctx) => {
     const { splitType, splits, amount } = data;
 
-    if (!splits && splitType !== "equal") {
+    if (!splits && splitType !== ExpenseSplitType.EQUAL) {
       ctx.addIssue({
         code: "custom",
         message: "Requires 'splits' if 'splitType' is different equal",
@@ -142,7 +143,7 @@ export const updateExpenseSchema = z
     }
 
     // exact → tất cả splits phải có amount
-    if (splitType === "exact") {
+    if (splitType === ExpenseSplitType.EXACT) {
       const total = splits!.reduce(
         (sum, s) => sum.plus(s.amount ?? 0),
         new Decimal(0)
@@ -168,7 +169,7 @@ export const updateExpenseSchema = z
     }
 
     // percentage → tổng = 100
-    if (splitType === "percentage") {
+    if (splitType === ExpenseSplitType.PERCENTAGE) {
       const total = splits!.reduce(
         (sum, s) => sum.plus(s.percentage ?? 0),
         new Decimal(0)
@@ -184,7 +185,7 @@ export const updateExpenseSchema = z
     }
 
     // shares → tổng shares > 0
-    if (splitType === "shares") {
+    if (splitType === ExpenseSplitType.SHARES) {
       const totalShares = splits!.reduce(
         (sum, s) => sum.plus(s.shares ?? 0),
         new Decimal(0)
@@ -213,16 +214,15 @@ export const queryExpenseSchema = z.object({
     .positive("Page size must be a positive integer")
     .default(10),
   category: z
-    .enum([
-      "food",
-      "transport",
-      "entertainment",
-      "accommodation",
-      "shopping",
-      "other",
-    ])
+    .preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase() : val),
+      z.enum(ExpenseCategory, { message: "Invalid expense category" })
+    )
     .optional(),
   expenseDateFrom: z.coerce.date().optional(),
   expenseDateTo: z.coerce.date().optional(),
   paidBy: z.string().optional(),
+  q: z.string().optional(),
+  sort: z.enum(["createdAt", "expenseDate"]).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
 });

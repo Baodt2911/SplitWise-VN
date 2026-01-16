@@ -23,7 +23,11 @@ export const generateRefreshToken = (payload: RefreshJwtPayload) => {
 export const refreshTokenService = async (
   userId: string,
   sessionId: string,
-  refreshToken: string
+  refreshToken: string,
+  context: {
+    ua: string;
+    ip: string;
+  }
 ) => {
   const key = `session:${userId}:${sessionId}`;
   const raw = await redis.get(key);
@@ -34,10 +38,10 @@ export const refreshTokenService = async (
       message: "Phiên đăng nhập không hợp lệ",
     };
   }
-
+  const { ua, ip } = context;
   const session = JSON.parse(raw);
 
-  // 1. Check refresh token hợp lệ
+  // Check refresh token hợp lệ
   if (session.refreshToken !== refreshToken) {
     await redis.del(key);
     throw {
@@ -45,15 +49,24 @@ export const refreshTokenService = async (
       message: "Phát hiện token bị tái sử dụng",
     };
   }
-  // 3. Rotate sessionId mới
+  // Rotate sessionId mới
   const newSessionId = uuidv4();
   const newKey = `session:${userId}:${newSessionId}`;
 
-  // 2. Tạo tokens mới
+  // Cần check thêm ua,ip để an toàn hơn
+  if (session.ua !== ua || session.ip !== ip) {
+    await redis.del(key);
+    throw {
+      status: StatusCodes.UNAUTHORIZED,
+      message: "Phát hiện token bị tái sử dụng",
+    };
+  }
+
+  //Tạo tokens mới
   const newAccessToken = generateAccessToken({ userId });
   const newRefreshToken = generateRefreshToken({ userId, sessionId });
 
-  // 4. Lưu session mới vào Redis
+  //Lưu session mới vào Redis
   await redis.set(
     newKey,
     JSON.stringify({
