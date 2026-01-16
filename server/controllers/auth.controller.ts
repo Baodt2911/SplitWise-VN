@@ -1,36 +1,23 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../helper/catchAsync";
-import { LoginDTO, RegisterDTO } from "../dtos";
+import { LoginDTO, RegisterDTO, ResetPasswordDTO } from "../dtos";
 import {
-  generateAccessToken,
-  generateRefreshToken,
   loginService,
   registerService,
   googleAuthService,
+  sendOtpResetService,
+  resetPasswordService,
 } from "../services";
 import { StatusCodes } from "http-status-codes";
 import redis from "../configs/redis.config";
-import { v4 as uuidv4 } from "uuid";
 
 export const loginController = catchAsync(
   async (req: Request<{}, {}, LoginDTO>, res: Response) => {
-    const user = await loginService(req.body);
-    const sessionId = uuidv4();
-    const accessToken = generateAccessToken({ userId: user.id });
-    const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
-    const key = `session:${user.id}:${sessionId}`;
-    await redis.set(
-      key,
-      JSON.stringify({
-        refreshToken,
-        sessionId,
-        ua: req.headers["user-agent"] || "",
-        ip: req.ip,
-        createdAt: Date.now(),
-        rotatedAt: Date.now(),
-      }),
-      "EX",
-      15 * 24 * 60 * 60
+    const ua = req.headers["user-agent"] || "";
+    const ip = req.ip || "";
+    const { user, accessToken, refreshToken, sessionId } = await loginService(
+      req.body,
+      { ua, ip }
     );
 
     res.status(StatusCodes.OK).json({
@@ -47,31 +34,11 @@ export const googleAuthController = async (
   req: Request<{}, {}, { idToken: string }>,
   res: Response
 ) => {
+  const ua = req.headers["user-agent"] || "";
+  const ip = req.ip || "";
   const { idToken } = req.body;
-  const user = await googleAuthService(idToken);
-
-  // Ensure user.id is present before using it
-  if (!user || !user.id) {
-    throw new Error("User ID missing after upsert");
-  }
-
-  const sessionId = uuidv4();
-  const accessToken = generateAccessToken({ userId: user.id });
-  const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
-
-  await redis.set(
-    `session:${user.id}:${sessionId}`,
-    JSON.stringify({
-      refreshToken,
-      sessionId,
-      ua: req.headers["user-agent"] || "",
-      ip: req.ip,
-      createdAt: Date.now(),
-      rotatedAt: Date.now(),
-    }),
-    "EX",
-    15 * 24 * 60 * 60
-  );
+  const { user, accessToken, refreshToken, sessionId } =
+    await googleAuthService(idToken, { ua, ip });
 
   res.status(StatusCodes.OK).json({
     message: "Đăng nhập thành công",
@@ -87,7 +54,7 @@ export const registerController = catchAsync(
     await registerService(req.body);
     res
       .status(StatusCodes.OK)
-      .json({ message: "OTP đã được gửi đến số điện thoại của bạn" });
+      .json({ message: "OTP đã được gửi đến email của bạn" });
   }
 );
 
@@ -105,6 +72,25 @@ export const logoutController = catchAsync(
     await redis.del(key);
     res.status(StatusCodes.OK).json({
       message: "Đăng xuất thành công",
+    });
+  }
+);
+
+export const forgotPasswordController = catchAsync(
+  async (req: Request<{}, {}, { email: string }>, res: Response) => {
+    await sendOtpResetService(req.body.email);
+    res.status(StatusCodes.OK).json({
+      message: "OTP đã được gửi đến email của bạn",
+    });
+  }
+);
+
+export const resetPasswordController = catchAsync(
+  async (req: Request<{}, {}, ResetPasswordDTO>, res: Response) => {
+    const { email, resetToken, newPassword } = req.body;
+    await resetPasswordService({ email, resetToken, newPassword });
+    res.status(StatusCodes.OK).json({
+      message: "Mật khẩu đã được đặt lại",
     });
   }
 );
