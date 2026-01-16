@@ -8,3 +8,4 @@ export * from "./settlement.service";
 export * from "./notification.service";
 export * from "./activity.service";
 export * from "./comment.service";
+export * from "./expense_category.service";

@@ -8,3 +8,4 @@ export * from "./settlement.controller";
 export * from "./notification.controller";
 export * from "./activity.controller";
 export * from "./comment.controller";
+export * from "./expense_category.controller";
