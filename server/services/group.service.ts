@@ -14,7 +14,7 @@ import {
   SettlementStatus,
 } from "../generated/prisma/client";
 import { v4 as uuidv4 } from "uuid";
-import { checkGroupAdmin } from "../middlewares";
+import { checkGroupAdmin, checkGroupMember } from "../middlewares";
 import { createActivityService } from "./activity.service";
 import {
   createNotificationService,
@@ -218,6 +218,7 @@ export const updateGroupService = async (
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
     select: {
       name: true,
@@ -294,6 +295,7 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
   });
 
@@ -304,13 +306,41 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
     };
   }
   await checkGroupAdmin(userId, groupId);
+  const now = new Date();
   await prisma.$transaction(async (tx) => {
     await tx.group.update({
       where: {
         id: groupId,
       },
       data: {
-        deletedAt: new Date(),
+        deletedAt: now,
+      },
+    });
+
+    await tx.groupMember.updateMany({
+      where: {
+        groupId,
+      },
+      data: {
+        status: GroupMemberStatus.REMOVED,
+      },
+    });
+
+    await tx.expense.updateMany({
+      where: {
+        groupId,
+      },
+      data: {
+        deletedAt: now,
+      },
+    });
+
+    await tx.settlement.updateMany({
+      where: {
+        groupId,
+      },
+      data: {
+        deletedAt: now,
       },
     });
 
@@ -333,6 +363,7 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
       inviteCode,
+      deletedAt: null,
     },
     select: {
       id: true,
@@ -443,6 +474,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
     select: {
       createdBy: true,
@@ -474,6 +506,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
     where: {
       groupId,
       userId,
+      status: GroupMemberStatus.ACTIVE,
     },
     select: {
       id: true,
@@ -543,13 +576,18 @@ const addMemberDirectlyService = async (
   user: User
 ) => {
   //Check Invite tồn tại không
-  const isUser = await prisma.groupInvite.findFirst({
+  const isInvite = await prisma.groupInvite.findFirst({
     where: {
       groupId,
+      email: user.email,
       phone: user.phone,
+      status: GroupInviteStatus.PENDING,
+      expiresAt: {
+        gte: new Date(),
+      },
     },
   });
-  if (isUser) {
+  if (isInvite) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "Lời mời đã được gửi và không thể thêm trực tiếp",
@@ -610,7 +648,12 @@ const sendInviteTokensService = async (
   const isUser = await prisma.groupInvite.findFirst({
     where: {
       groupId,
+      email: user.email,
       phone: user.phone,
+      status: GroupInviteStatus.PENDING,
+      expiresAt: {
+        gte: new Date(),
+      },
     },
   });
   if (isUser) {
@@ -626,6 +669,7 @@ const sendInviteTokensService = async (
         groupId,
         invitedBy: userId,
         inviteToken: uuidv4(),
+        email: user.email,
         phone: user.phone,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), //7 ngày,
       },
@@ -670,11 +714,15 @@ const sendInviteTokensService = async (
 export const addMemberService = async (
   userId: string,
   groupId: string,
-  phone: string
+  data: {
+    phone?: string;
+    email?: string;
+  }
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
     select: {
       allowMemberDirectAdd: true,
@@ -705,7 +753,7 @@ export const addMemberService = async (
 
   //Lấy user
   const targetUser = await prisma.user.findUnique({
-    where: { phone },
+    where: { phone: data.phone, email: data.email },
   });
 
   if (!targetUser) {
@@ -720,6 +768,7 @@ export const addMemberService = async (
     where: {
       userId: targetUser.id,
       groupId: groupId,
+      status: GroupMemberStatus.ACTIVE,
     },
   });
 
@@ -760,7 +809,7 @@ export const verifyInviteTokenService = async (token: string) => {
     throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy lời mời" };
   }
 
-  if (invite.status.toUpperCase() !== GroupInviteStatus.PENDING) {
+  if (invite.status !== GroupInviteStatus.PENDING) {
     throw {
       status: StatusCodes.GONE,
       message: "Lời mời không còn hợp lệ",
@@ -784,7 +833,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
   }
 
   // Check status
-  if (invite.status.toUpperCase() !== GroupInviteStatus.PENDING) {
+  if (invite.status !== GroupInviteStatus.PENDING) {
     throw {
       status: StatusCodes.GONE,
       message: "Lời mời đã được sử dụng hoặc đã hết hạn",
@@ -807,7 +856,10 @@ export const acceptInviteService = async (token: string, userId: string) => {
       message: "Không tìm thấy người dùng",
     };
 
-  if (invite.phone && invite.phone !== user.phone) {
+  if (
+    (invite.email && invite.email !== user.email) ||
+    (invite.phone && invite.phone !== user.phone)
+  ) {
     throw {
       status: StatusCodes.FORBIDDEN,
       message: "Lời mời này không dành cho bạn",
@@ -819,6 +871,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
     where: {
       groupId: invite.groupId,
       userId,
+      status: GroupMemberStatus.ACTIVE,
     },
   });
 
@@ -838,11 +891,20 @@ export const acceptInviteService = async (token: string, userId: string) => {
 
   await prisma.$transaction(async (tx) => {
     // Create group member
-    await tx.groupMember.create({
-      data: {
+    await tx.groupMember.upsert({
+      where: {
+        groupId_userId: {
+          groupId: invite.groupId,
+          userId: userId,
+        },
+      },
+      create: {
         groupId: invite.groupId,
         userId: userId,
         role: GroupMemberRole.MEMBER,
+      },
+      update: {
+        status: GroupMemberStatus.ACTIVE,
       },
     });
 
@@ -903,6 +965,7 @@ export const removeMemberService = async (
   const existingGroup = await prisma.group.findUnique({
     where: {
       id: groupId,
+      deletedAt: null,
     },
   });
 
@@ -918,8 +981,10 @@ export const removeMemberService = async (
   const groupMember = await prisma.groupMember.findFirst({
     where: {
       id: memberId,
+      status: GroupMemberStatus.ACTIVE,
     },
     select: {
+      userId: true,
       user: {
         select: {
           fullName: true,
@@ -961,7 +1026,7 @@ export const removeMemberService = async (
 
     await createNotificationService(
       {
-        userId: memberId, // người bị xóa
+        userId: groupMember.userId, // người bị xóa
         type: NotificationType.YOU_WERE_REMOVED,
         title: "Bạn đã bị xóa khỏi nhóm",
         body: "Bạn không còn là thành viên của nhóm này",
@@ -970,11 +1035,10 @@ export const removeMemberService = async (
       },
       tx
     );
-
-    emitNotificationToUser(io, memberId, {
-      type: NotificationType.YOU_WERE_REMOVED,
-      relatedType: RelatedType.GROUP,
-      relatedId: groupId,
-    });
+  });
+  emitNotificationToUser(io, memberId, {
+    type: NotificationType.YOU_WERE_REMOVED,
+    relatedType: RelatedType.GROUP,
+    relatedId: groupId,
   });
 };

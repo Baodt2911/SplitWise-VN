@@ -89,14 +89,14 @@ export const getGroupController = catchAsync(
 
 export const addMemberController = catchAsync(
   async (
-    req: Request<{ groupId: string }, {}, { phone: string }>,
+    req: Request<{ groupId: string }, {}, { phone?: string; email?: string }>,
     res: Response
   ) => {
     const userId = req.user?.userId;
     const { added } = await addMemberService(
       userId!,
       req.params.groupId,
-      req.body.phone
+      req.body
     );
     res.status(StatusCodes.OK).json({
       message: added ? "Đã thêm vào nhóm" : "Đã gửi lời mời",
@@ -124,9 +124,9 @@ export const acceptInviteController = catchAsync(
 );
 
 export const joinGroupController = catchAsync(
-  async (req: Request<{ code: string }>, res: Response) => {
+  async (req: Request<{}, {}, { code: string }>, res: Response) => {
     const userId = req.user?.userId;
-    await joinGroupService(userId!, req.params.code);
+    await joinGroupService(userId!, req.body.code);
     res.status(StatusCodes.OK).json({
       message: "Đã tham gia nhóm",
     });

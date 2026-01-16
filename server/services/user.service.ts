@@ -8,8 +8,8 @@ import {
 } from "../dtos";
 import bcrypt from "bcrypt";
 
-export const saveUserService = async (phone: string) => {
-  const raw = await redis.get(`pending:${phone}`);
+export const saveUserService = async (email: string) => {
+  const raw = await redis.get(`pending:${email}`);
   if (!raw) {
     throw {
       status: StatusCodes.FORBIDDEN,
@@ -17,6 +17,7 @@ export const saveUserService = async (phone: string) => {
     };
   }
   const data = JSON.parse(raw);
+
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data,
@@ -29,7 +30,7 @@ export const saveUserService = async (phone: string) => {
     });
   });
 
-  await redis.del(`pending:${phone}`);
+  await redis.del(`pending:${email}`);
 
   return true;
 };
@@ -51,7 +52,7 @@ export const changePasswordServie = async (
   }
   const isPasswordValid = await bcrypt.compare(
     data.currentPassword,
-    existingUser?.passwordHash || ""
+    existingUser?.password || ""
   );
   if (!isPasswordValid) {
     throw {
@@ -66,7 +67,7 @@ export const changePasswordServie = async (
       id: userId,
     },
     data: {
-      passwordHash: newPasswordHash,
+      password: newPasswordHash,
     },
   });
   return true;
