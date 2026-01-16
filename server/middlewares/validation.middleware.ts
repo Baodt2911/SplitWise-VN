@@ -14,9 +14,9 @@ export const validateAll = ({
 }) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      body && body.parse(req.body);
-      params && params.parse(req.params);
-      query && query.parse(req.query);
+      body && (req.body = body.parse(req.body));
+      params && (req.params = params.parse(req.params) as any);
+      query && (req.query = query.parse(req.query) as any);
 
       return next();
     } catch (err) {

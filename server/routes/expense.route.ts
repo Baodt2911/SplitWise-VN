@@ -37,7 +37,7 @@ router.get(
   getDetailExpenseController
 );
 router.post(
-  "/create",
+  "/",
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),
@@ -47,7 +47,7 @@ router.post(
   createExpenseController
 );
 router.patch(
-  "/:expenseId/update",
+  "/:expenseId",
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),
@@ -59,7 +59,7 @@ router.patch(
 );
 
 router.delete(
-  "/:expenseId/delete",
+  "/:expenseId",
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),

@@ -23,7 +23,7 @@ router.get(
   getSettlementController
 );
 router.post(
-  "/create",
+  "/",
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),

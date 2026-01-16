@@ -4,5 +4,5 @@ import { createCommentController, getCommentsController } from "../controllers";
 const router = Router({ mergeParams: true });
 
 router.get("/", getCommentsController);
-router.post("/create", createCommentController);
+router.post("/", createCommentController);
 export default router;

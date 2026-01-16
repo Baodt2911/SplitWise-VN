@@ -24,7 +24,7 @@ const router = Router();
 
 // GROUP
 router.get(
-  "/all",
+  "/",
   verifyAccessToken,
   validateAll({ query: queryGroupSchema }),
   getAllGroupController
@@ -41,13 +41,13 @@ router.get(
 );
 
 router.post(
-  "/create",
+  "/",
   verifyAccessToken,
   validateAll({ body: createGroupSchema }),
   createGroupController
 );
 router.patch(
-  "/:groupId/update",
+  "/:groupId",
   verifyAccessToken,
   validateAll({
     params: z.object({
@@ -58,7 +58,7 @@ router.patch(
   updateGroupControlleer
 );
 router.delete(
-  "/:groupId/delete",
+  "/:groupId",
   verifyAccessToken,
   validateAll({
     params: z.object({
@@ -82,10 +82,10 @@ router.delete(
 );
 
 router.get(
-  "/join/:code",
+  "/join",
   verifyAccessToken,
   validateAll({
-    params: z.object({
+    body: z.object({
       code: z.string().length(6, "Invite code must be exactly 6 characters"),
     }),
   }),
@@ -104,21 +104,22 @@ router.post(
 );
 
 router.post(
-  "/:groupId/add-member",
+  "/:groupId/members",
   verifyAccessToken,
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),
     }),
     body: z.object({
-      phone: z.string().min(1, "Phone number is required"),
+      phone: z.string().min(1, "Phone number is required").optional(),
+      email: z.email("Invalid format email").optional(),
     }),
   }),
   addMemberController
 );
 
 router.get(
-  "/invite/:token",
+  "/invites/:token",
   validateAll({
     params: z.object({
       token: z.uuidv4("Token is required"),
@@ -127,7 +128,7 @@ router.get(
   verifyInviteTokenController
 );
 router.post(
-  "/invite/:token/accept",
+  "/invites/:token/accept",
   validateAll({
     params: z.object({
       token: z.uuidv4("Token is required"),

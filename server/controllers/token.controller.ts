@@ -5,10 +5,15 @@ import { refreshTokenService } from "../services";
 
 export const refreshTokenController = catchAsync(
   async (req: Request, res: Response) => {
+    const ua = req.headers["user-agent"] || "";
+    const ip = req.ip || "";
     const token: string =
       req.cookies.refreshToken || req.headers.authorization?.split(" ")[1];
     const { userId, sessionId } = req.user!;
-    const data = await refreshTokenService(userId!, sessionId!, token);
+    const data = await refreshTokenService(userId!, sessionId!, token, {
+      ua,
+      ip,
+    });
     res.status(StatusCodes.OK).json({
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,

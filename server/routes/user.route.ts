@@ -19,18 +19,18 @@ router.get("/activites", getActivitiesController);
 router.get("/notifications", getNotificationsController);
 
 router.patch(
-  "/update-profile",
+  "/me",
   validateAll({ body: updateProfileSchema }),
   updateProfileController
 );
 
 router.patch(
-  "/update-settings",
+  "/me/settings",
   validateAll({ body: updateUserSettingsSchema }),
   updateUserSettingsController
 );
-router.post(
-  "/change-password",
+router.patch(
+  "/users/me/password",
   validateAll({ body: changePasswordSchema }),
   changePasswordController
 );
