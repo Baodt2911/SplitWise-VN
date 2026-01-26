@@ -6,6 +6,16 @@ export async function seedDevGroups(users: { id: string; email: string }[]) {
   const bob = users.find((u) => u.email.startsWith("bob"))!;
   const charlie = users.find((u) => u.email.startsWith("charlie"))!;
 
+  const isGroupExist = await prisma.group.findMany({
+    where: {
+      OR: [{ name: "Trip Da Nang" }, { name: "House Expenses" }],
+    },
+  });
+  if (isGroupExist.length > 0) {
+    console.log("Groups already seeded, skipping...");
+    return isGroupExist;
+  }
+
   // 1️⃣ Create groups
   const tripGroup = await prisma.group.create({
     data: {

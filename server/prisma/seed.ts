@@ -5,14 +5,14 @@ import { seedExpenseSubCategories } from "./seed/systems/expenseSubCategory.seed
 const isDev = process.env.NODE_ENV !== "production";
 async function main() {
   console.log(
-    "🌱 Seeding database in " + (isDev ? "development" : "production") + "..."
+    "🌱 Seeding database in " + (isDev ? "development" : "production") + "...",
   );
 
   await seedExpenseSubCategories();
 
   if (isDev) {
     const users = await seedDevUsers();
-    await seedDevGroups(users);
+    const groups = await seedDevGroups(users);
   }
 
   console.log("✅ Seed completed");

@@ -5,12 +5,20 @@ import groupRouters from "./groups/index";
 import otpRouter from "./otp.route";
 import notificationRouter from "./notification.route";
 import expenseCategoryRouter from "./expense_category.route";
+import adminStatsRouter from "./admin_stats.route";
+import userStatsRouter from "./user_stats.route";
+
 import { Router } from "express";
-import { validateAll, verifyAccessToken } from "../middlewares";
+import {
+  validateAll,
+  verifyAccessToken,
+  verifySystemAdmin,
+} from "../middlewares";
 import z from "zod";
 
 const routers = Router();
 
+routers.use("/admin/stats", verifySystemAdmin, adminStatsRouter);
 routers.use("/auth", authRouter);
 routers.use("/auth/otp", otpRouter);
 routers.use("/groups", groupBaseRouter);
@@ -22,9 +30,10 @@ routers.use(
     }),
   }),
   verifyAccessToken,
-  groupRouters
+  groupRouters,
 );
 routers.use("/users", verifyAccessToken, userRouter);
+routers.use("/stats/me", verifyAccessToken, userStatsRouter);
 routers.use("/notifications", verifyAccessToken, notificationRouter);
 routers.use("/expense-categories", expenseCategoryRouter);
 export default routers;

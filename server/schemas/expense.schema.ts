@@ -35,12 +35,12 @@ export const createExpenseSchema = z
     paidBy: z.string().min(1, "PaidBy is required"),
     category: z.preprocess(
       (val) => (typeof val === "string" ? val.toUpperCase() : val),
-      z.enum(ExpenseCategory, { message: "Invalid expense category" })
+      z.enum(ExpenseCategory, { message: "Invalid expense category" }),
     ),
     subCategoryId: z.string().optional(),
     splitType: z.preprocess(
       (val) => (typeof val === "string" ? val.toUpperCase() : val),
-      z.enum(ExpenseSplitType, { message: "Invalid expense split type" })
+      z.enum(ExpenseSplitType, { message: "Invalid expense split type" }),
     ),
     expenseDate: z.coerce.date().optional(),
     receiptUrl: z
@@ -59,7 +59,7 @@ export const createExpenseSchema = z
     if (splitType === ExpenseSplitType.EXACT) {
       const total = splits.reduce(
         (sum, s) => sum.plus(s.amount ?? 0),
-        new Decimal(0)
+        new Decimal(0),
       );
       if (!total.equals(amount)) {
         ctx.addIssue({
@@ -75,7 +75,7 @@ export const createExpenseSchema = z
     if (splitType === ExpenseSplitType.PERCENTAGE) {
       const total = splits.reduce(
         (sum, s) => sum.plus(s.percentage ?? 0),
-        new Decimal(0)
+        new Decimal(0),
       );
       if (!total.equals(new Decimal(100))) {
         ctx.addIssue({
@@ -91,104 +91,7 @@ export const createExpenseSchema = z
     if (splitType === ExpenseSplitType.SHARES) {
       const totalShares = splits.reduce(
         (sum, s) => sum.plus(s.shares ?? 0),
-        new Decimal(0)
-      );
-      if (totalShares.lte(0)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Total shares must be > 0",
-          path: ["splits"],
-        });
-      }
-      return;
-    }
-  })
-  .strict();
-
-export const updateExpenseSchema = z
-  .object({
-    description: z.string().min(1, "Description is required"),
-    amount: z
-      .string()
-      .transform((val) => new Decimal(val))
-      .refine((val) => val.gt(0), {
-        message: "Amount must be a positive number",
-      }),
-    paidBy: z.string().min(1, "PaidBy is required"),
-    category: z.preprocess(
-      (val) => (typeof val === "string" ? val.toUpperCase() : val),
-      z.enum(ExpenseCategory, { message: "Invalid expense category" })
-    ),
-    subCategoryId: z.string().optional(),
-    splitType: z.preprocess(
-      (val) => (typeof val === "string" ? val.toUpperCase() : val),
-      z.enum(ExpenseSplitType, { message: "Invalid expense split type" })
-    ),
-    expenseDate: z.coerce.date(),
-    receiptUrl: z.url("Receipt URL must be a valid URL").or(z.literal("")),
-    notes: z.string(),
-    splits: z.array(splitSchema),
-  })
-  .partial()
-  .superRefine((data, ctx) => {
-    const { splitType, splits, amount } = data;
-
-    if (!splits && splitType !== ExpenseSplitType.EQUAL) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Requires 'splits' if 'splitType' is different equal",
-        path: ["splits"], // chỉ rõ lỗi nằm ở splits
-      });
-      return;
-    }
-
-    // exact → tất cả splits phải có amount
-    if (splitType === ExpenseSplitType.EXACT) {
-      const total = splits!.reduce(
-        (sum, s) => sum.plus(s.amount ?? 0),
-        new Decimal(0)
-      );
-
-      if (!amount) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Exact split must equal total amount",
-          path: ["splits"],
-        });
-        return;
-      }
-
-      if (!total.equals(amount)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Exact split must equal total amount",
-          path: ["splits"], // chỉ rõ lỗi nằm ở splits
-        });
-      }
-      return;
-    }
-
-    // percentage → tổng = 100
-    if (splitType === ExpenseSplitType.PERCENTAGE) {
-      const total = splits!.reduce(
-        (sum, s) => sum.plus(s.percentage ?? 0),
-        new Decimal(0)
-      );
-      if (!total.equals(new Decimal(100))) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Percentage must sum to 100%",
-          path: ["splits"],
-        });
-      }
-      return;
-    }
-
-    // shares → tổng shares > 0
-    if (splitType === ExpenseSplitType.SHARES) {
-      const totalShares = splits!.reduce(
-        (sum, s) => sum.plus(s.shares ?? 0),
-        new Decimal(0)
+        new Decimal(0),
       );
       if (totalShares.lte(0)) {
         ctx.addIssue({
@@ -216,7 +119,7 @@ export const queryExpenseSchema = z.object({
   category: z
     .preprocess(
       (val) => (typeof val === "string" ? val.toUpperCase() : val),
-      z.enum(ExpenseCategory, { message: "Invalid expense category" })
+      z.enum(ExpenseCategory, { message: "Invalid expense category" }),
     )
     .optional(),
   expenseDateFrom: z.coerce.date().optional(),

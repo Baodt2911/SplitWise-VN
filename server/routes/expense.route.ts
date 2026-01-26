@@ -8,11 +8,7 @@ import {
   updateExpenseController,
 } from "../controllers";
 import z from "zod";
-import {
-  createExpenseSchema,
-  queryExpenseSchema,
-  updateExpenseSchema,
-} from "../schemas";
+import { createExpenseSchema, queryExpenseSchema } from "../schemas";
 import commmentRouter from "./comment.route";
 const router = Router({ mergeParams: true });
 
@@ -24,7 +20,7 @@ router.get(
     }),
     query: queryExpenseSchema,
   }),
-  getExpenseGroupController
+  getExpenseGroupController,
 );
 router.get(
   "/:expenseId",
@@ -34,7 +30,7 @@ router.get(
       expenseId: z.uuid("Expense ID is required"),
     }),
   }),
-  getDetailExpenseController
+  getDetailExpenseController,
 );
 router.post(
   "/",
@@ -44,18 +40,18 @@ router.post(
     }),
     body: createExpenseSchema,
   }),
-  createExpenseController
+  createExpenseController,
 );
-router.patch(
+router.put(
   "/:expenseId",
   validateAll({
     params: z.object({
       groupId: z.uuid("Group ID is required"),
       expenseId: z.uuid("Expense ID is required"),
     }),
-    body: updateExpenseSchema,
+    body: createExpenseSchema,
   }),
-  updateExpenseController
+  updateExpenseController,
 );
 
 router.delete(
@@ -66,7 +62,7 @@ router.delete(
       expenseId: z.uuid("Expense ID is required"),
     }),
   }),
-  deleteExpenseController
+  deleteExpenseController,
 );
 
 //COMMENT
