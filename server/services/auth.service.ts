@@ -14,7 +14,7 @@ export const loginService = async (
   context: {
     ua: string;
     ip: string;
-  }
+  },
 ) => {
   const user = await prisma.user.findUnique({
     where: { email: data.email },
@@ -24,6 +24,7 @@ export const loginService = async (
       fullName: true,
       email: true,
       password: true,
+      role: true,
     },
   });
   if (!user) {
@@ -45,7 +46,7 @@ export const loginService = async (
   });
   const { ua, ip } = context;
   const sessionId = uuidv4();
-  const accessToken = generateAccessToken({ userId: user.id });
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
   const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
   const key = `session:${user.id}:${sessionId}`;
   await redis.set(
@@ -59,9 +60,9 @@ export const loginService = async (
       rotatedAt: Date.now(),
     }),
     "EX",
-    15 * 24 * 60 * 60
+    15 * 24 * 60 * 60,
   );
-  const { password, ...rest } = user;
+  const { password,role, ...rest } = user;
   return { user: rest, accessToken, refreshToken, sessionId };
 };
 
@@ -88,7 +89,7 @@ export const registerService = async (data: RegisterDTO) => {
       passwordHash: hashedPassword,
     }),
     "EX",
-    300
+    300,
   );
   await sendOtpRegisterService(data.email);
   return true;
@@ -99,7 +100,7 @@ export const googleAuthService = async (
   context: {
     ua: string;
     ip: string;
-  }
+  },
 ) => {
   const payload = await verifyGoogleIdToken(idToken);
   if (!payload) {
@@ -134,13 +135,13 @@ export const googleAuthService = async (
       phone: true,
       fullName: true,
       email: true,
-      password: true,
+      role: true,
     },
   });
 
   const { ua, ip } = context;
   const sessionId = uuidv4();
-  const accessToken = generateAccessToken({ userId: user.id });
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
   const refreshToken = generateRefreshToken({ userId: user.id, sessionId });
 
   await redis.set(
@@ -154,10 +155,10 @@ export const googleAuthService = async (
       rotatedAt: Date.now(),
     }),
     "EX",
-    15 * 24 * 60 * 60
+    15 * 24 * 60 * 60,
   );
 
-  const { password, ...rest } = user;
+  const { role, ...rest } = user;
   return { user: rest, accessToken, refreshToken, sessionId };
 };
 

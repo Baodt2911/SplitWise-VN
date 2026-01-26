@@ -1,3 +1,5 @@
+import { UserRole } from "../generated/prisma/browser";
+
 export interface RefreshJwtPayload {
   userId: string;
   sessionId: string;
@@ -6,6 +8,7 @@ export interface RefreshJwtPayload {
 }
 export interface AccessJwtPayload {
   userId: string;
+  role?: UserRole;
   iat?: number;
   exp?: number;
 }

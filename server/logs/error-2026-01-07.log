@@ -1,5 +1,0 @@
-{"level":"error","message":"Số tiền phải thanh toán không khớp","method":"POST","path":"/api/v1/group/491132ea-63f2-4340-94f2-dde36d44b8e3/settlements/create","status":403,"timestamp":"2026-01-07T11:09:21.477Z"}
-{"level":"error","message":"Bạn đã là thành viên của nhóm","method":"GET","path":"/api/v1/group/join/PAV9NJ","status":403,"timestamp":"2026-01-07T11:15:40.356Z"}
-{"level":"error","message":"Bạn đã là thành viên của nhóm","method":"GET","path":"/api/v1/group/join/PAV9NJ","status":403,"timestamp":"2026-01-07T11:16:18.610Z"}
-{"level":"error","message":"Đã là thành viên không thể tham gia lại","method":"GET","path":"/api/v1/group/join/PAV9NJ","status":403,"timestamp":"2026-01-07T11:16:42.934Z"}
-{"level":"error","message":"Chi phí không tồn tại","method":"GET","path":"/api/v1/group/491132ea-63f2-4340-94f2-dde36d44b8e3/expenses/9b5d250e-c4d2-48d1-8ea4-48259737e493","status":404,"timestamp":"2026-01-07T12:45:34.185Z"}

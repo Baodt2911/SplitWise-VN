@@ -1,9 +1,15 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../../../lib/prisma";
+import { UserRole } from "../../../generated/prisma/enums";
 
 const DEV_PASSWORD = "dev123456";
 
 export const devUsers = [
+  {
+    email: "bao.dev@test.com",
+    fullName: "Bao Dev",
+    role: UserRole.SYSTEM_ADMIN,
+  },
   { email: "alice.dev@test.com", fullName: "Alice Dev" },
   { email: "bob.dev@test.com", fullName: "Bob Dev" },
   { email: "charlie.dev@test.com", fullName: "Charlie Dev" },

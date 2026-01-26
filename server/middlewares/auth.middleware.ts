@@ -3,9 +3,10 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import { AccessJwtPayload, RefreshJwtPayload } from "../types/jwt";
 import { ExtendedError, Socket } from "socket.io";
+import { UserRole } from "../generated/prisma/browser";
 export const verifyAccessTokenSocket = (
   socket: Socket,
-  next: (err?: ExtendedError) => void
+  next: (err?: ExtendedError) => void,
 ) => {
   const accessToken: string = socket.handshake.auth.token;
   if (!accessToken) {
@@ -31,7 +32,7 @@ export const verifyAccessTokenSocket = (
 export const verifyAccessToken = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { authorization } = req.headers;
@@ -73,7 +74,7 @@ export const verifyAccessToken = async (
 export const verifyRefreshToken = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const refreshToken: string | undefined =
@@ -113,4 +114,19 @@ export const verifyRefreshToken = async (
       error: error.message || ReasonPhrases.INTERNAL_SERVER_ERROR,
     });
   }
+};
+
+export const verifySystemAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  await verifyAccessToken(req, res, () => {
+    if (!req.user?.role || req.user.role !== UserRole.SYSTEM_ADMIN) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        message: "Bạn không có quyền truy cập",
+      });
+    }
+    next();
+  });
 };

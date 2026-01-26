@@ -1,4 +1,5 @@
 import * as express from "express";
+import { UserRole } from "../generated/prisma/enums";
 
 // Mở rộng kiểu Request để thêm thuộc tính 'user'
 declare global {
@@ -7,6 +8,7 @@ declare global {
       user?: {
         userId: string;
         sessionId?: string;
+        role?: UserRole;
       };
     }
   }
