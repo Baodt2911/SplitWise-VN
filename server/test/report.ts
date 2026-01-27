@@ -1,10 +1,14 @@
 import fs from "fs";
+<<<<<<< HEAD
 import path from "path";
 import carbone from "carbone";
 const templatePath = path.resolve(
   __dirname,
   "../templates/reports/personal-report.xlsx",
 );
+=======
+import carbone from "carbone";
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
 const data = {
   // =========================
   // THÔNG TIN THÁNG
@@ -150,6 +154,7 @@ carbone.set({
   currencyTarget: "VND",
   currencyRates: { VND: 2 },
 });
+<<<<<<< HEAD
 carbone.render(templatePath, data, function (err, result) {
   if (err) {
     return console.log(err);
@@ -157,3 +162,16 @@ carbone.render(templatePath, data, function (err, result) {
   // write the result
   fs.writeFileSync("result.xlsx", result);
 });
+=======
+carbone.render(
+  "templates/reports/personal-report.xlsx",
+  data,
+  function (err, result) {
+    if (err) {
+      return console.log(err);
+    }
+    // write the result
+    fs.writeFileSync("result.xlsx", result);
+  },
+);
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6

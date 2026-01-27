@@ -6,10 +6,18 @@ import { toUTCDate } from "../utils/date";
 
 export const getOverviewStatsService = async (
   userId: string,
+<<<<<<< HEAD
   data: Required<GetOverviewStatsDTO>,
 ) => {
   const { month, year } = data;
 
+=======
+  data: GetOverviewStatsDTO,
+) => {
+  const { month, year } = data;
+
+  console.time("getOverviewStatsService");
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
   const [
     totalExpensePrevious,
     totalReceivedPrevious,
@@ -28,10 +36,20 @@ export const getOverviewStatsService = async (
       where: {
         paidBy: userId,
         deletedAt: null,
+<<<<<<< HEAD
         expenseDate: {
           gt: toUTCDate(new Date(year, month - 2, 1)),
           lt: toUTCDate(new Date(year, month - 1, 1)),
         },
+=======
+        ...(month &&
+          year && {
+            expenseDate: {
+              gt: toUTCDate(new Date(year, month - 2, 1)),
+              lt: toUTCDate(new Date(year, month - 1, 1)),
+            },
+          }),
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
       },
     }),
 
@@ -43,10 +61,20 @@ export const getOverviewStatsService = async (
       where: {
         payeeId: userId,
         status: SettlementStatus.CONFIRMED,
+<<<<<<< HEAD
         paymentDate: {
           gt: toUTCDate(new Date(year, month - 2, 1)),
           lt: toUTCDate(new Date(year, month - 1, 1)),
         },
+=======
+        ...(month &&
+          year && {
+            paymentDate: {
+              gt: toUTCDate(new Date(year, month - 2, 1)),
+              lt: toUTCDate(new Date(year, month - 1, 1)),
+            },
+          }),
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
       },
     }),
 
@@ -58,10 +86,20 @@ export const getOverviewStatsService = async (
       where: {
         paidBy: userId,
         deletedAt: null,
+<<<<<<< HEAD
         expenseDate: {
           gt: toUTCDate(new Date(year, month - 1, 1)),
           lt: toUTCDate(new Date(year, month, 1)),
         },
+=======
+        ...(month &&
+          year && {
+            expenseDate: {
+              gt: toUTCDate(new Date(year, month - 1, 1)),
+              lt: toUTCDate(new Date(year, month, 1)),
+            },
+          }),
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
       },
     }),
 
@@ -73,10 +111,20 @@ export const getOverviewStatsService = async (
       where: {
         payeeId: userId,
         status: SettlementStatus.CONFIRMED,
+<<<<<<< HEAD
         paymentDate: {
           gt: toUTCDate(new Date(year, month - 1, 1)),
           lt: toUTCDate(new Date(year, month, 1)),
         },
+=======
+        ...(month &&
+          year && {
+            paymentDate: {
+              gt: toUTCDate(new Date(year, month - 1, 1)),
+              lt: toUTCDate(new Date(year, month, 1)),
+            },
+          }),
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
       },
     }),
 
@@ -89,10 +137,20 @@ export const getOverviewStatsService = async (
       where: {
         paidBy: userId,
         deletedAt: null,
+<<<<<<< HEAD
         expenseDate: {
           gt: toUTCDate(new Date(year, month - 1, 1)),
           lt: toUTCDate(new Date(year, month, 1)),
         },
+=======
+        ...(month &&
+          year && {
+            expenseDate: {
+              gt: toUTCDate(new Date(year, month - 1, 1)),
+              lt: toUTCDate(new Date(year, month, 1)),
+            },
+          }),
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
       },
     }),
 
@@ -120,6 +178,7 @@ export const getOverviewStatsService = async (
       where: {
         paidBy: { not: userId },
         deletedAt: null,
+<<<<<<< HEAD
         expenseDate: {
           gt: toUTCDate(new Date(year, month - 1, 1)),
           lt: toUTCDate(new Date(year, month, 1)),
@@ -127,6 +186,19 @@ export const getOverviewStatsService = async (
       },
     }),
   ]);
+=======
+        ...(month &&
+          year && {
+            expenseDate: {
+              gt: toUTCDate(new Date(year, month - 1, 1)),
+              lt: toUTCDate(new Date(year, month, 1)),
+            },
+          }),
+      },
+    }),
+  ]);
+  console.timeEnd("getOverviewStatsService");
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
   const totalExpense = totalExpenseCurrent._sum.amount || new Decimal(0);
   const totalReceived = totalReceivedCurrent._sum.amount || new Decimal(0);
 
@@ -164,8 +236,11 @@ export const getOverviewStatsService = async (
   }
 
   return {
+<<<<<<< HEAD
     month: `${month < 9 ? "0" + month : month}/${year}`,
     monthLabel: `Tháng ${month < 9 ? "0" + month : month}/${year}`,
+=======
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
     summary: {
       totalExpense,
       totalReceived,
@@ -196,6 +271,10 @@ export const getOverviewStatsService = async (
 };
 
 export const getBalancesStatsService = async (userId: string) => {
+<<<<<<< HEAD
+=======
+  console.time("getBalancesStatsService");
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
   const [owedToOthers, owedByOthers, detailsOwe] = await Promise.all([
     // Tổng mình nợ người khác
     prisma.balance.aggregate({
@@ -249,10 +328,19 @@ export const getBalancesStatsService = async (userId: string) => {
       type: isOwe ? "youOwe" : "oweYou",
     };
   });
+<<<<<<< HEAD
   return {
     total: {
       youOwe: owedToOthers._sum.amount,
       oweYou: owedByOthers._sum.amount,
+=======
+
+  console.timeEnd("getBalancesStatsService");
+  return {
+    total: {
+      youOwe: owedToOthers._sum.amount || 0,
+      oweYou: owedByOthers._sum.amount || 0,
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
     },
     details: mapDetails,
   };

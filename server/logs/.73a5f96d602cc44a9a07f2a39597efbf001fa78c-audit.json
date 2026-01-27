@@ -49,11 +49,14 @@
             "date": 1769402773802,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2026-01-26.log",
             "hash": "f1d19043c4b3a5242f225efa2f4c0395552998198edd48fe46f94ceb08181cb2"
+<<<<<<< HEAD
         },
         {
             "date": 1769504851855,
             "name": "D:\\project\\SplitWiseVN\\server\\logs\\app-2026-01-27.log",
             "hash": "926e3bd385435b631acd6cec2b6b951a3072ece0a467e7086aedab6773a40b86"
+=======
+>>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
         }
     ],
     "hashType": "sha256"
