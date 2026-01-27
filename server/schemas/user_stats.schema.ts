@@ -1,6 +1,5 @@
 import z from "zod";
 
-<<<<<<< HEAD
 const currentYear = new Date().getFullYear();
 
 export const getOverviewStatsSchema = z.object({
@@ -23,9 +22,3 @@ export const getOverviewStatsSchema = z.object({
     .default(currentYear)
     .optional(),
 });
-=======
-export const getOverviewStatsSchema = z.object({
-    month:z.string().min(1).transform((val)=> Number(val)).optional(),
-    year:z.string().min(4).transform((val)=> Number(val)).optional(),
-})
->>>>>>> d2383351ed7802c64f13adccbbb3b61a799e9ea6
