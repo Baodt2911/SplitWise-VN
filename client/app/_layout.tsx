@@ -1,4 +1,5 @@
 import "../global.css";
+import "../src/services/i18n"; // Initialize i18n
 
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -10,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Alert } from "../src/components/ui/Alert";
 import { ToastContainer } from "../src/components/ui/Toast";
 import { useAuthStore } from "../src/store/authStore";
+import { useCategoryStore } from "../src/store/categoryStore";
 import { usePreferencesStore } from "../src/store/preferencesStore";
 import { getThemeColors } from "../src/utils/themeColors";
 
@@ -35,6 +37,9 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hide();
       // Note: initializeAuth is called in index.tsx to ensure proper timing
+      
+      // Prefetch categories (cached if already exists)
+      useCategoryStore.getState().fetchCategories();
     }
   }, [loaded]);
 

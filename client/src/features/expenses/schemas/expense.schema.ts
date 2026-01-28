@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const parentCategories = ["FOOD", "TRANSPORT", "ENTERTAINMENT", "HOUSING", "TRAVEL", "SHOPPING", "HEALTH", "EDUCATION", "PETS", "GIFTS", "OTHER"] as const;
+
 export const createExpenseSchema = () => {
   return z.object({
     description: z.string().min(1, "Mô tả là bắt buộc"),
@@ -12,10 +14,10 @@ export const createExpenseSchema = () => {
       }, "Số tiền phải lớn hơn 0"),
     currency: z.string().optional(),
     paidBy: z.string().min(1, "Người trả là bắt buộc"),
-    category: z.enum(
-      ["food", "transport", "entertainment", "accommodation", "shopping", "other"],
-      { message: "Danh mục không hợp lệ" }
-    ),
+    category: z.enum(parentCategories, {
+      message: "Danh mục là bắt buộc",
+    }),
+    subCategoryId: z.string().optional(),
     splitType: z.enum(["equal", "exact", "percentage", "shares"], {
       message: "Cách chia không hợp lệ",
     }),

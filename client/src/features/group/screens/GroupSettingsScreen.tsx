@@ -112,7 +112,6 @@ export const GroupSettingsScreen = () => {
         const safeStored = {
           ...storedGroup,
           members: Array.isArray(storedGroup.members) ? storedGroup.members : [],
-          expenses: Array.isArray(storedGroup.expenses) ? storedGroup.expenses : [],
         };
         setGroup(safeStored);
         setIsPublic(safeStored.isPublic);
@@ -136,7 +135,6 @@ export const GroupSettingsScreen = () => {
       const safeStored = {
         ...groupFromStore,
         members: Array.isArray(groupFromStore.members) ? groupFromStore.members : [],
-        expenses: Array.isArray(groupFromStore.expenses) ? groupFromStore.expenses : [],
       };
       setGroup(safeStored);
       setIsPublic(safeStored.isPublic);
@@ -228,8 +226,7 @@ export const GroupSettingsScreen = () => {
                  const mergedGroup = { 
                     ...group, 
                     ...result.data, 
-                    members: group.members, 
-                    expenses: group.expenses 
+                    members: group.members
                  };
                  setGroupDetail(group.id, mergedGroup);
             } else if ("message" in result) {
@@ -254,8 +251,7 @@ export const GroupSettingsScreen = () => {
         const mergedGroup = {
            ...group,
            ...result.data,
-           members: group.members, // Explicitly preserve members
-           expenses: group.expenses, // Explicitly preserve expenses
+           members: group.members // Explicitly preserve members
         };
         setGroupDetail(group.id, mergedGroup);
       } else if ("message" in result) {

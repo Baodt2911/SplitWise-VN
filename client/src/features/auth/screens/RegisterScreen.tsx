@@ -28,8 +28,8 @@ const RegisterScreen = () => {
     resolver: zodResolver(createRegisterSchema()) as any,
     defaultValues: {
       fullName: "",
+      email: "",
       phone: "",
-      email: undefined,
       password: "",
       confirmPassword: "",
       agreeToTerms: false,
@@ -41,8 +41,8 @@ const RegisterScreen = () => {
     try {
       const result = await register({
         fullName: data.fullName,
-        phone: data.phone,
         email: data.email,
+        phone: data.phone || undefined,
         password: data.password,
       });
       
@@ -65,10 +65,10 @@ const RegisterScreen = () => {
       }
 
       // Success - Server automatically sends OTP after registration
-      success("Mã OTP đã được gửi đến số điện thoại của bạn.", "Thành công");
+      success("Mã OTP đã được gửi đến email của bạn.", "Thành công");
       router.replace({
         pathname: "/auth/otp-verify",
-        params: { phone: data.phone, type: "register" },
+        params: { email: data.email, type: "register" },
       });
     } catch (err: any) {
       // Network error or other unexpected errors
@@ -82,10 +82,10 @@ const RegisterScreen = () => {
     subtitle: "Bắt đầu quản lý chi tiêu nhóm một cách dễ dàng.",
     fullNameLabel: "Họ tên",
     fullNamePlaceholder: "Nhập họ và tên",
-    phoneLabel: "Số điện thoại",
+    emailLabel: "Email",
+    emailPlaceholder: "Nhập địa chỉ email",
+    phoneLabel: "Số điện thoại (tùy chọn)",
     phonePlaceholder: "Nhập số điện thoại",
-    emailLabel: "Email (tùy chọn)",
-    emailPlaceholder: "Nhập email",
     passwordLabel: "Mật khẩu",
     passwordPlaceholder: "Nhập mật khẩu",
     passwordHint: "ít nhất 8 ký tự",
@@ -117,8 +117,8 @@ const RegisterScreen = () => {
 
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -161,19 +161,20 @@ const RegisterScreen = () => {
               />
 
               <TextInput
-                label={t.phoneLabel}
-                placeholder={t.phonePlaceholder}
-                control={control}
-                name="phone"
-                keyboardType="phone-pad"
-              />
-
-              <TextInput
                 label={t.emailLabel}
                 placeholder={t.emailPlaceholder}
                 control={control}
                 name="email"
                 keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <TextInput
+                label={t.phoneLabel}
+                placeholder={t.phonePlaceholder}
+                control={control}
+                name="phone"
+                keyboardType="phone-pad"
               />
 
               <TextInput

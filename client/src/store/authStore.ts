@@ -1,13 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import * as SecureStore from "expo-secure-store";
-
-export interface User {
-  id: string;
-  phone: string;
-  fullName: string;
-  email: string | null;
-}
+import type { User } from "../types/models";
 
 export interface AuthState {
   user: User | null;
@@ -21,6 +15,12 @@ export interface AuthState {
     refreshToken: string;
     sessionId: string;
   }) => Promise<void>;
+  updateTokens: (data: {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+  }) => Promise<void>;
+  setUser: (user: User) => Promise<void>;
   clearAuth: () => Promise<void>;
   initializeAuth: () => Promise<void>;
 }
@@ -74,6 +74,24 @@ export const useAuthStore = create<AuthState>()(
           sessionId: data.sessionId,
           isAuthenticated: true,
         });
+      },
+
+      updateTokens: async (data) => {
+        // Store tokens in SecureStore
+        await SecureStore.setItemAsync("accessToken", data.accessToken);
+        await SecureStore.setItemAsync("refreshToken", data.refreshToken);
+        await SecureStore.setItemAsync("sessionId", data.sessionId);
+
+        set({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          sessionId: data.sessionId,
+        });
+      },
+
+      setUser: async (user) => {
+        await SecureStore.setItemAsync("user", JSON.stringify(user));
+        set({ user });
       },
 
       clearAuth: async () => {

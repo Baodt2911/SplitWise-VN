@@ -4,10 +4,7 @@ import { getValidationMessages } from "../utils/validationMessages";
 export const createLoginSchema = () => {
   const messages = getValidationMessages();
   return z.object({
-    phone: z
-      .string()
-      .min(1, messages.required)
-      .regex(/^[0-9]{10,11}$/, messages.phone),
+    email: z.string().min(1, messages.required).email(messages.email),
     password: z.string().min(1, messages.required),
   });
 };
@@ -17,11 +14,12 @@ export const createRegisterSchema = () => {
   return z
     .object({
       fullName: z.string().min(1, messages.required).min(2, messages.minLength(2)),
+      email: z.string().min(1, messages.required).email(messages.email),
       phone: z
         .string()
-        .min(1, messages.required)
-        .regex(/^[0-9]{10,11}$/, messages.phone),
-      email: z.string().email(messages.email).optional().or(z.literal("")),
+        .regex(/^[0-9]{10,11}$/, messages.phone)
+        .optional()
+        .or(z.literal("")),
       password: z.string().min(1, messages.required).min(8, messages.password),
       confirmPassword: z.string().min(1, messages.required),
       agreeToTerms: z.boolean().refine((val) => val === true, {
@@ -47,10 +45,7 @@ export const createOtpSchema = () => {
 export const createForgotPasswordSchema = () => {
   const messages = getValidationMessages();
   return z.object({
-    phone: z
-      .string()
-      .min(1, messages.required)
-      .regex(/^[0-9]{10,11}$/, messages.phone),
+    email: z.string().min(1, messages.required).email(messages.email),
   });
 };
 

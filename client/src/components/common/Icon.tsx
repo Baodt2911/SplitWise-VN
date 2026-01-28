@@ -1,122 +1,140 @@
 import React from "react";
 import { StyleProp, ViewStyle } from "react-native";
-import {
-  Home,
-  Users,
-  BarChart3,
-  User,
-  UserPlus,
-  Plus,
-  Minus,
-  Edit,
-  Trash2,
-  Check,
-  X,
-  ArrowLeft,
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
-  DollarSign,
-  Wallet,
-  Receipt,
-  CreditCard,
-  Settings,
-  Bell,
-  Search,
-  Filter,
-  MoreVertical,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  Phone,
-  Calendar,
-  Clock,
-  ShoppingCart,
-  Building2,
-  ChevronRight,
-  Globe,
-  Info,
-  QrCode,
-  Database,
-  AlertTriangle,
-  Link,
-  Delete,
-  Camera,
-  Utensils,
-  Car,
-  BedDouble,
-  Clapperboard,
-  ShoppingBag,
-  FileText,
-  Lightbulb,
-  type LucideIcon,
-} from "lucide-react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { getThemeColors } from "../../utils/themeColors";
 import { usePreferencesStore } from "../../store/preferencesStore";
 
-// Map icon names to Lucide components
-// Add more icons as needed
-const iconMap: Record<string, LucideIcon> = {
+// Map icon names to MaterialCommunityIcons names
+const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   // Navigation
-  home: Home,
-  users: Users,
-  barChart: BarChart3,
-  user: User,
-  userPlus: UserPlus,
-  shoppingCart: ShoppingCart,
-  building: Building2,
+  home: "home",
+  users: "account-group",
+  barChart: "chart-bar",
+  user: "account",
+  userPlus: "account-plus",
+  shoppingCart: "cart",
+  building: "office-building",
   
   // Common actions
-  plus: Plus,
-  minus: Minus,
-  edit: Edit,
-  trash: Trash2,
-  check: Check,
-  x: X,
-  arrowLeft: ArrowLeft,
-  arrowRight: ArrowRight,
-  chevronDown: ChevronDown,
-  chevronUp: ChevronUp,
-  delete: Delete,
-  backspace: Delete,
+  plus: "plus",
+  minus: "minus",
+  edit: "pencil",
+  trash: "delete",
+  check: "check",
+  x: "close",
+  arrowLeft: "arrow-left",
+  arrowRight: "arrow-right",
+  chevronDown: "chevron-down",
+  chevronUp: "chevron-up",
+  delete: "backspace",
+  backspace: "backspace",
   
   // Money & Finance
-  dollarSign: DollarSign,
-  wallet: Wallet,
-  receipt: Receipt,
-  creditCard: CreditCard,
+  dollarSign: "currency-usd",
+  wallet: "wallet",
+  receipt: "receipt",
+  creditCard: "credit-card",
+  pieChart: "chart-pie",
   
   // Settings & More
-  settings: Settings,
-  bell: Bell,
-  search: Search,
-  filter: Filter,
-  moreVertical: MoreVertical,
-  eye: Eye,
-  eyeOff: EyeOff,
-  lock: Lock,
-  mail: Mail,
-  phone: Phone,
-  calendar: Calendar,
-  clock: Clock,
-  chevronRight: ChevronRight,
-  globe: Globe,
-  info: Info,
-  qrcode: QrCode,
-  database: Database,
-  alertTriangle: AlertTriangle,
-  link: Link,
-  camera: Camera,
-  lightbulb: Lightbulb,
+  settings: "cog",
+  bell: "bell",
+  search: "magnify",
+  filter: "filter",
+  moreVertical: "dots-vertical",
+  eye: "eye",
+  eyeOff: "eye-off",
+  lock: "lock",
+  mail: "email",
+  phone: "phone",
+  calendar: "calendar",
+  clock: "clock-outline",
+  chevronRight: "chevron-right",
+  globe: "earth",
+  info: "information",
+  qrcode: "qrcode",
+  database: "database",
+  alertTriangle: "alert",
+  link: "link",
+  camera: "camera",
+  lightbulb: "lightbulb-on",
+  image: "image",
 
-  // Categories (added for GroupDetail)
-  utensils: Utensils,
-  car: Car,
-  bed: BedDouble,
-  movie: Clapperboard,
-  shoppingBag: ShoppingBag,
-  fileText: FileText,
+  // Categories
+  utensils: "silverware-fork-knife",
+  car: "car",
+  bed: "bed",
+  movie: "movie",
+  shoppingBag: "shopping",
+  fileText: "file-document",
+
+  // Category Icons (from category.constants.ts)
+  // FOOD
+  "silverware-fork-knife": "silverware-fork-knife",
+  coffee: "coffee",
+  beer: "beer",
+  cookie: "cookie",
+  cart: "cart",
+  
+  // TRANSPORT
+  taxi: "taxi",
+  "gas-station": "gas-station",
+  parking: "parking",
+  wrench: "wrench",
+  bus: "bus",
+  
+  // ENTERTAINMENT
+  microphone: "microphone",
+  "dice-5": "dice-5",
+  dumbbell: "dumbbell",
+  "calendar-heart": "calendar-heart",
+  
+  // HOUSING
+  "lightning-bolt": "lightning-bolt",
+  water: "water",
+  wifi: "wifi",
+  shimmer: "shimmer",
+  sofa: "sofa",
+  hammer: "hammer",
+  
+  // TRAVEL
+  "bed-double": "bed-double",
+  "home-account": "home-account",
+  ticket: "ticket",
+  airplane: "airplane",
+  map: "map",
+  
+  // SHOPPING
+  "tshirt-crew": "tshirt-crew",
+  lipstick: "lipstick",
+  "diamond-stone": "diamond-stone",
+  "monitor-cellphone": "monitor-cellphone",
+  "shopping-outline": "shopping-outline",
+  
+  // HEALTH
+  pill: "pill",
+  stethoscope: "stethoscope",
+  "heart-pulse": "heart-pulse",
+  
+  // EDUCATION
+  "book-open-page-variant": "book-open-page-variant",
+  school: "school",
+  briefcase: "briefcase",
+  "monitor-screenshot": "monitor-screenshot",
+  
+  // PETS
+  bone: "bone",
+  needle: "needle",
+  "content-cut": "content-cut",
+  
+  // GIFTS
+  gift: "gift",
+  "party-popper": "party-popper",
+  "hand-coin": "hand-coin",
+  
+  // OTHER
+  "help-circle": "help-circle",
+  "circle-outline": "circle-outline",
 };
 
 export type IconName = keyof typeof iconMap;
@@ -129,8 +147,7 @@ interface IconProps {
 }
 
 /**
- * Icon component using Lucide React Native
- * Optimized for Expo with tree-shaking support
+ * Icon component using MaterialCommunityIcons from @expo/vector-icons
  * 
  * @example
  * <Icon name="home" size={24} color="#000" />
@@ -144,19 +161,19 @@ export const Icon: React.FC<IconProps> = ({
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   
-  const IconComponent = iconMap[name];
+  const iconName = iconMap[name];
   
-  if (!IconComponent) {
+  if (!iconName) {
     console.warn(`Icon "${name}" not found in iconMap`);
     return null;
   }
   
   return (
-    <IconComponent
+    <MaterialCommunityIcons
+      name={iconName as any}
       size={size}
       color={color || colors.textPrimary}
       style={style}
     />
   );
 };
-

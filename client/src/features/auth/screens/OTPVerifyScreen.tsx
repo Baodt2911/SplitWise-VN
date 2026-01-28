@@ -17,7 +17,7 @@ import { verifyOtpRegister, sendOtpRegister } from "../../../services/api/otp.ap
 const OTPVerifyScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const params = useLocalSearchParams<{ phone?: string; type?: "register" | "forgot-password" }>();
+  const params = useLocalSearchParams<{ email?: string; type?: "register" | "forgot-password" }>();
   const { success, error } = useToast();
 
   const {
@@ -34,20 +34,23 @@ const OTPVerifyScreen = () => {
 
   const onSubmit = async (data: OtpFormData) => {
     try {
-      if (!params.phone) {
-        error("Thiếu số điện thoại.", "Lỗi");
+      if (!params.email) {
+        error("Thiếu email.", "Lỗi");
         return;
       }
 
       if (params.type === "register") {
         // Verify OTP for registration
-        await verifyOtpRegister({ phone: params.phone, otp: data.otp });
+        await verifyOtpRegister({ email: params.email, otp: data.otp });
         success("Xác minh OTP thành công! Vui lòng đăng nhập.", "Thành công");
         router.replace("/auth/login");
       } else if (params.type === "forgot-password") {
         // TODO: Implement verify OTP for forgot password
         success("Xác minh OTP thành công!", "Thành công");
-        router.push("/auth/reset-password");
+        router.push({
+          pathname: "/auth/reset-password",
+          params: { email: params.email, otp: data.otp }
+        });
       } else {
         error("Loại xác minh không hợp lệ.", "Lỗi");
       }
@@ -58,12 +61,12 @@ const OTPVerifyScreen = () => {
   };
 
   const handleResend = async () => {
-    if (!params.phone) {
-      error("Thiếu số điện thoại để gửi lại mã.", "Lỗi");
+    if (!params.email) {
+      error("Thiếu email để gửi lại mã.", "Lỗi");
       return;
     }
     try {
-      await sendOtpRegister(params.phone);
+      await sendOtpRegister(params.email);
       success("Mã OTP đã được gửi lại!", "Thành công");
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Gửi lại mã OTP thất bại.";
@@ -71,19 +74,10 @@ const OTPVerifyScreen = () => {
     }
   };
 
-  const formatPhone = (phone?: string) => {
-    if (!phone) return "+84 XXX XXX XXX";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length >= 9) {
-      return `+84 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-    return `+84 ${phone}`;
-  };
-
   const t = {
     title: "Xác thực",
     instruction: "Nhập mã OTP",
-    sentTo: "Mã xác thực đã được gửi đến số điện thoại",
+    sentTo: "Mã xác thực đã được gửi đến email",
     didntReceive: "Không nhận được mã?",
     resend: "Gửi lại mã",
     confirmButton: "Xác nhận",
@@ -108,8 +102,8 @@ const OTPVerifyScreen = () => {
 
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -146,7 +140,7 @@ const OTPVerifyScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {t.sentTo + "\n" + formatPhone(params.phone)}
+                  {t.sentTo + "\n" + (params.email || "")}
                 </Text>
               </View>
 

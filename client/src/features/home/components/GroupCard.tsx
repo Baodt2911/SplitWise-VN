@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import { Text, TouchableOpacity, View, Image } from "react-native";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
@@ -94,12 +94,29 @@ export const GroupCard = memo(({
     }).format(amount);
   };
 
+  // Prevent multiple rapid clicks
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handlePress = useCallback(() => {
+    if (isNavigating || !onPress) return;
+    
+    setIsNavigating(true);
+    onPress();
+    
+    // Reset after a short delay
+    setTimeout(() => {
+      setIsNavigating(false);
+    }, 500);
+  }, [isNavigating, onPress]);
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
+      disabled={isNavigating}
       className="flex-row items-center rounded-2xl p-4 mb-3 shadow-sm"
       style={{
         backgroundColor: colors.surface,
+        opacity: isNavigating ? 0.6 : 1,
       }}
       activeOpacity={0.7}
     >

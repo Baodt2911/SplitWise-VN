@@ -30,7 +30,7 @@ const LoginScreen = () => {
     resolver: zodResolver(createLoginSchema()),
     mode: "onBlur",
     defaultValues: {
-      phone: "",
+      email: "",
       password: "",
     },
   });
@@ -38,7 +38,7 @@ const LoginScreen = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await login({
-        phone: data.phone,
+        email: data.email,
         password: data.password,
       });
       
@@ -50,8 +50,8 @@ const LoginScreen = () => {
         showError(apiError.message, "Lỗi");
         
         // Set error to form field to highlight with red border
-        if (apiError.field === "phone") {
-          setError("phone", {
+        if (apiError.field === "email") {
+          setError("email", {
             type: "server",
             message: apiError.message,
           });
@@ -86,9 +86,9 @@ const LoginScreen = () => {
 
   const t = {
     title: "Chào mừng trở lại",
-    subtitle: "Nhập số điện thoại và mật khẩu để đăng nhập",
-    phoneLabel: "Số điện thoại",
-    phonePlaceholder: "Nhập số điện thoại",
+    subtitle: "Nhập email và mật khẩu để đăng nhập",
+    emailLabel: "Email",
+    emailPlaceholder: "Nhập địa chỉ email",
     passwordLabel: "Mật khẩu",
     passwordPlaceholder: "Nhập mật khẩu",
     loginButton: "Đăng nhập",
@@ -123,8 +123,8 @@ const LoginScreen = () => {
 
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -159,11 +159,12 @@ const LoginScreen = () => {
 
               {/* Form */}
               <TextInput
-                label={t.phoneLabel}
-                placeholder={t.phonePlaceholder}
+                label={t.emailLabel}
+                placeholder={t.emailPlaceholder}
                 control={control}
-                name="phone"
-                keyboardType="phone-pad"
+                name="email"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
 
               <TextInput
@@ -216,17 +217,9 @@ const LoginScreen = () => {
               <View className="flex-row justify-center gap-3 mb-4">
                 <TouchableOpacity
                   onPress={() => handleSocialLogin("google")}
-                  className="w-14 h-14 rounded-xl items-center justify-center"
+                  className="w-14 h-14 rounded-xl items-center justify-center shadow-lg"
                   style={{
                     backgroundColor: colors.surface,
-                    shadowColor: theme === "dark" ? "#000" : "#000",
-                    shadowOffset: {
-                      width: 0,
-                      height: 1,
-                    },
-                    shadowOpacity: theme === "dark" ? 0.2 : 0.05,
-                    shadowRadius: 2,
-                    elevation: 1,
                   }}
                 >
                   <Image
@@ -238,17 +231,9 @@ const LoginScreen = () => {
 
                 <TouchableOpacity
                   onPress={() => handleSocialLogin("facebook")}
-                  className="w-14 h-14 rounded-xl items-center justify-center"
+                  className="w-14 h-14 rounded-xl items-center justify-center shadow-lg"
                   style={{
                     backgroundColor: colors.surface,
-                    shadowColor: theme === "dark" ? "#000" : "#000",
-                    shadowOffset: {
-                      width: 0,
-                      height: 1,
-                    },
-                    shadowOpacity: theme === "dark" ? 0.2 : 0.05,
-                    shadowRadius: 2,
-                    elevation: 1,
                   }}
                 >
                   <Image
@@ -268,7 +253,7 @@ const LoginScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.noAccount}{" "}
+                {t.noAccount}
               </Text>
               <TouchableOpacity onPress={() => router.push("/auth/register")}>
                 <Text

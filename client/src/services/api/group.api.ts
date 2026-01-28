@@ -28,7 +28,7 @@ export interface GetGroupsParams {
 export const getGroups = async (params: GetGroupsParams): Promise<GroupsResponse> => {
   try {
     // Interceptor automatically adds accessToken header
-    const response = await apiClient.get<GroupsResponse>("/group/all", {
+    const response = await apiClient.get<GroupsResponse>("/groups", {
       params: {
         page: params.page,
         pageSize: params.pageSize,
@@ -74,7 +74,6 @@ export interface GroupExpense {
   splitType: string;
   yourDebts: string;
   yourCredits: string;
-  splits?: ExpenseSplit[]; // Array of splits for this expense
 }
 
 export interface GroupSettlement {
@@ -97,8 +96,7 @@ export interface GroupDetail {
   archivedAt: string | null;
   creator: string;
   members: GroupMember[];
-  expenses: GroupExpense[];
-  settlements: GroupSettlement[];
+  expenses?: any[]; // Store expenses list
 }
 
 export interface GroupDetailResponse {
@@ -108,7 +106,7 @@ export interface GroupDetailResponse {
 export const getGroupDetail = async (groupId: string): Promise<GroupDetailResponse> => {
   try {
     // Interceptor automatically adds accessToken header
-    const response = await apiClient.get<GroupDetailResponse>(`/group/${groupId}`);
+    const response = await apiClient.get<GroupDetailResponse>(`/groups/${groupId}`);
     
     return response.data;
   } catch (error: any) {
@@ -166,7 +164,7 @@ export const createGroup = async (data: CreateGroupRequest): Promise<CreateGroup
     };
 
     // Interceptor automatically adds accessToken header
-    const response = await apiClient.post<CreateGroupResponse>("/group/create", requestBody);
+    const response = await apiClient.post<CreateGroupResponse>("/groups", requestBody);
     
     return response.data;
   } catch (error: any) {
@@ -191,7 +189,7 @@ export const updateGroup = async (
   try {
     // Interceptor automatically adds accessToken header
     const response = await apiClient.patch<UpdateGroupResponse>(
-      `/group/${groupId}/update`,
+      `/groups/${groupId}`,
       data
     );
     
@@ -209,5 +207,106 @@ export const updateGroup = async (
       field: field,
     };
   }
+};
+
+export const deleteGroup = async (groupId: string): Promise<{ message: string } | ApiError> => {
+  try {
+    const response = await apiClient.delete<{ message: string }>(`/groups/${groupId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Không thể xóa nhóm",
+      field: error.response?.data?.field
+    };
+  }
+};
+
+export const removeMember = async (groupId: string, memberId: string): Promise<{ message: string } | ApiError> => {
+  try {
+    const response = await apiClient.delete<{ message: string }>(`/groups/${groupId}/members/${memberId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Không thể xóa thành viên",
+      field: error.response?.data?.field
+    };
+  }
+};
+
+export interface JoinGroupRequest {
+  code: string;
+}
+
+export const joinGroup = async (data: JoinGroupRequest): Promise<GroupDetailResponse | ApiError> => {
+  try {
+    // Server uses GET with body for join (unconventional but per spec)
+    const response = await apiClient.get<GroupDetailResponse>("/groups/join", {
+      data: data 
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Không thể tham gia nhóm",
+      field: error.response?.data?.field
+    };
+  }
+};
+
+export const leaveGroup = async (groupId: string): Promise<{ message: string } | ApiError> => {
+  try {
+    const response = await apiClient.post<{ message: string }>(`/groups/${groupId}/leave`);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Không thể rời nhóm",
+      field: error.response?.data?.field
+    };
+  }
+};
+
+export interface AddMemberRequest {
+  email?: string;
+  phone?: string;
+}
+
+export const addMember = async (groupId: string, data: AddMemberRequest): Promise<{ message: string } | ApiError> => {
+  try {
+    const response = await apiClient.post<{ message: string }>(`/groups/${groupId}/members`, data);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Không thể thêm thành viên",
+      field: error.response?.data?.field
+    };
+  }
+};
+
+export const verifyInvite = async (token: string): Promise<any | ApiError> => {
+   try {
+     const response = await apiClient.get(`/groups/invites/${token}`);
+     return response.data;
+   } catch (error: any) {
+     if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+     return {
+       message: error.response?.data?.message || "Lời mời không hợp lệ",
+     };
+   }
+};
+
+export const acceptInvite = async (token: string): Promise<any | ApiError> => {
+   try {
+     const response = await apiClient.post(`/groups/invites/${token}/accept`);
+     return response.data;
+   } catch (error: any) {
+     if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+     return {
+       message: error.response?.data?.message || "Không thể chấp nhận lời mời",
+     };
+   }
 };
 

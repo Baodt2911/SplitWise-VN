@@ -18,6 +18,10 @@ interface GroupState {
   getGroupDetail: (groupId: string) => GroupDetail | undefined;
   updateGroupDetail: (groupId: string, updater: (detail: GroupDetail) => GroupDetail) => void;
   removeGroupDetail: (groupId: string) => void;
+  setExpenses: (groupId: string, expenses: any[]) => void;
+  addExpense: (groupId: string, expense: any) => void;
+  updateExpense: (groupId: string, expenseId: string, updatedExpense: any) => void;
+  deleteExpense: (groupId: string, expenseId: string) => void;
   setLoading: (loading: boolean) => void;
   setLoadingMore: (loading: boolean) => void;
   setHasMore: (hasMore: boolean) => void;
@@ -74,6 +78,76 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   removeGroupDetail: (groupId) => set((state) => {
     const { [groupId]: _, ...rest } = state.groupDetails;
     return { groupDetails: rest };
+  }),
+
+  setExpenses: (groupId, expenses) => set((state) => {
+    const currentDetail = state.groupDetails[groupId];
+    if (!currentDetail) return state;
+    
+    return {
+      groupDetails: {
+        ...state.groupDetails,
+        [groupId]: {
+          ...currentDetail,
+          expenses,
+        },
+      },
+    };
+  }),
+
+  addExpense: (groupId, expense) => set((state) => {
+    const currentDetail = state.groupDetails[groupId];
+    if (!currentDetail) return state;
+    
+    const currentExpenses = currentDetail.expenses || [];
+    
+    return {
+      groupDetails: {
+        ...state.groupDetails,
+        [groupId]: {
+          ...currentDetail,
+          expenses: [expense, ...currentExpenses],
+        },
+      },
+    };
+  }),
+
+  updateExpense: (groupId, expenseId, updatedExpense) => set((state) => {
+    const currentDetail = state.groupDetails[groupId];
+    if (!currentDetail) return state;
+    
+    const currentExpenses = currentDetail.expenses || [];
+    const updatedExpenses = currentExpenses.map((exp: any) => 
+      exp.id === expenseId ? { ...exp, ...updatedExpense } : exp
+    );
+    
+    return {
+      groupDetails: {
+        ...state.groupDetails,
+        [groupId]: {
+          ...currentDetail,
+          expenses: updatedExpenses,
+        },
+      },
+    };
+  }),
+
+  deleteExpense: (groupId, expenseId) => set((state) => {
+    const currentDetail = state.groupDetails[groupId];
+    if (!currentDetail) return state;
+    
+    const currentExpenses = currentDetail.expenses || [];
+    const updatedExpenses = currentExpenses.filter((exp: any) => exp.id !== expenseId);
+    
+    return {
+      groupDetails: {
+        ...state.groupDetails,
+        [groupId]: {
+          ...currentDetail,
+          expenses: updatedExpenses,
+        },
+      },
+    };
   }),
   
   setLoading: (isLoading) => set({ isLoading }),

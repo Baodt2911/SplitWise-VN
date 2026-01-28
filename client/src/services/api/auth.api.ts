@@ -1,4 +1,4 @@
-import type { User } from "../../store/authStore";
+import type { User } from "../../types/models";
 import { apiClient } from "./config";
 
 const API_BASE_URL = apiClient.defaults.baseURL || "";
@@ -20,20 +20,20 @@ export interface LogoutResponse {
 }
 
 export interface LoginRequest {
-  phone: string;
+  email: string;
   password: string;
 }
 
 export interface RegisterRequest {
   fullName: string;
-  phone: string;
-  email?: string;
+  email: string;
+  phone?: string;
   password: string;
 }
 
 export interface ApiError {
   message: string;
-  field?: string; // Field name that has error (e.g., "phone", "password")
+  field?: string; // Field name that has error (e.g., "email", "password")
 }
 
 export const login = async (data: LoginRequest): Promise<LoginResponse | ApiError> => {
@@ -72,6 +72,38 @@ export const register = async (data: RegisterRequest): Promise<RegisterResponse 
     return {
       message: error.response?.data?.message || "Đăng ký thất bại",
       field: error.response?.data?.field,
+    };
+  }
+};
+
+// Google Auth
+export const googleVerify = async (idToken: string): Promise<LoginResponse | ApiError> => {
+  try {
+    const response = await apiClient.post<LoginResponse>("/auth/google-verify", { idToken });
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Đăng nhập Google thất bại",
+    };
+  }
+};
+
+export interface ResetPasswordRequest {
+  email: string; 
+  otp: string;
+  newPassword: string;
+}
+
+export const resetPassword = async (data: ResetPasswordRequest): Promise<{ message: string } | ApiError> => {
+  try {
+    const response = await apiClient.post<{ message: string }>("/auth/reset-password", data);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Đặt lại mật khẩu thất bại",
+      field: error.response?.data?.field
     };
   }
 };

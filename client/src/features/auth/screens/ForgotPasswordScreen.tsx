@@ -27,19 +27,19 @@ const ForgotPasswordScreen = () => {
     resolver: zodResolver(createForgotPasswordSchema()),
     mode: "onBlur",
     defaultValues: {
-      phone: "",
+      email: "",
     },
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       // TODO: Replace with actual forgot password API
-      await sendOtpRegister(data.phone);
+      await sendOtpRegister(data.email);
 
-      success("Mã OTP đã được gửi đến số điện thoại của bạn.", "Thành công");
+      success("Mã OTP đã được gửi đến email của bạn.", "Thành công");
       router.push({
         pathname: "/auth/otp-verify",
-        params: { phone: data.phone, type: "forgot-password" },
+        params: { email: data.email, type: "forgot-password" },
       });
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Gửi mã OTP thất bại. Vui lòng thử lại.";
@@ -49,9 +49,9 @@ const ForgotPasswordScreen = () => {
 
   const t = {
     title: "Quên mật khẩu",
-    subtitle: "Nhập số điện thoại để nhận mã OTP đặt lại mật khẩu",
-    phoneLabel: "Số điện thoại",
-    phonePlaceholder: "Nhập số điện thoại",
+    subtitle: "Nhập email để nhận mã OTP đặt lại mật khẩu",
+    emailLabel: "Email",
+    emailPlaceholder: "Nhập địa chỉ email",
     sendOtpButton: "Gửi mã OTP",
     rememberPassword: "Nhớ mật khẩu?",
     login: "Đăng nhập",
@@ -76,8 +76,8 @@ const ForgotPasswordScreen = () => {
 
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -112,11 +112,12 @@ const ForgotPasswordScreen = () => {
 
               {/* Form */}
               <TextInput
-                label={t.phoneLabel}
-                placeholder={t.phonePlaceholder}
+                label={t.emailLabel}
+                placeholder={t.emailPlaceholder}
                 control={control}
-                name="phone"
-                keyboardType="phone-pad"
+                name="email"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
 
               <Button

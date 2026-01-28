@@ -13,10 +13,14 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
 
+import { resetPassword } from "../../../services/api/auth.api";
+import { useLocalSearchParams } from "expo-router";
+
 const ResetPasswordScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   const { success, error } = useToast();
+  const params = useLocalSearchParams<{ email: string; otp: string }>();
 
   const {
     control,
@@ -33,13 +37,21 @@ const ResetPasswordScreen = () => {
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
-      // TODO: Implement reset password API
-      console.log("Reset password:", data);
+      if (!params.email || !params.otp) {
+        error("Thiếu thông tin xác thực. Vui lòng thử lại.", "Lỗi");
+        return;
+      }
+
+      await resetPassword({
+        email: params.email,
+        otp: params.otp,
+        newPassword: data.password,
+      });
       
       success("Đặt lại mật khẩu thành công!", "Thành công");
       router.replace("/auth/login");
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.";
+      const errorMessage = err.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.";
       error(errorMessage, "Lỗi");
     }
   };
@@ -74,8 +86,8 @@ const ResetPasswordScreen = () => {
 
         <KeyboardAvoidingView
           className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"

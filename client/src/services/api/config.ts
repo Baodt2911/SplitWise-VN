@@ -32,6 +32,34 @@ const PUBLIC_ENDPOINTS = [
   "/otp/verify",
 ];
 
+// Flag to track if token is being refreshed to prevent multiple refresh calls
+let isRefreshing = false;
+// Queue of failed requests that need to be retried after token refresh
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+// Helper to process the queue of failed requests
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Create a separate client for refresh token to avoid interceptor loop
+const refreshClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Request interceptor to add accessToken
 apiClient.interceptors.request.use(
   async (config) => {
@@ -54,6 +82,92 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle token expiration
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Check for 403 Forbidden with specific message "Token đã hết hạn" (Token expired)
+    // Or 401 Unauthorized (just in case functionality changes)
+    if (
+      (error.response?.status === 403 &&
+        error.response?.data?.message === "Token đã hết hạn") ||
+      error.response?.status === 401
+    ) {
+      if (originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // If already refreshing, add to queue
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        
+        if (!refreshToken) {
+          // No refresh token, force logout
+          throw new Error("No refresh token available");
+        }
+
+        console.log("[API] Refreshing token...");
+        const response = await refreshClient.post("/auth/refresh-token", {}, {
+          headers: {
+            Authorization: `Bearer ${refreshToken}`,
+          },
+        });
+
+        const { accessToken, refreshToken: newRefreshToken, sessionId } = response.data;
+
+        // Update AuthStore state directly if possible, but SecureStore is the source of truth
+        // We can dynamically import store to avoid circular issues or just let UI update on next render
+        // Ideally we should update the store:
+        const { useAuthStore } = require("../../store/authStore");
+        useAuthStore.getState().updateTokens({
+          accessToken,
+          refreshToken: newRefreshToken,
+          sessionId,
+        });
+
+        apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+        processQueue(null, accessToken);
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        console.error("[API] Token refresh failed:", refreshError);
+        processQueue(refreshError, null);
+        
+        // Clear auth and logout
+        const { useAuthStore } = require("../../store/authStore");
+        await useAuthStore.getState().clearAuth();
+        
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     return Promise.reject(error);
   }
 );

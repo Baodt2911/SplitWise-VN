@@ -1,4 +1,4 @@
-import { AddExpenseScreen } from "../../../src/features/group/screens/AddExpenseScreen";
+import { ExpenseFormScreen } from "../../../src/features/expenses/screens/ExpenseFormScreen";
 
-export default AddExpenseScreen;
+export default ExpenseFormScreen;
 
