@@ -13,10 +13,6 @@ const THEME_OPTIONS: {
   label: string;
 }[] = [
   {
-    code: "system",
-    label: "Mặc định theo thiết bị",
-  },
-  {
     code: "light",
     label: "Sáng",
   },

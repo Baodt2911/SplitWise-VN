@@ -7,7 +7,7 @@ import notificationRouter from "./notification.route";
 import expenseCategoryRouter from "./expense_category.route";
 import adminStatsRouter from "./admin_stats.route";
 import userStatsRouter from "./user_stats.route";
-
+import cloudinaryRouter from "./cloudinary.route";
 import { Router } from "express";
 import {
   validateAll,
@@ -36,4 +36,5 @@ routers.use("/users", verifyAccessToken, userRouter);
 routers.use("/stats/me", verifyAccessToken, userStatsRouter);
 routers.use("/notifications", verifyAccessToken, notificationRouter);
 routers.use("/expense-categories", expenseCategoryRouter);
+routers.use("/cloudinary",verifyAccessToken, cloudinaryRouter);
 export default routers;

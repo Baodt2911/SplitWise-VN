@@ -10,7 +10,8 @@ import { usePreferencesStore } from "../../../store/preferencesStore";
 import { TextInput } from "../../auth/components/TextInput";
 import { Icon } from "../../../components/common/Icon";
 import { createGroupSchema, type CreateGroupFormData } from "../schemas/group.schema";
-import { createGroup, type ApiError, type CreateGroupResponse } from "../../../services/api/group.api";
+import { createGroup, updateGroup, type ApiError, type CreateGroupResponse } from "../../../services/api/group.api";
+import { uploadImage } from "../../../services/api/upload.api";
 import { useToast } from "../../../hooks/useToast";
 import { useGroupStore } from "../../../store/groupStore";
 
@@ -90,7 +91,7 @@ export const CreateGroupBottomSheet = ({
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -107,11 +108,11 @@ export const CreateGroupBottomSheet = ({
   const onSubmit = async (data: CreateGroupFormData) => {
     try {
 
-      // Default: Call API
+      // 1. Create Group first
       const result = await createGroup({
         name: data.name,
         description: data.description || undefined,
-        avatarUrl: data.avatarUrl || undefined,
+        // Don't send avatarUrl yet
         isPublic: data.isPublic ?? false,
       });
 
@@ -130,12 +131,52 @@ export const CreateGroupBottomSheet = ({
         return;
       }
 
-      // Success - add new group to store directly (no need to refetch)
       const successResult = result as CreateGroupResponse;
-      if (successResult.data) {
+      let finalGroupData = successResult.data;
+
+      // 2. Upload avatar if selected
+      if (imageUri && finalGroupData?.id) {
+        try {
+          const uploadResult = await uploadImage(
+            { uri: imageUri, name: `group_${finalGroupData.id}_avatar.jpg`, type: 'image/jpeg' },
+            finalGroupData.id,
+            'avatar'
+          );
+          
+          if (uploadResult?.secure_url) {
+            // 3. Update group with avatar URL
+            const updateResult = await updateGroup(finalGroupData.id, {
+               avatarUrl: uploadResult.secure_url
+            });
+            
+            if (!("field" in updateResult)) {
+                 // Type assertion/check optimization might be needed here depending on exact return type of updateGroup
+                 // Assuming it returns { data: GroupDetail } or similar, but updateGroup returns UpdateGroupResponse | ApiError
+                 // UpdateGroupResponse has data: GroupDetail
+                 const updateSuccess = updateResult as any; // Using any to bypass strict type check for now if needed, or proper casting
+                 if(updateSuccess.data) {
+                    // Merge properties. GroupDetail has more fields than Group, but we just want to update avatarUrl in store
+                    // The store expects Group (from getGroups). 
+                    // Let's just update the avatarUrl in finalGroupData
+                    finalGroupData = {
+                        ...finalGroupData,
+                        avatarUrl: uploadResult.secure_url
+                    };
+                 }
+            }
+          }
+        } catch (uploadError) {
+          console.error("Avatar upload failed:", uploadError);
+          // Don't fail the whole creation, just show warning?
+          // Or just proceed without avatar
+        }
+      }
+
+      // Success - add new group to store directly (no need to refetch)
+      if (finalGroupData) {
         const { prependGroup } = useGroupStore.getState();
         prependGroup({
-          ...successResult.data,
+          ...finalGroupData,
           memberCount: 1,
           expenseCount: 0,
           peopleOweYou: [],

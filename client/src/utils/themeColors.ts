@@ -6,10 +6,7 @@ import type { AppTheme } from "../features/onboarding/types";
  * Dark theme: Modern Mint Dark - Tối hiện đại, hơi xanh mint, hợp fintech/expense app
  */
 export const getThemeColors = (theme: AppTheme) => {
-  // Handle system theme - default to light if system is not available
-  // In components, use useColorScheme() hook to get actual system theme
-  const effectiveTheme = theme === "system" ? "light" : theme;
-  const isDark = effectiveTheme === "dark";
+  const isDark = theme === "dark";
 
   if (isDark) {
     // Dark Theme - "Modern Mint Dark"

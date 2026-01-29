@@ -10,15 +10,12 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Alert } from "../src/components/ui/Alert";
 import { ToastContainer } from "../src/components/ui/Toast";
-import { useAuthStore } from "../src/store/authStore";
 import { useCategoryStore } from "../src/store/categoryStore";
 import { usePreferencesStore } from "../src/store/preferencesStore";
 import { getThemeColors } from "../src/utils/themeColors";
-
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   const [loaded] = useFonts({

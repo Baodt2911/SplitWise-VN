@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
-import { FlatList, Text, TouchableOpacity, View, Image, ActivityIndicator, RefreshControl } from "react-native";
+import { FlatList, View, Text, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -7,14 +7,12 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Icon } from "../../../components/common/Icon";
-import { getGroupDetail, type GroupDetail } from "../../../services/api/group.api";
+import { getGroupDetail, type GroupDetail, type GroupBalance } from "../../../services/api/group.api";
 import { getExpenses, deleteExpense } from "../../../services/api/expense.api";
 import { useToast } from "../../../hooks/useToast";
 import { useGroupStore } from "../../../store/groupStore";
 import { useAlertStore } from "../../../store/alertStore";
 import { LinearGradient } from "expo-linear-gradient";
-import { getCategoryIcon } from "../../../constants/category.constants";
-import { getMemberInitials, getMemberAvatarColor, getMemberTextColor } from "../../../utils/memberUtils";
 import { ExpenseListItem } from "../components/ExpenseListItem";
 import { GroupHeader } from "../components/GroupHeader";
 
@@ -181,6 +179,19 @@ export const GroupDetailScreen = () => {
     );
   }, [params.id, deleteExpenseFromStore, fetchExpenses, showAlert]);
 
+  // Handle balance press - navigate to payment screen
+  const handleBalancePress = useCallback((balance: GroupBalance) => {
+    // TODO: Navigate to payment detail screen
+    console.log('Balance pressed:', balance);
+  }, []);
+
+  // Handle payment button press
+  const handlePaymentPress = useCallback((balance: GroupBalance) => {
+    // TODO: Navigate to payment screen with pre-filled data
+    console.log('Payment button pressed:', balance);
+    // router.push(`/group/${params.id}/payment?payerId=${balance.payer.id}&payeeId=${balance.payee.id}&amount=${balance.amount}`);
+  }, []);
+
   // Render expense item
   const renderExpenseItem = useCallback(({ item }: { item: any }) => {
     return (
@@ -200,9 +211,19 @@ export const GroupDetailScreen = () => {
 
   // Render list header
   const renderListHeader = useCallback(() => {
-    if (!group) return null;
-    return <GroupHeader group={group} colors={colors} hasExpenses={expenses.length > 0} />;
-  }, [group, colors, expenses.length]);
+    if (!group || !user) return null;
+    return (
+      <GroupHeader 
+        group={group} 
+        colors={colors} 
+        hasExpenses={expenses.length > 0}
+        currentUserId={user.id}
+        formatCurrency={formatCurrency}
+        onBalancePress={handleBalancePress}
+        onPaymentPress={handlePaymentPress}
+      />
+    );
+  }, [group, colors, expenses.length, user, formatCurrency, handleBalancePress, handlePaymentPress]);
 
   const refreshControl = useMemo(() => {
     return (

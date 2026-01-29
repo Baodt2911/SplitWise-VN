@@ -764,6 +764,14 @@ export const getExpenseGroupService = async (
         },
       },
       category: true,
+      subCategory: {
+        select: {
+          id: true,
+          name: true,
+          key: true,
+          icon: true,
+        },
+      },
       expenseDate: true,
       splitType: true,
       receiptUrl: true,

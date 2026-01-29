@@ -22,13 +22,13 @@ export const getExpenseGroupController = catchAsync(
     res.status(StatusCodes.OK).json({
       expenses,
     });
-  }
+  },
 );
 
 export const getDetailExpenseController = catchAsync(
   async (
     req: Request<{ groupId: string; expenseId: string }>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     const { groupId, expenseId } = req.params;
@@ -36,60 +36,60 @@ export const getDetailExpenseController = catchAsync(
     res.status(StatusCodes.OK).json({
       expense,
     });
-  }
+  },
 );
 
 export const createExpenseController = catchAsync(
   async (
     req: Request<{ groupId: string }, {}, CreateExpenseDTO>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     const data = await createExpenseService(
       userId!,
       req.params.groupId,
-      req.body
+      req.body,
     );
     res.status(StatusCodes.CREATED).json({
       message: "Tạo chi phí thành công",
       data,
     });
-  }
+  },
 );
 
 export const updateExpenseController = catchAsync(
   async (
     req: Request<{ groupId: string; expenseId: string }, {}, UpdateExpenseDTO>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     const data = await updateExpenseService(
       userId!,
       req.params.groupId,
       req.params.expenseId,
-      req.body
+      req.body,
     );
     res.status(StatusCodes.OK).json({
       message: "Cập nhật chi phí thành công",
       data,
     });
-  }
+  },
 );
 
 export const deleteExpenseController = catchAsync(
   async (
     req: Request<{ groupId: string; expenseId: string }>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     const data = await deleteExpenseService(
       userId!,
       req.params.groupId,
-      req.params.expenseId
+      req.params.expenseId,
     );
     res.status(StatusCodes.OK).json({
       message: "Xóa chi phí thành công",
       data,
     });
-  }
+  },
 );

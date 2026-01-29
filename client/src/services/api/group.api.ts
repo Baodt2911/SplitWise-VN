@@ -81,6 +81,17 @@ export interface GroupSettlement {
   // Add settlement fields as needed
 }
 
+export interface BalanceUser {
+  id: string;
+  fullName: string;
+}
+
+export interface GroupBalance {
+  payer: BalanceUser;
+  payee: BalanceUser;
+  amount: string;
+}
+
 export interface GroupDetail {
   id: string;
   name: string;
@@ -97,6 +108,7 @@ export interface GroupDetail {
   creator: string;
   members: GroupMember[];
   expenses?: any[]; // Store expenses list
+  balances?: GroupBalance[]; // Store balances list
 }
 
 export interface GroupDetailResponse {

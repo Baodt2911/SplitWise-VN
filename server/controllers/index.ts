@@ -10,3 +10,4 @@ export * from "./activity.controller";
 export * from "./comment.controller";
 export * from "./expense_category.controller";
 export * from "./user_stats.controller";
+export * from "./cloudinary.controller";

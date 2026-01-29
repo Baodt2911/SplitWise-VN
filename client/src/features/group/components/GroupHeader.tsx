@@ -2,19 +2,34 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Icon } from "../../../components/common/Icon";
 import { MemberAvatarList } from "./MemberAvatarList";
-import type { GroupDetail } from "../../../services/api/group.api";
+import { BalanceListItem } from "./BalanceListItem";
+import type { GroupDetail, GroupBalance } from "../../../services/api/group.api";
 
 interface GroupHeaderProps {
   group: GroupDetail;
   colors: any;
   hasExpenses: boolean;
+  currentUserId: string;
+  formatCurrency: (amount: string) => string;
+  onBalancePress: (balance: GroupBalance) => void;
+  onPaymentPress: (balance: GroupBalance) => void;
 }
 
-export const GroupHeader = ({ group, colors, hasExpenses }: GroupHeaderProps) => {
+export const GroupHeader = ({ 
+  group, 
+  colors, 
+  hasExpenses,
+  currentUserId,
+  formatCurrency,
+  onBalancePress,
+  onPaymentPress,
+}: GroupHeaderProps) => {
+  const hasBalances = group.balances && group.balances.length > 0;
+
   return (
-    <View className="w-full px-4 pt-6">
+    <View className="w-full pt-6">
       {/* Members Section */}
-      <View className="mb-6">
+      <View className="mb-6 px-4">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
             {group.members.length} thành viên
@@ -27,12 +42,29 @@ export const GroupHeader = ({ group, colors, hasExpenses }: GroupHeaderProps) =>
         <MemberAvatarList members={group.members} colors={colors} />
       </View>
 
-      {/* Payment Section Placeholder */}
-      {hasExpenses && (
-        <View className="bg-card rounded-xl shadow-sm border border-border overflow-hidden mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-          <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
+      {/* Balance/Payment Section */}
+      {hasBalances && (
+        <View 
+          className="rounded-xl shadow-sm mb-6" 
+          style={{ backgroundColor: colors.surface }}
+        >
+          <View className="flex-row items-center gap-2 px-4 pt-4 pb-4">
             <Icon name="lightbulb" size={20} color="#F59E0B" />
-            <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>Thanh toán</Text>
+            <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Thanh toán</Text>
+          </View>
+          
+          <View className="px-4 pb-2">
+            {group.balances!.map((balance, index) => (
+              <BalanceListItem
+                key={`${balance.payer.id}-${balance.payee.id}-${index}`}
+                balance={balance}
+                colors={colors}
+                currentUserId={currentUserId}
+                formatCurrency={formatCurrency}
+                onPress={() => onBalancePress(balance)}
+                onPayment={() => onPaymentPress(balance)}
+              />
+            ))}
           </View>
         </View>
       )}

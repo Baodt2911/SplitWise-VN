@@ -14,6 +14,73 @@ interface PayerSelectorProps {
   currentUserId?: string;
 }
 
+// Memoized payer member item for better performance
+interface PayerMemberItemProps {
+  member: GroupMember;
+  isSelected: boolean;
+  isCurrentUser: boolean;
+  colors: any;
+  onSelect: () => void;
+}
+
+const PayerMemberItem = React.memo<PayerMemberItemProps>(({
+  member,
+  isSelected,
+  isCurrentUser,
+  colors,
+  onSelect,
+}) => {
+  return (
+    <TouchableOpacity
+      className="py-4 px-4 rounded-xl border mb-2 flex-row items-center"
+      style={{
+        backgroundColor: isSelected ? colors.primary : colors.surface,
+        borderColor: isSelected ? colors.primary : colors.border,
+      }}
+      onPress={onSelect}
+    >
+      <View
+        className="w-10 h-10 rounded-full items-center justify-center mr-3"
+        style={{
+          backgroundColor: isSelected ? "#FFFFFF" : getMemberAvatarColor(member.userId),
+        }}
+      >
+        {member.avatarUrl ? (
+          <Image
+            source={{ uri: member.avatarUrl }}
+            style={{ width: 40, height: 40, borderRadius: 20 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text
+            className="font-bold"
+            style={{
+              fontSize: 16,
+              color: isSelected ? getMemberTextColor(member.userId) : getMemberTextColor(member.userId),
+            }}
+          >
+            {getMemberInitials(member.fullName)}
+          </Text>
+        )}
+      </View>
+      <Text
+        className="flex-1 font-medium"
+        style={{
+          fontSize: 14,
+          color: isSelected ? "#FFFFFF" : colors.textPrimary,
+        }}
+      >
+        {isCurrentUser ? "Bạn" : member.fullName}
+      </Text>
+      {isSelected && (
+        <Icon name="check" size={20} color="#FFFFFF" />
+      )}
+    </TouchableOpacity>
+  );
+});
+
+PayerMemberItem.displayName = "PayerMemberItem";
+
 export const PayerSelector = ({
   visible,
   onClose,
@@ -58,55 +125,17 @@ export const PayerSelector = ({
               const isSelected = selectedPayerId === member.userId;
               const isCurrentUser = member.userId === currentUserId;
               return (
-                <TouchableOpacity
+                <PayerMemberItem
                   key={member.userId}
-                  className="py-4 px-4 rounded-xl border mb-2 flex-row items-center"
-                  style={{
-                    backgroundColor: isSelected ? colors.primary : colors.surface,
-                    borderColor: isSelected ? colors.primary : colors.border,
-                  }}
-                  onPress={() => {
+                  member={member}
+                  isSelected={isSelected}
+                  isCurrentUser={isCurrentUser}
+                  colors={colors}
+                  onSelect={() => {
                     onSelect(member.userId);
                     onClose();
                   }}
-                >
-                  <View
-                    className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                    style={{
-                      backgroundColor: isSelected ? "#FFFFFF" : getMemberAvatarColor(member.userId),
-                    }}
-                  >
-                    {member.avatarUrl ? (
-                      <Image
-                        source={{ uri: member.avatarUrl }}
-                        style={{ width: 40, height: 40, borderRadius: 20 }}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Text
-                        className="font-bold"
-                        style={{
-                          fontSize: 16,
-                          color: isSelected ? getMemberTextColor(member.userId) : getMemberTextColor(member.userId),
-                        }}
-                      >
-                        {getMemberInitials(member.fullName)}
-                      </Text>
-                    )}
-                  </View>
-                  <Text
-                    className="flex-1 font-medium"
-                    style={{
-                      fontSize: 14,
-                      color: isSelected ? "#FFFFFF" : colors.textPrimary,
-                    }}
-                  >
-                    {isCurrentUser ? "Bạn" : member.fullName}
-                  </Text>
-                  {isSelected && (
-                    <Icon name="check" size={20} color="#FFFFFF" />
-                  )}
-                </TouchableOpacity>
+                />
               );
             })}
           </ScrollView>

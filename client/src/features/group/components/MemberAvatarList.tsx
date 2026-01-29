@@ -46,19 +46,6 @@ export const MemberAvatarList = ({ members, colors, onAddMember }: MemberAvatarL
             </View>
           );
         })}
-        {/* Add member button */}
-        <TouchableOpacity
-          className="w-10 h-10 rounded-full items-center justify-center border-2 border-dashed ml-2"
-          style={{
-            backgroundColor: colors.background,
-            borderColor: colors.border,
-            zIndex: 100
-          }}
-          activeOpacity={0.7}
-          onPress={onAddMember}
-        >
-          <Icon name="plus" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
       </View>
     </View>
   );

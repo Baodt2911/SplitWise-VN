@@ -37,7 +37,7 @@ export const createExpenseSchema = z
       (val) => (typeof val === "string" ? val.toUpperCase() : val),
       z.enum(ExpenseCategory, { message: "Invalid expense category" }),
     ),
-    subCategoryId: z.string().optional(),
+    subCategoryId: z.uuid().optional(),
     splitType: z.preprocess(
       (val) => (typeof val === "string" ? val.toUpperCase() : val),
       z.enum(ExpenseSplitType, { message: "Invalid expense split type" }),

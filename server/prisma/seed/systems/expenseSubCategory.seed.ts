@@ -7,7 +7,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.FOOD,
     key: "street_food",
     name: "Street food",
-    icon: "street-food",
+    icon: "street_food",
   },
   {
     parent: ExpenseCategory.FOOD,
@@ -63,7 +63,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.TRANSPORT,
     key: "bike_repair",
     name: "Bike repair",
-    icon: "bike-repair",
+    icon: "bike_repair",
   },
   {
     parent: ExpenseCategory.TRANSPORT,
@@ -75,7 +75,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.TRANSPORT,
     key: "car_rental",
     name: "Car rental",
-    icon: "car-rental",
+    icon: "car_rental",
   },
 
   // ====================== ENTERTAINMENT ======================
@@ -172,7 +172,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.TRAVEL,
     key: "travel_fuel",
     name: "Travel fuel",
-    icon: "fuel-trip",
+    icon: "fuel_trip",
   },
   {
     parent: ExpenseCategory.TRAVEL,
@@ -211,7 +211,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.SHOPPING,
     key: "online_shopping",
     name: "Online shopping",
-    icon: "online-shopping",
+    icon: "online_shopping",
   },
 
   // ====================== HEALTH ======================
@@ -257,7 +257,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.EDUCATION,
     key: "online_courses",
     name: "Online courses",
-    icon: "online-course",
+    icon: "online_course",
   },
 
   // ====================== PETS ======================
@@ -265,7 +265,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.PETS,
     key: "pet_food",
     name: "Pet food",
-    icon: "pet-food",
+    icon: "pet_food",
   },
   {
     parent: ExpenseCategory.PETS,
@@ -277,7 +277,7 @@ export const expenseSubCategories = [
     parent: ExpenseCategory.PETS,
     key: "pet_grooming",
     name: "Pet grooming",
-    icon: "pet-grooming",
+    icon: "pet_grooming",
   },
 
   // ====================== GIFTS ======================

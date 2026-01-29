@@ -17,7 +17,7 @@ interface ExpenseListItemProps {
   onDelete: () => void;
 }
 
-export const ExpenseListItem = ({
+export const ExpenseListItem = React.memo<ExpenseListItemProps>(({
   item,
   colors,
   theme,
@@ -234,4 +234,6 @@ export const ExpenseListItem = ({
       </TouchableOpacity>
     </Swipeable>
   );
-};
+});
+
+ExpenseListItem.displayName = "ExpenseListItem";

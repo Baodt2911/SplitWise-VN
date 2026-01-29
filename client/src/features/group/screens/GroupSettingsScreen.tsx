@@ -8,7 +8,7 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Icon } from "../../../components/common/Icon";
-import { getGroupDetail, updateGroup, type GroupDetail } from "../../../services/api/group.api";
+import { getGroupDetail, updateGroup, leaveGroup, deleteGroup, type GroupDetail } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { useGroupStore } from "../../../store/groupStore";
@@ -283,6 +283,74 @@ export const GroupSettingsScreen = () => {
   };
 
   const isAdmin = getCurrentUserRole() === "ADMIN";
+
+  // Handle Leave Group
+  const handleLeaveGroup = async () => {
+    if (!group) return;
+
+    alert(
+      "Rời nhóm",
+      "Bạn có chắc chắn muốn rời khỏi nhóm này không? Các khoản nợ/thu chưa thanh toán sẽ cần được xử lý.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Rời nhóm",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const result = await leaveGroup(group.id);
+              if ("message" in result && !("field" in result)) {
+                 showSuccessRef.current("Đã rời nhóm thành công", "Thành công");
+                 useGroupStore.getState().removeGroup(group.id);
+                 router.replace("/(tabs)/home");
+              } else {
+                 throw new Error((result as any).message || "Không thể rời nhóm");
+              }
+            } catch (err: any) {
+              showErrorRef.current(err.message || "Không thể rời nhóm", "Lỗi");
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Handle Delete Group
+  const handleDeleteGroup = async () => {
+    if (!group) return;
+
+    alert(
+      "Xóa nhóm",
+      "Hành động này không thể hoàn tác. Tất cả dữ liệu của nhóm sẽ bị xóa vĩnh viễn.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa vĩnh viễn",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const result = await deleteGroup(group.id);
+              if ("message" in result && !("field" in result)) {
+                 showSuccessRef.current("Đã xóa nhóm thành công", "Thành công");
+                 useGroupStore.getState().removeGroup(group.id);
+                 router.replace("/(tabs)/home");
+              } else {
+                 throw new Error((result as any).message || "Không thể xóa nhóm");
+              }
+            } catch (err: any) {
+              showErrorRef.current(err.message || "Không thể xóa nhóm", "Lỗi");
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
 
 
@@ -899,6 +967,7 @@ export const GroupSettingsScreen = () => {
               borderColor: colors.danger,
             }}
             activeOpacity={0.7}
+            onPress={handleLeaveGroup}
           >
             <Text
               className="text-center text-base"
@@ -915,6 +984,7 @@ export const GroupSettingsScreen = () => {
               className="py-3 rounded-xl"
               style={{ backgroundColor: colors.danger }}
               activeOpacity={0.8}
+              onPress={handleDeleteGroup}
             >
               <Text
                 className="text-center text-base"

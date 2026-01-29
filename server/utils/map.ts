@@ -17,6 +17,12 @@ type ExpenseProps = {
   updatedAt: Date;
   paidBy: string;
   category: ExpenseCategory;
+  subCategory?: {
+    id: string;
+    name: string;
+    key: string;
+    icon: string | null;
+  } | null;
   expenseDate: Date;
   splitType: ExpenseSplitType;
   receiptUrl: string | null;
@@ -32,6 +38,7 @@ type ExpenseProps = {
     shares: Decimal | null;
   }[];
 };
+
 export const mapExpense = (userId: string, expense: ExpenseProps) => ({
   id: expense.id,
   description: expense.description,
@@ -40,6 +47,7 @@ export const mapExpense = (userId: string, expense: ExpenseProps) => ({
   paidById: expense.paidBy,
   paidBy: expense.paidByUser.fullName,
   category: expense.category,
+  subCategory: expense.subCategory,
   expenseDate: expense.expenseDate,
   splitType: expense.splitType,
   receiptUrl: expense.receiptUrl,

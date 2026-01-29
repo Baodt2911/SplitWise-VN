@@ -142,6 +142,16 @@ export const getGroupService = async (userId: string, groupId: string) => {
           role: "asc",
         },
       },
+      balances: {
+        where: {
+          OR: [{ payerId: userId }, { payeeId: userId }],
+        },
+        select: {
+          payer: { select: { id: true, fullName: true } },
+          payee: { select: { id: true, fullName: true } },
+          amount: true,
+        },
+      },
     },
   });
 
@@ -164,6 +174,7 @@ export const getGroupService = async (userId: string, groupId: string) => {
     ...group,
     creator: group.creator?.fullName,
     members: resultMember,
+    balances: group.balances,
   };
 };
 
