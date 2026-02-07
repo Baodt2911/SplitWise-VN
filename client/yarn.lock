@@ -3073,7 +3073,7 @@ expo-asset@~12.0.11:
 
 expo-auth-session@^7.0.10:
   version "7.0.10"
-  resolved "https://registry.npmjs.org/expo-auth-session/-/expo-auth-session-7.0.10.tgz"
+  resolved "https://registry.yarnpkg.com/expo-auth-session/-/expo-auth-session-7.0.10.tgz#37250576baf5d56f16b861fb7c387a990f8eaf45"
   integrity sha512-XDnKkudvhHSKkZfJ+KkodM+anQcrxB71i+h0kKabdLa5YDXTQ81aC38KRc3TMqmnBDHAu0NpfbzEVd9WDFY3Qg==
   dependencies:
     expo-application "~7.0.8"
@@ -3096,7 +3096,7 @@ expo-constants@^18.0.11, expo-constants@~18.0.11:
     "@expo/config" "~12.0.11"
     "@expo/env" "~2.0.8"
 
-expo-crypto@~15.0.8:
+expo-crypto@^15.0.8, expo-crypto@~15.0.8:
   version "15.0.8"
   resolved "https://registry.npmjs.org/expo-crypto/-/expo-crypto-15.0.8.tgz"
   integrity sha512-aF7A914TB66WIlTJvl5J6/itejfY78O7dq3ibvFltL9vnTALJ/7LYHvLT4fwmx9yUNS6ekLBtDGWivFWnj2Fcw==
@@ -3250,7 +3250,7 @@ expo-status-bar@^3.0.9:
   dependencies:
     react-native-is-edge-to-edge "^1.2.1"
 
-expo-web-browser@~15.0.10:
+expo-web-browser@^15.0.10, expo-web-browser@~15.0.10:
   version "15.0.10"
   resolved "https://registry.npmjs.org/expo-web-browser/-/expo-web-browser-15.0.10.tgz"
   integrity sha512-fvDhW4bhmXAeWFNFiInmsGCK83PAqAcQaFyp/3pE/jbdKmFKoRCWr46uZGIfN4msLK/OODhaQ/+US7GSJNDHJg==

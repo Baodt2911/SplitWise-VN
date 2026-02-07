@@ -51,3 +51,10 @@ export const uploadImage = async (file: { uri: string; name?: string; type?: str
 
     return dataUpload.json();
 };
+
+export const deleteImage = async (publicId: string, groupId: string, type: 'avatar' | 'receipt') => {
+    const encodedPublicId = encodeURIComponent(publicId);
+    return await apiClient.delete(`/cloudinary/delete/${encodedPublicId}`, {
+        data: { groupId, type }
+    });
+};

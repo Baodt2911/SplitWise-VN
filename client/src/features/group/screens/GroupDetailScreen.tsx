@@ -113,23 +113,27 @@ export const GroupDetailScreen = () => {
 
 
 
-  // Format date
+  // Format date - convert UTC to Vietnam timezone
   const formatDate = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
+    const utcDate = new Date(dateString);
+    const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+    
+    const now = new Date();
+    const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const yesterday = new Date(nowVietnam);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
+    if (vietnamDate.toDateString() === nowVietnam.toDateString()) {
       return "Hôm nay";
     }
-    if (date.toDateString() === yesterday.toDateString()) {
+
+    if (vietnamDate.toDateString() === yesterday.toDateString()) {
       return "Hôm qua";
     }
 
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    return `${day}/${month}`;
+    const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    const dayName = days[vietnamDate.getDay()];
+    return `${dayName}, ${vietnamDate.getDate()}/${vietnamDate.getMonth() + 1}`;
   }, []);
 
   // Format currency

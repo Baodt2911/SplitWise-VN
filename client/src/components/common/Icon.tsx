@@ -60,6 +60,19 @@ const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   lightbulb: "lightbulb-on",
   image: "image",
 
+  // Notification icons
+  checkCircle: "check-circle",
+  xCircle: "close-circle",
+  alertCircle: "alert-circle",
+  xOctagon: "octagon",
+  userCheck: "account-check",
+  userMinus: "account-minus",
+  logOut: "logout",
+  shield: "shield",
+  messageSquare: "message-text",
+  atSign: "at",
+  bellOff: "bell-off",
+
   // Categories
   utensils: "silverware-fork-knife",
   car: "car",

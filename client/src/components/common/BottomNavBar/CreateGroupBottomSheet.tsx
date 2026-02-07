@@ -7,9 +7,9 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetScrollVie
 import { LinearGradient } from "expo-linear-gradient";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
-import { TextInput } from "../../auth/components/TextInput";
-import { Icon } from "../../../components/common/Icon";
-import { createGroupSchema, type CreateGroupFormData } from "../schemas/group.schema";
+import { TextInput } from "../../../features/auth/components/TextInput";
+import { Icon } from "../Icon";
+import { createGroupSchema, type CreateGroupFormData } from "../../../features/home/schemas/group.schema";
 import { createGroup, updateGroup, type ApiError, type CreateGroupResponse } from "../../../services/api/group.api";
 import { uploadImage } from "../../../services/api/upload.api";
 import { useToast } from "../../../hooks/useToast";

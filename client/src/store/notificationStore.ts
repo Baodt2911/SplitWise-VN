@@ -1,26 +1,21 @@
 import { create } from "zustand";
 import { 
+  getNotifications,
   markRead, 
-  markReadAll 
+  markReadAll,
+  type Notification 
 } from "../services/api/notification.api";
-import { getNotifications } from "../services/api/user.api";
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  isRead: boolean;
-  type: string;
-  referenceId?: string;
-  createdAt: string;
-}
 
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
+  currentPage: number;
+  hasMore: boolean;
+  isLoadingMore: boolean;
   
   fetchNotifications: () => Promise<void>;
+  loadMoreNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
 }
@@ -29,23 +24,56 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
+  currentPage: 1,
+  hasMore: true,
+  isLoadingMore: false,
 
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
-      const data = await getNotifications();
-      // Server returns list of notifications
-      const list = Array.isArray(data) ? data : [];
+      const data = await getNotifications(1, 10);
+      const list = data.notifications || [];
       const unread = list.filter((n: Notification) => !n.isRead).length;
       
       set({ 
         notifications: list, 
         unreadCount: unread,
-        isLoading: false 
+        isLoading: false,
+        currentPage: 1,
+        hasMore: list.length === 10, // If we got 10 items, there might be more
       });
     } catch (error) {
       set({ isLoading: false });
       console.error("Failed to fetch notifications", error);
+    }
+  },
+
+  loadMoreNotifications: async () => {
+    const { currentPage, isLoadingMore, hasMore } = get();
+    
+    if (isLoadingMore || !hasMore) return;
+
+    set({ isLoadingMore: true });
+    try {
+      const nextPage = currentPage + 1;
+      const data = await getNotifications(nextPage, 10);
+      const newList = data.notifications || [];
+      
+      set((state) => {
+        const combined = [...state.notifications, ...newList];
+        const unread = combined.filter((n: Notification) => !n.isRead).length;
+        
+        return {
+          notifications: combined,
+          unreadCount: unread,
+          currentPage: nextPage,
+          hasMore: newList.length === 10, // If we got less than 10, no more pages
+          isLoadingMore: false,
+        };
+      });
+    } catch (error) {
+      set({ isLoadingMore: false });
+      console.error("Failed to load more notifications", error);
     }
   },
 

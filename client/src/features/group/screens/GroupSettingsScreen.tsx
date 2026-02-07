@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ScrollView, Text, TouchableOpacity, View, Image, Switch, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { ScrollView, Text, TouchableOpacity, View, Image, Switch, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Pressable } from "react-native";
+import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -8,11 +9,12 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Icon } from "../../../components/common/Icon";
-import { getGroupDetail, updateGroup, leaveGroup, deleteGroup, type GroupDetail } from "../../../services/api/group.api";
+import { getGroupDetail, updateGroup, leaveGroup, deleteGroup, addMember, removeMember, type GroupDetail } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { useGroupStore } from "../../../store/groupStore";
 import * as Clipboard from "expo-clipboard";
+import { uploadImage, deleteImage } from "../../../services/api/upload.api";
 
 export const GroupSettingsScreen = () => {
   const params = useLocalSearchParams<{ id: string }>();
@@ -40,6 +42,13 @@ export const GroupSettingsScreen = () => {
   // Edit states
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [infoState, setInfoState] = useState({ name: "", description: "", avatarUrl: "" });
+
+  // Add member states
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [inputType, setInputType] = useState<'email' | 'phone'>('email');
+  const [inputValue, setInputValue] = useState("");
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const addMemberSheetRef = useRef<BottomSheet>(null);
 
   // Use refs to avoid dependency issues
   const showErrorRef = useRef(showError);
@@ -214,29 +223,120 @@ export const GroupSettingsScreen = () => {
         return;
      }
      
-     const changes: any = {};
-     if (infoState.name !== group.name) changes.name = infoState.name;
-     if (infoState.description !== (group.description || "")) changes.description = infoState.description;
-     if (infoState.avatarUrl !== (group.avatarUrl || "")) changes.avatarUrl = infoState.avatarUrl;
+     try {
+       let oldPublicId: string | null = null;
+       let newAvatarUrl: string | undefined = undefined;
+       
+       // 1. Upload avatar if it's a local file
+       if (infoState.avatarUrl && infoState.avatarUrl !== (group.avatarUrl || "") && infoState.avatarUrl.startsWith('file://')) {
+         console.log("=== Starting avatar upload ===");
+         console.log("Image URI:", infoState.avatarUrl);
+         console.log("Group ID:", group.id);
+         
+         const uploadResult = await uploadImage(
+           { 
+             uri: infoState.avatarUrl,
+             name: `group_${group.id}_avatar.jpg`,
+             type: 'image/jpeg'
+           },
+           group.id,
+           'avatar'
+         );
+         
+         console.log("=== Upload result ===");
+         console.log("Full result:", JSON.stringify(uploadResult, null, 2));
+         console.log("Has secure_url?", !!uploadResult?.secure_url);
+         
+         if (uploadResult?.secure_url) {
+           newAvatarUrl = uploadResult.secure_url;
+           console.log("Upload successful! URL:", newAvatarUrl);
+           
+           // Extract new public_id for comparison
+           const newPublicId = uploadResult.public_id;
+           console.log("New public_id:", newPublicId);
+           
+           // Extract old public_id for cleanup
+           if (group.avatarUrl && group.avatarUrl.includes('cloudinary.com')) {
+             const urlParts = group.avatarUrl.split('/');
+             const fileWithExt = urlParts[urlParts.length - 1];
+             const publicIdParts = urlParts.slice(urlParts.indexOf('upload') + 2, -1);
+             const fileName = fileWithExt.split('.')[0];
+             const extractedOldId = [...publicIdParts, fileName].join('/');
+             
+             console.log("Old public_id (extracted):", extractedOldId);
+             
+             // Only delete if old and new are different
+             // If they're the same, Cloudinary already overwrote it
+             if (extractedOldId !== newPublicId) {
+               oldPublicId = extractedOldId;
+               console.log("Will delete old image after update");
+             } else {
+               console.log("Old and new public_id are the same - no need to delete");
+             }
+           }
+         } else {
+           // Upload failed - don't continue
+           console.error("Upload failed - no secure_url in result");
+           throw new Error("Upload không trả về URL");
+         }
+       }
+       
+       // 2. Build changes object
+       const changes: any = {};
+       if (infoState.name !== group.name) changes.name = infoState.name;
+       if (infoState.description !== (group.description || "")) changes.description = infoState.description;
+       
+       // Only update avatarUrl if we have a cloud URL
+       if (newAvatarUrl) {
+         changes.avatarUrl = newAvatarUrl;
+       } else if (infoState.avatarUrl !== (group.avatarUrl || "") && !infoState.avatarUrl.startsWith('file://')) {
+         // Allow updating with HTTP URLs, but never local file paths
+         changes.avatarUrl = infoState.avatarUrl;
+       }
 
-     if (Object.keys(changes).length > 0) {
-        try {
-            const result = await updateGroup(group.id, changes);
-            if ("data" in result) {
-                 const mergedGroup = { 
-                    ...group, 
-                    ...result.data, 
-                    members: group.members
-                 };
-                 setGroupDetail(group.id, mergedGroup);
-            } else if ("message" in result) {
-                showErrorRef.current(result.message, "Lỗi");
-            }
-        } catch (err: any) {
-            showErrorRef.current(err.message || "Lỗi", "Lỗi");
-        }
+       // 3. Update group
+       if (Object.keys(changes).length > 0) {
+         console.log("=== Updating group with changes ===");
+         console.log("Changes:", JSON.stringify(changes, null, 2));
+         
+         const result = await updateGroup(group.id, changes);
+         
+         console.log("=== Update result ===");
+         console.log("Result:", JSON.stringify(result, null, 2));
+         
+         if ("data" in result) {
+           const mergedGroup = { 
+             ...group, 
+             ...result.data, 
+             members: group.members
+           };
+           console.log("Update successful! Setting group detail...");
+           setGroupDetail(group.id, mergedGroup);
+           
+           // 4. Delete old image after successful update
+           if (oldPublicId) {
+             console.log("Deleting old image, public_id:", oldPublicId);
+             try {
+               await deleteImage(oldPublicId, group.id, 'avatar');
+               console.log("Old image deleted successfully");
+             } catch (deleteError) {
+               console.error("Failed to delete old avatar:", deleteError);
+             }
+           }
+         } else if ("message" in result) {
+           console.error("Update failed:", result.message);
+           showErrorRef.current(result.message, "Lỗi");
+           return;
+         }
+       } else {
+         console.log("No changes to update");
+       }
+       
+       setIsEditingInfo(false);
+     } catch (err: any) {
+       console.error("Save group info error:", err);
+       showErrorRef.current(err.message || "Lỗi", "Lỗi");
      }
-     setIsEditingInfo(false);
   };
 
   // Handle update settings
@@ -352,6 +452,121 @@ export const GroupSettingsScreen = () => {
     );
   };
 
+
+  // Validate email format
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validate phone format (Vietnamese phone numbers)
+  const isValidPhone = (phone: string) => {
+    const phoneRegex = /^(0|\+84)(\d{9,10})$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
+  // Handle add member
+  const handleAddMember = async () => {
+    if (!group || !inputValue.trim()) {
+      showErrorRef.current("Vui lòng nhập thông tin", "Lỗi");
+      return;
+    }
+
+    // Validate input based on type
+    if (inputType === 'email' && !isValidEmail(inputValue)) {
+      showErrorRef.current("Email không hợp lệ", "Lỗi");
+      return;
+    }
+
+    if (inputType === 'phone' && !isValidPhone(inputValue)) {
+      showErrorRef.current("Số điện thoại không hợp lệ", "Lỗi");
+      return;
+    }
+
+    try {
+      setIsAddingMember(true);
+      const data = inputType === 'email' ? { email: inputValue } : { phone: inputValue };
+      const result = await addMember(group.id, data);
+
+      if ("message" in result && !("field" in result)) {
+        showSuccessRef.current("Đã thêm thành viên thành công", "Thành công");
+        setInputValue("");
+        setShowAddMemberModal(false);
+        addMemberSheetRef.current?.close();
+        // Refresh group details
+        await loadGroupDetail(true);
+      } else {
+        throw new Error((result as any).message || "Không thể thêm thành viên");
+      }
+    } catch (err: any) {
+      showErrorRef.current(err.message || "Không thể thêm thành viên", "Lỗi");
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  // Handle remove member
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!group) return;
+
+    alert(
+      "Xóa thành viên",
+      `Bạn có chắc chắn muốn xóa ${memberName} khỏi nhóm không?`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const result = await removeMember(group.id, memberId);
+              if ("message" in result && !("field" in result)) {
+                showSuccessRef.current("Đã xóa thành viên thành công", "Thành công");
+                // Refresh group details
+                await loadGroupDetail(true);
+              } else {
+                throw new Error((result as any).message || "Không thể xóa thành viên");
+              }
+            } catch (err: any) {
+              showErrorRef.current(err.message || "Không thể xóa thành viên", "Lỗi");
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Open add member modal
+  const openAddMemberModal = () => {
+    setInputValue("");
+    setInputType('email');
+    setShowAddMemberModal(true);
+    addMemberSheetRef.current?.expand();
+  };
+
+  // Close add member modal
+  const closeAddMemberModal = () => {
+    setShowAddMemberModal(false);
+    setInputValue("");
+    addMemberSheetRef.current?.close();
+  };
+
+  const addMemberSnapPoints = useMemo(() => ["45%"], []);
+
+  const renderAddMemberBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
 
 
   if (isLoading || !group) {
@@ -607,7 +822,10 @@ export const GroupSettingsScreen = () => {
                 </View>
 
                 {!isCurrentUser && isAdmin && (
-                  <TouchableOpacity activeOpacity={0.7}>
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => handleRemoveMember(member.id, member.fullName)}
+                  >
                     <Icon name="trash" size={20} color={colors.danger} />
                   </TouchableOpacity>
                 )}
@@ -620,6 +838,7 @@ export const GroupSettingsScreen = () => {
               className="flex-row items-center justify-center py-3 mt-2 rounded-xl"
               style={{ backgroundColor: colors.primary }}
               activeOpacity={0.8}
+              onPress={openAddMemberModal}
             >
               <Icon name="userPlus" size={20} color="#FFFFFF" />
               <Text
@@ -999,6 +1218,121 @@ export const GroupSettingsScreen = () => {
         </View>
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Add Member Modal */}
+      <Modal
+        visible={showAddMemberModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddMemberModal}
+      >
+        <Pressable 
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={closeAddMemberModal}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <View 
+                style={{ 
+                  backgroundColor: colors.surface, 
+                  borderRadius: 16, 
+                  padding: 24, 
+                  width: 320,
+                }}
+              >
+                <Text
+                  className="text-xl font-bold mb-4"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Thêm thành viên
+                </Text>
+
+                {/* Input Type Toggle */}
+                <View className="flex-row mb-4" style={{ gap: 8 }}>
+                  <TouchableOpacity
+                    className="flex-1 py-2 rounded-lg items-center"
+                    style={{
+                      backgroundColor: inputType === 'email' ? colors.primary : colors.background,
+                    }}
+                    onPress={() => setInputType('email')}
+                  >
+                    <Text
+                      className="text-base font-semibold"
+                      style={{ color: inputType === 'email' ? '#FFFFFF' : colors.textSecondary }}
+                    >
+                      Email
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text className="text-base self-center" style={{ color: colors.textSecondary }}>
+                    hoặc
+                  </Text>
+
+                  <TouchableOpacity
+                    className="flex-1 py-2 rounded-lg items-center"
+                    style={{
+                      backgroundColor: inputType === 'phone' ? colors.primary : colors.background,
+                    }}
+                    onPress={() => setInputType('phone')}
+                  >
+                    <Text
+                      className="text-base font-semibold"
+                      style={{ color: inputType === 'phone' ? '#FFFFFF' : colors.textSecondary }}
+                    >
+                      Số điện thoại
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Input Field */}
+                <TextInput
+                  className="border rounded-lg px-4 py-3 text-base mb-4"
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.textPrimary,
+                    backgroundColor: colors.background,
+                  }}
+                  placeholder={inputType === 'email' ? 'Nhập email' : 'Nhập số điện thoại'}
+                  placeholderTextColor={colors.textSecondary}
+                  value={inputValue}
+                  onChangeText={setInputValue}
+                  keyboardType={inputType === 'email' ? 'email-address' : 'phone-pad'}
+                  autoCapitalize="none"
+                  autoComplete={inputType === 'email' ? 'email' : 'tel'}
+                />
+
+                {/* Buttons */}
+                <View className="flex-row" style={{ gap: 8 }}>
+                  <TouchableOpacity
+                    className="flex-1 py-3 rounded-lg items-center"
+                    style={{ backgroundColor: colors.border }}
+                    onPress={closeAddMemberModal}
+                  >
+                    <Text className="text-base font-semibold" style={{ color: colors.textPrimary }}>
+                      Hủy
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    className="flex-1 py-3 rounded-lg items-center"
+                    style={{ backgroundColor: colors.primary }}
+                    onPress={handleAddMember}
+                    disabled={isAddingMember}
+                  >
+                    {isAddingMember ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-base font-bold" style={{ color: '#FFFFFF' }}>
+                        Thêm
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };

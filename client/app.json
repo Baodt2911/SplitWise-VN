@@ -2,6 +2,7 @@
   "expo": {
     "name": "splitwise",
     "scheme": "splitwise",
+    "owner": "baodt2911",
     "slug": "splitwise",
     "version": "1.0.0",
     "orientation": "portrait",

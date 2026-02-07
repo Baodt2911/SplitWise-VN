@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -7,7 +13,6 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Icon } from "../../../components/common/Icon";
-import { BottomNavBar } from "../../home/components/BottomNavBar";
 import { logout } from "../../../services/api/auth.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
@@ -22,6 +27,7 @@ export const ProfileScreen = () => {
   const { alert } = useAlert();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Mock data - will be replaced with real API calls later
   const bankAccount = {
@@ -74,29 +80,35 @@ export const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    alert(
-      "Bạn có chắc chắn muốn đăng xuất không?",
-      "Xác nhận đăng xuất",
-      [
-        {
-          text: "Hủy",
-          style: "cancel",
-        },
-        {
-          text: "Đăng xuất",
-          style: "destructive",
-          onPress: performLogout,
-        },
-      ]
-    );
+    alert("Bạn có chắc chắn muốn đăng xuất không?", "Xác nhận đăng xuất", [
+      {
+        text: "Hủy",
+        style: "cancel",
+      },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: performLogout,
+      },
+    ]);
   };
 
   const handleSettingPress = (key: string) => {
+    // Prevent double navigation
+    if (isNavigating) return;
+
     switch (key) {
       case "theme":
         setThemeModalVisible(true);
         break;
       case "notifications":
+      case "activityHistory":
+        setIsNavigating(true);
+        const route = key === "notifications" ? "/notifications" : "/activity-history";
+        router.push(route);
+        // Reset after a short delay
+        setTimeout(() => setIsNavigating(false), 500);
+        break;
       case "security":
       case "about":
         // Handle other settings later
@@ -108,17 +120,21 @@ export const ProfileScreen = () => {
 
   const settingsItems = [
     { key: "notifications", label: "Thông báo", icon: "bell" as const },
+    { key: "activityHistory", label: "Lịch sử hoạt động", icon: "clock" as const },
     { key: "security", label: "Bảo mật", icon: "lock" as const },
     { key: "theme", label: "Giao diện", icon: "settings" as const },
     { key: "about", label: "Về ứng dụng", icon: "info" as const },
   ];
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+    >
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 }}
       >
@@ -171,9 +187,8 @@ export const ProfileScreen = () => {
           {/* Bank Account Section */}
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
-              <Icon name="building" size={20} color={colors.primary} />
               <Text
-                className="text-xl font-extrabold ml-2"
+                className="text-xl font-extrabold "
                 style={{
                   color: colors.textPrimary,
                 }}
@@ -182,7 +197,7 @@ export const ProfileScreen = () => {
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
-              <View className="flex-1">
+              <View className="flex-1 px-4">
                 <Text
                   className="text-sm mb-1 font-normal"
                   style={{
@@ -219,9 +234,8 @@ export const ProfileScreen = () => {
           {/* Statistics Section */}
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
-              <Icon name="barChart" size={20} color={colors.primary} />
               <Text
-                className="text-xl font-extrabold ml-2"
+                className="text-xl font-extrabold"
                 style={{
                   color: colors.textPrimary,
                 }}
@@ -284,17 +298,6 @@ export const ProfileScreen = () => {
 
           {/* Settings Section */}
           <View>
-            <View className="flex-row items-center mb-3">
-              <Icon name="settings" size={20} color={colors.primary} />
-              <Text
-                className="text-xl font-extrabold ml-2"
-                style={{
-                  color: colors.textPrimary,
-                }}
-              >
-                Cài đặt
-              </Text>
-            </View>
             {settingsItems.map((item, index) => (
               <TouchableOpacity
                 key={item.key}
@@ -307,7 +310,11 @@ export const ProfileScreen = () => {
                 activeOpacity={0.7}
               >
                 <View className="flex-row items-center flex-1">
-                  <Icon name={item.icon} size={20} color={colors.textSecondary} />
+                  <Icon
+                    name={item.icon}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                   <Text
                     className="text-base ml-3 font-normal"
                     style={{
@@ -317,7 +324,11 @@ export const ProfileScreen = () => {
                     {item.label}
                   </Text>
                 </View>
-                <Icon name="chevronRight" size={20} color={colors.textSecondary} />
+                <Icon
+                  name="chevronRight"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             ))}
           </View>
@@ -346,9 +357,6 @@ export const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <BottomNavBar />
-
       <ThemeModal
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
@@ -356,4 +364,3 @@ export const ProfileScreen = () => {
     </SafeAreaView>
   );
 };
-

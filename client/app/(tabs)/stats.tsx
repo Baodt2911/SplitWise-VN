@@ -2,7 +2,6 @@ import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getThemeColors } from "../../src/utils/themeColors";
 import { usePreferencesStore } from "../../src/store/preferencesStore";
-import { BottomNavBar } from "../../src/features/home/components/BottomNavBar";
 
 export default function StatsScreen() {
   const theme = usePreferencesStore((state) => state.theme);
@@ -13,7 +12,6 @@ export default function StatsScreen() {
       <View className="flex-1 items-center justify-center">
         <Text style={{ color: colors.textPrimary }}>Statistics Screen</Text>
       </View>
-      <BottomNavBar />
     </SafeAreaView>
   );
 }

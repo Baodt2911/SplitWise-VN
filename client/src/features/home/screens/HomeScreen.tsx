@@ -10,11 +10,10 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { OverviewCard } from "../components/OverviewCard";
 import { GroupCard } from "../components/GroupCard";
-import { CreateGroupButton } from "../components/CreateGroupButton";
-import { CreateGroupBottomSheet } from "../components/CreateGroupBottomSheet";
-import { BottomNavBar } from "../components/BottomNavBar";
+import { BottomNavBar } from "../../../components/common/BottomNavBar/BottomNavBar";
 import { Icon } from "../../../components/common/Icon";
 import { useGroupStore } from "../../../store/groupStore";
+import { useNotificationStore } from "../../../store/notificationStore";
 import { getGroups } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 
@@ -22,6 +21,7 @@ export const HomeScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   const { error: showError } = useToast();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
 
   // Group store
   const {
@@ -51,6 +51,7 @@ export const HomeScreen = () => {
   };
 
   const [refreshing, setRefreshing] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Load groups
   const loadGroups = useCallback(async (page: number, isLoadMore = false) => {
@@ -94,6 +95,8 @@ export const HomeScreen = () => {
     // No groups in store, load from API
     reset();
     loadGroups(1, false);
+    // Also fetch notifications
+    fetchNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -235,12 +238,26 @@ export const HomeScreen = () => {
           />
 
           {/* Icon thông báo bên phải */}
-          <TouchableOpacity className="relative pr-1">
+          <TouchableOpacity 
+            className="relative pr-1"
+            onPress={() => {
+              if (isNavigating) return;
+              setIsNavigating(true);
+              router.push("/notifications");
+              setTimeout(() => setIsNavigating(false), 500);
+            }}
+          >
             <Icon name="bell" size={24} color={colors.textPrimary} />
-            <View
-              className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
-              style={{ backgroundColor: colors.warning }}
-            />
+            {unreadCount > 0 && (
+              <View
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full items-center justify-center"
+                style={{ backgroundColor: colors.danger }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -272,9 +289,6 @@ export const HomeScreen = () => {
             })}
           />
         )}
-
-        {/* Bottom Navigation */}
-        <BottomNavBar />
       </SafeAreaView>
     </GestureHandlerRootView>
   );

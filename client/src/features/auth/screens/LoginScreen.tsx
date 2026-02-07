@@ -1,10 +1,22 @@
-import { Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+import * as Google from "expo-auth-session/providers/google";
+import { useEffect, useMemo } from "react";
 
 import { Button } from "../components/Button";
 import { TextInput } from "../components/TextInput";
@@ -12,13 +24,20 @@ import { createLoginSchema, type LoginFormData } from "../schemas/auth.schema";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
-import { login, type ApiError, type LoginResponse } from "../../../services/api/auth.api";
+import {
+  login,
+  type ApiError,
+  type LoginResponse,
+} from "../../../services/api/auth.api";
 import { useAuthStore } from "../../../store/authStore";
+import { verifyGoogleToken } from "../../../services/api/googleAuth.api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const { success, error: showError } = useToast();
+  const { success, info: showInfo, error: showError } = useToast();
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const {
@@ -41,14 +60,14 @@ const LoginScreen = () => {
         email: data.email,
         password: data.password,
       });
-      
+
       // Check if result is an error response (has field property)
       if ("field" in result) {
         const apiError = result as ApiError;
-        
+
         // Show toast with error message
         showError(apiError.message, "Lỗi");
-        
+
         // Set error to form field to highlight with red border
         if (apiError.field === "email") {
           setError("email", {
@@ -61,10 +80,10 @@ const LoginScreen = () => {
             message: apiError.message,
           });
         }
-        
+
         return;
       }
-      
+
       // Success - TypeScript now knows result is LoginResponse
       const loginResponse = result as LoginResponse;
       await setAuth({
@@ -79,7 +98,8 @@ const LoginScreen = () => {
       router.replace("/(tabs)/home");
     } catch (err: any) {
       // Network error or other unexpected errors
-      const errorMessage = err.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      const errorMessage =
+        err.message || "Đăng nhập thất bại. Vui lòng thử lại.";
       showError(errorMessage, "Lỗi");
     }
   };
@@ -98,17 +118,79 @@ const LoginScreen = () => {
     signUp: "Đăng ký",
   };
 
-
   const isDark = theme === "dark";
-  
+
   // Gradient colors based on theme
   const gradientColors = isDark
-    ? [colors.primaryLight, colors.background, colors.surface] as const
-    : [colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const;
+    ? ([colors.primaryLight, colors.background, colors.surface] as const)
+    : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    // TODO: Implement social login
-    console.log(`Login with ${provider}`);
+  const redirectUri = useMemo(() => {
+    return AuthSession.makeRedirectUri({
+      scheme: process.env.EXPO_PUBLIC_SCHEME,
+    });
+  }, []);
+
+  const [googleRequest, googleResponse, promptGoogleAsync] =
+    Google.useAuthRequest({
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_WEB_ID,
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_WEB_ID,
+      androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ANDROID_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_IOS_ID,
+      redirectUri,
+    });
+
+  console.log("googleRequest:", googleRequest);
+  console.log("googleResponse:", googleResponse);
+  // Handle Google Auth Response
+  useEffect(() => {
+    handleGoogleAuthResponse();
+  }, [googleResponse]);
+
+  const handleGoogleAuthResponse = async () => {
+    if (googleResponse?.type === "success") {
+      const { authentication } = googleResponse;
+      const idToken = authentication?.idToken;
+
+      console.log("=== Google Auth Success ===");
+      console.log("ID Token:", idToken);
+
+      if (idToken) {
+        try {
+          // Verify with our server
+          const authResult = await verifyGoogleToken(idToken);
+
+          // Store auth data
+          await setAuth({
+            user: authResult.user,
+            accessToken: authResult.accessToken,
+            refreshToken: authResult.refreshToken,
+            sessionId: authResult.sessionId,
+          });
+
+          success("Đăng nhập thành công!", "Đăng nhập");
+          router.replace("/(tabs)/home");
+        } catch (err: any) {
+          const errorMessage = err.message || "Đăng nhập Google thất bại";
+          showError(errorMessage, "Lỗi");
+        }
+      }
+    } else if (googleResponse?.type === "error") {
+      console.error("Google authentication error:", googleResponse.error);
+      showError("Đăng nhập Google thất bại", "Lỗi");
+    }
+  };
+
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
+    if (provider === "facebook") {
+      showInfo("Chức năng đang phát triển", "Thông báo");
+      return;
+    }
+
+    // Trigger Google login
+    if (googleRequest) {
+      promptGoogleAsync();
+    }
   };
 
   return (
@@ -118,7 +200,10 @@ const LoginScreen = () => {
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
-      <SafeAreaView className="flex-1" style={{ backgroundColor: "transparent" }}>
+      <SafeAreaView
+        className="flex-1"
+        style={{ backgroundColor: "transparent" }}
+      >
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
         <KeyboardAvoidingView
@@ -184,7 +269,6 @@ const LoginScreen = () => {
                 <Text
                   className="text-sm font-semibold"
                   style={{
-
                     color: colors.primary,
                   }}
                 >
@@ -200,17 +284,22 @@ const LoginScreen = () => {
 
               {/* Divider */}
               <View className="flex-row items-center my-5">
-                <View className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
+                <View
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: colors.border }}
+                />
                 <Text
                   className="px-3 text-sm font-medium"
                   style={{
-
                     color: colors.textSecondary,
                   }}
                 >
                   {t.orLoginWith}
                 </Text>
-                <View className="flex-1 h-px" style={{ backgroundColor: colors.border }} />
+                <View
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: colors.border }}
+                />
               </View>
 
               {/* Social Login Buttons */}
@@ -259,7 +348,6 @@ const LoginScreen = () => {
                 <Text
                   className="text-sm font-semibold"
                   style={{
-
                     color: colors.primary,
                   }}
                 >
@@ -275,4 +363,3 @@ const LoginScreen = () => {
 };
 
 export default LoginScreen;
-

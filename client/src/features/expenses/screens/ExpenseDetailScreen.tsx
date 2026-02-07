@@ -182,7 +182,7 @@ export const ExpenseDetailScreen = () => {
                   {formatCurrency(expense.amount)}
                 </Text>
                 <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
-                  {dayjs(expense.expenseDate).locale("vi").format("dddd, DD/MM/YYYY")}
+                  {dayjs(new Date(new Date(expense.expenseDate).getTime() + 7 * 60 * 60 * 1000)).locale("vi").format("dddd, DD/MM/YYYY")}
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">

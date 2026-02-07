@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { router, usePathname, useSegments } from "expo-router";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,8 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
-import { useGroupStore } from "../../../store/groupStore";
-import { Icon, type IconName } from "../../../components/common/Icon";
+import { Icon, type IconName } from "../Icon";
 import { CreateGroupBottomSheet } from "./CreateGroupBottomSheet";
 
 
@@ -25,7 +23,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { key: "home", label: "Trang chủ", icon: "home", route: "/home" },
-  { key: "search", label: "Tìm kiếm", icon: "search", route: "/groups" },
+  { key: "search", label: "Tìm kiếm", icon: "search", route: "/search" },
   { key: "group", label: "Nhóm", icon: "plus", route: "/groups", isCenter: true },
   { key: "statistics", label: "Thống kê", icon: "barChart", route: "/stats" },
   { key: "profile", label: "Hồ sơ", icon: "user", route: "/profile" },

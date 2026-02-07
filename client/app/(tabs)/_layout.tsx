@@ -1,19 +1,23 @@
 import { Tabs } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomNavBar } from "../../src/components/common/BottomNavBar/BottomNavBar";
+
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { display: "none" }, // Hide default tab bar, we use custom one
-        animation: "none", // Disable all animations for tabs
-      }}
-    >
-      <Tabs.Screen name="home" />
-      <Tabs.Screen name="groups" />
-      <Tabs.Screen name="stats" />
-      <Tabs.Screen name="profile" />
-    </Tabs>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: "none" },
+        }}
+      >
+        <Tabs.Screen name="home" />
+        <Tabs.Screen name="search" />
+        <Tabs.Screen name="stats" />
+        <Tabs.Screen name="profile" />
+      </Tabs>
+      <BottomNavBar  />
+    </GestureHandlerRootView>
   );
 }
-
