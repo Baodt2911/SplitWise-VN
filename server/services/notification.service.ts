@@ -1,19 +1,30 @@
+import { QueryNotificationDTO } from "../dtos";
 import {
   NotificationType,
   Prisma,
   RelatedType,
 } from "../generated/prisma/client";
+import { addPushJob } from "../jobs";
 import { prisma } from "../lib/prisma";
 import { StatusCodes } from "http-status-codes";
+import { getPushTokensByUserService } from "./pushNotification.service";
+import { NotificationPayload } from "../types";
 
-export const getNotificationsService = async (userId: string) => {
+export const getNotificationsService = async (
+  userId: string,
+  data: QueryNotificationDTO,
+) => {
+  const { page, pageSize } = data;
   return await prisma.notification.findMany({
     where: { userId },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    orderBy: { createdAt: "desc" },
   });
 };
 export const readNotificationService = async (
   userId: string,
-  notificationId: string
+  notificationId: string,
 ) => {
   const result = await prisma.notification.updateMany({
     where: {
@@ -57,33 +68,46 @@ export const readAllNotificationsService = async (userId: string) => {
   return true;
 };
 export const createNotificationService = async (
-  data: {
-    userId: string;
-    type: NotificationType;
-    title: string;
-    body: string;
-    relatedId?: string;
-    relatedType?: RelatedType;
-  },
-  tx: Prisma.TransactionClient
+  data: NotificationPayload,
+  tx: Prisma.TransactionClient,
 ) => {
-  return tx.notification.create({
+  const notification = await tx.notification.create({
     data,
   });
+  if (notification) {
+    const tokens = await getPushTokensByUserService(data.userId);
+
+    await addPushJob(
+      data.userId,
+      tokens.map((t) => t.token),
+      data,
+    );
+  }
+  return true;
 };
 
 export const createManyNotificationService = async (
-  data: {
-    userId: string;
-    type: NotificationType;
-    title: string;
-    body: string;
-    relatedId?: string;
-    relatedType?: RelatedType;
-  }[],
-  tx: Prisma.TransactionClient
+  data: NotificationPayload[],
+  tx: Prisma.TransactionClient,
 ) => {
-  return tx.notification.createMany({
+  const notifications = await tx.notification.createMany({
     data,
   });
+  if (notifications) {
+    for (const e of data) {
+      const tokens = await getPushTokensByUserService(e.userId);
+      await addPushJob(
+        e.userId,
+        tokens.map((t) => t.token),
+        {
+          type: e.type,
+          title: e.title,
+          body: e.body,
+          relatedId: e.relatedId,
+          relatedType: e.relatedType,
+        },
+      );
+    }
+  }
+  return true;
 };

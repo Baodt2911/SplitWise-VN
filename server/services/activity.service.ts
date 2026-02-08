@@ -1,3 +1,4 @@
+import { QueryActivityDTO } from "../dtos";
 import { ActivityAction, Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { checkGroupMember } from "../middlewares";
@@ -10,7 +11,7 @@ export const createActivityService = async (
     description: string;
     metadata?: Prisma.InputJsonValue;
   },
-  tx: Prisma.TransactionClient
+  tx: Prisma.TransactionClient,
 ) => {
   return tx.activity.create({
     data,
@@ -20,8 +21,9 @@ export const createActivityService = async (
 export const getActivitiesGroupService = async (
   userId: string,
   groupId: string,
-  action?: ActivityAction
+  data: QueryActivityDTO,
 ) => {
+  const { page, pageSize, action } = data;
   await checkGroupMember(userId, groupId);
   const activities = await prisma.activity.findMany({
     where: {
@@ -47,6 +49,8 @@ export const getActivitiesGroupService = async (
       metadata: true,
       createdAt: true,
     },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
     orderBy: {
       createdAt: "desc",
     },
@@ -54,11 +58,15 @@ export const getActivitiesGroupService = async (
   return activities;
 };
 
-export const getActivitiesService = async (userId: string) => {
+export const getActivitiesService = async (
+  userId: string,
+  data: QueryActivityDTO,
+) => {
+  const { page, pageSize, action } = data;
   const activities = await prisma.activity.findMany({
     where: {
       userId,
-      // groupId: null,
+      action,
     },
     select: {
       id: true,
@@ -78,7 +86,8 @@ export const getActivitiesService = async (userId: string) => {
       metadata: true,
       createdAt: true,
     },
-
+    skip: (page - 1) * pageSize,
+    take: pageSize,
     orderBy: {
       createdAt: "desc",
     },

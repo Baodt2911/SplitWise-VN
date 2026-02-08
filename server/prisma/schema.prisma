@@ -268,6 +268,11 @@ enum AccentColor {
   ORANGE
 }
 
+enum PlatformDevice {
+  ANDROID
+  IOS
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -312,28 +317,29 @@ model User {
   role UserRole @default(USER)
 
   // Relations
-  groupsCreated        Group[]               @relation("GroupCreator")
-  groupMemberships     GroupMember[]
-  expensesPaid         Expense[]             @relation("ExpensePaidBy")
-  expensesCreated      Expense[]             @relation("ExpenseCreator")
-  expenseSplits        ExpenseSplit[]
-  settlementsPaid      Settlement[]          @relation("SettlementPayer")
-  settlementsReceived  Settlement[]          @relation("SettlementPayee")
-  settlementsConfirmed Settlement[]          @relation("SettlementConfirmer")
-  balancesPayer        Balance[]             @relation("BalancePayer")
-  balancesPayee        Balance[]             @relation("BalancePayee")
-  friendshipsInitiated Friendship[]          @relation("FriendshipUser")
-  friendshipsReceived  Friendship[]          @relation("FriendshipFriend")
-  notifications        Notification[]
-  comments             Comment[]
-  activities           Activity[]
-  groupInvitesSent     GroupInvite[]         @relation("InviteSender")
-  groupInvitesUsed     GroupInvite[]         @relation("InviteUser")
-  premiumSubscriptions PremiumSubscription[]
-  referralsGiven       Referral[]            @relation("Referrer")
-  referralsReceived    Referral[]            @relation("Referred")
-  pointTransactions    UserPoint[]
-  settings             UserSettings?
+  groupsCreated          Group[]                 @relation("GroupCreator")
+  groupMemberships       GroupMember[]
+  expensesPaid           Expense[]               @relation("ExpensePaidBy")
+  expensesCreated        Expense[]               @relation("ExpenseCreator")
+  expenseSplits          ExpenseSplit[]
+  settlementsPaid        Settlement[]            @relation("SettlementPayer")
+  settlementsReceived    Settlement[]            @relation("SettlementPayee")
+  settlementsConfirmed   Settlement[]            @relation("SettlementConfirmer")
+  balancesPayer          Balance[]               @relation("BalancePayer")
+  balancesPayee          Balance[]               @relation("BalancePayee")
+  friendshipsInitiated   Friendship[]            @relation("FriendshipUser")
+  friendshipsReceived    Friendship[]            @relation("FriendshipFriend")
+  notifications          Notification[]
+  comments               Comment[]
+  activities             Activity[]
+  groupInvitesSent       GroupInvite[]           @relation("InviteSender")
+  groupInvitesUsed       GroupInvite[]           @relation("InviteUser")
+  premiumSubscriptions   PremiumSubscription[]
+  referralsGiven         Referral[]              @relation("Referrer")
+  referralsReceived      Referral[]              @relation("Referred")
+  pointTransactions      UserPoint[]
+  settings               UserSettings?
+  pushNotificationTokens PushNotificationToken[]
 
   @@index([phone, deletedAt])
   @@index([email, deletedAt])
@@ -835,4 +841,22 @@ model UserSettings {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
+}
+
+model PushNotificationToken {
+  id       String         @id @default(uuid())
+  userId   String         @map("user_id")
+  token    String         @unique @db.Text
+  device   String?        @db.VarChar(100)
+  platform PlatformDevice @map("platform")
+  isActive Boolean        @default(true) @map("is_active")
+
+  lastSeenAt DateTime? @map("last_seen_at") @db.Timestamp()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamp()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_notification_tokens")
 }

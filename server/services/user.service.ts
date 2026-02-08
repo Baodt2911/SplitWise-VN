@@ -7,6 +7,7 @@ import {
   UpdateUserSettingsDTO,
 } from "../dtos";
 import bcrypt from "bcrypt";
+import { GroupInviteStatus } from "../generated/prisma/enums";
 
 export const saveUserService = async (email: string) => {
   const raw = await redis.get(`pending:${email}`);
@@ -37,7 +38,7 @@ export const saveUserService = async (email: string) => {
 
 export const changePasswordServie = async (
   userId: string,
-  data: ChangePasswordDTO
+  data: ChangePasswordDTO,
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -52,7 +53,7 @@ export const changePasswordServie = async (
   }
   const isPasswordValid = await bcrypt.compare(
     data.currentPassword,
-    existingUser?.password || ""
+    existingUser?.password || "",
   );
   if (!isPasswordValid) {
     throw {
@@ -74,7 +75,7 @@ export const changePasswordServie = async (
 };
 export const updateProfileService = async (
   userId: string,
-  data: UpdateProfileDTO
+  data: UpdateProfileDTO,
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -107,7 +108,7 @@ export const updateProfileService = async (
 
 export const updateUserSettingsService = async (
   userId: string,
-  data: UpdateUserSettingsDTO
+  data: UpdateUserSettingsDTO,
 ) => {
   const existingUser = await prisma.userSettings.findUnique({
     where: {
@@ -127,4 +128,48 @@ export const updateUserSettingsService = async (
     data,
   });
   return true;
+};
+
+export const getInvitesService = async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Người dùng không tồn tại",
+    };
+  }
+  const invites = await prisma.groupInvite.findMany({
+    where: {
+      email: user.email,
+      phone: user.phone,
+      status: GroupInviteStatus.PENDING,
+      expiresAt: {
+        gte: new Date(),
+      },
+    },
+    select: {
+      id: true,
+      inviteToken: true,
+      createdAt: true,
+      group: {
+        select: {
+          name: true,
+          avatarUrl: true,
+        },
+      },
+      inviter: {
+        select: {
+          fullName: true,
+        },
+      },
+    },
+  });
+  const results = invites.map((i) => ({
+    id: i.id,
+    inviteToken: i.inviteToken,
+    createdAt: i.createdAt,
+    inviter: i.inviter.fullName,
+    group: i.group,
+  }));
+  return results;
 };

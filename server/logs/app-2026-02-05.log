@@ -1,0 +1,1 @@
+{"level":"error","message":"Chủ sở hữu nhóm không thể rời khỏi nhóm","method":"POST","path":"/api/v1/groups/48523d6c-88e6-4713-aaac-4b27b7772939/leave","status":403,"timestamp":"2026-02-05T14:35:35.067Z"}

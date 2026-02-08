@@ -4,24 +4,22 @@ import { CreateGroupDTO, QueryGroupDTO, UpdateGroupDTO } from "../dtos";
 import otpGenerator from "otp-generator";
 import {
   ActivityAction,
-  ExpenseSplitType,
   GroupInviteStatus,
   GroupMember,
   GroupMemberRole,
   GroupMemberStatus,
   NotificationType,
   RelatedType,
-  SettlementStatus,
+  User,
 } from "../generated/prisma/client";
 import { v4 as uuidv4 } from "uuid";
-import { checkGroupAdmin, checkGroupMember } from "../middlewares";
+import { checkGroupAdmin } from "../middlewares";
 import { createActivityService } from "./activity.service";
 import {
   createNotificationService,
   createManyNotificationService,
 } from "./notification.service";
 import Decimal from "decimal.js";
-import { User } from "../generated/prisma/client";
 import {
   emitNotificationToUser,
   emitNotificationToUserInGroup,
@@ -29,7 +27,7 @@ import {
 import { io } from "../app";
 export const getAllGroupService = async (
   userId: string,
-  query: QueryGroupDTO
+  query: QueryGroupDTO,
 ) => {
   const { page, pageSize } = query;
   const skip = (page - 1) * pageSize;
@@ -38,6 +36,7 @@ export const getAllGroupService = async (
       members: {
         some: {
           userId,
+          status: GroupMemberStatus.ACTIVE,
         },
       },
       deletedAt: null,
@@ -59,8 +58,16 @@ export const getAllGroupService = async (
       },
       _count: {
         select: {
-          members: true,
-          expenses: true,
+          members: {
+            where: {
+              status: GroupMemberStatus.ACTIVE,
+            },
+          },
+          expenses: {
+            where: {
+              deletedAt: null,
+            },
+          },
         },
       },
     },
@@ -85,11 +92,11 @@ export const getAllGroupService = async (
       })),
     totalPeopleOweYou: g.balances.reduce(
       (acc, b) => (b.payee.id === userId ? acc.plus(b.amount) : acc),
-      new Decimal(0)
+      new Decimal(0),
     ),
     yourDebts: g.balances.reduce(
       (acc, b) => (b.payer.id === userId ? acc.plus(b.amount) : acc),
-      new Decimal(0)
+      new Decimal(0),
     ),
   }));
   return result;
@@ -102,6 +109,7 @@ export const getGroupService = async (userId: string, groupId: string) => {
       members: {
         some: {
           userId,
+          status: GroupMemberStatus.ACTIVE,
         },
       },
       deletedAt: null,
@@ -126,7 +134,9 @@ export const getGroupService = async (userId: string, groupId: string) => {
         },
       },
       members: {
-        where: { status: GroupMemberStatus.ACTIVE },
+        where: {
+          status: GroupMemberStatus.ACTIVE,
+        },
         select: {
           id: true,
           role: true,
@@ -180,7 +190,7 @@ export const getGroupService = async (userId: string, groupId: string) => {
 
 export const createGroupService = async (
   userId: string,
-  data: CreateGroupDTO
+  data: CreateGroupDTO,
 ) => {
   const inviteCode = otpGenerator.generate(6, {
     specialChars: false,
@@ -215,7 +225,7 @@ export const createGroupService = async (
           groupName: group.name,
         },
       },
-      tx
+      tx,
     );
     return group;
   });
@@ -224,7 +234,7 @@ export const createGroupService = async (
 export const updateGroupService = async (
   userId: string,
   groupId: string,
-  data: UpdateGroupDTO
+  data: UpdateGroupDTO,
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
@@ -296,7 +306,7 @@ export const updateGroupService = async (
           },
         },
       },
-      tx
+      tx,
     );
     return group;
   });
@@ -364,7 +374,7 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
           groupName: existingGroup.name,
         },
       },
-      tx
+      tx,
     );
   });
   return true;
@@ -455,7 +465,7 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
         action: ActivityAction.SELF_JOIN_GROUP,
         description: `Đã tham gia nhóm`,
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
@@ -469,7 +479,7 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
         relatedType: RelatedType.GROUP,
         relatedId: existingGroup.id,
       })),
-      tx
+      tx,
     );
   });
 
@@ -554,7 +564,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
         action: ActivityAction.MEMBER_LEFT,
         description: `Đã rời khỏi nhóm`,
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
@@ -568,7 +578,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       })),
-      tx
+      tx,
     );
   });
 
@@ -584,7 +594,7 @@ const addMemberDirectlyService = async (
   userId: string,
   groupId: string,
   members: GroupMember[],
-  user: User
+  user: User,
 ) => {
   //Check Invite tồn tại không
   const isInvite = await prisma.groupInvite.findFirst({
@@ -626,7 +636,7 @@ const addMemberDirectlyService = async (
           fullName: user.fullName,
         },
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
@@ -640,7 +650,7 @@ const addMemberDirectlyService = async (
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       })),
-      tx
+      tx,
     );
   });
 
@@ -654,7 +664,7 @@ const addMemberDirectlyService = async (
 const sendInviteTokensService = async (
   userId: string,
   groupId: string,
-  user: User
+  user: User,
 ) => {
   const isUser = await prisma.groupInvite.findFirst({
     where: {
@@ -705,7 +715,7 @@ const sendInviteTokensService = async (
           fullName: user.fullName,
         },
       },
-      tx
+      tx,
     );
 
     await createNotificationService(
@@ -717,7 +727,7 @@ const sendInviteTokensService = async (
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },
-      tx
+      tx,
     );
   });
 };
@@ -728,7 +738,7 @@ export const addMemberService = async (
   data: {
     phone?: string;
     email?: string;
-  }
+  },
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
@@ -798,7 +808,7 @@ export const addMemberService = async (
       userId,
       groupId,
       existingGroup.members,
-      targetUser
+      targetUser,
     );
     return { added: true, method: "direct" };
   }
@@ -936,7 +946,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
         action: ActivityAction.ACCEPT_INVITE,
         description: `Đã tham gia nhóm`,
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo đền tất cả thành viên trong nhóm trừ bản thân
@@ -956,7 +966,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
         relatedType: RelatedType.GROUP,
         relatedId: invite.groupId,
       })),
-      tx
+      tx,
     );
   });
 
@@ -971,7 +981,7 @@ export const acceptInviteService = async (token: string, userId: string) => {
 export const removeMemberService = async (
   userId: string,
   groupId: string,
-  memberId: string
+  memberId: string,
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
@@ -1032,7 +1042,7 @@ export const removeMemberService = async (
           fullName: groupMember.user.fullName,
         },
       },
-      tx
+      tx,
     );
 
     await createNotificationService(
@@ -1044,7 +1054,7 @@ export const removeMemberService = async (
         relatedType: RelatedType.GROUP,
         relatedId: groupId,
       },
-      tx
+      tx,
     );
   });
   emitNotificationToUser(io, memberId, {

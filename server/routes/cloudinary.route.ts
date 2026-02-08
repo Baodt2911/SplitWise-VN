@@ -18,11 +18,11 @@ router.post(
   }),
   cloudinarySignatureController,
 );
-router.post(
+router.delete(
   "/delete/:public_id",
   validateAll({
     params: z.object({
-      public_id: z.string().min(1,"public_id is required"),
+      public_id: z.string().min(1, "public_id is required"),
     }),
     body: z.object({
       groupId: z.uuid("groupId is required"),

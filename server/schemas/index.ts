@@ -6,3 +6,5 @@ export * from "./settlement.schema";
 export * from "./comment.schema";
 export * from "./otp.schema";
 export * from "./user_stats.schema";
+export * from "./notification.schema";
+export * from "./activity.schema";

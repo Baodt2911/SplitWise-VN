@@ -23,6 +23,7 @@ export const loginService = async (
       phone: true,
       fullName: true,
       email: true,
+      avatarUrl: true,
       password: true,
       role: true,
     },
@@ -30,7 +31,7 @@ export const loginService = async (
   if (!user) {
     throw {
       status: StatusCodes.BAD_REQUEST,
-      message: "Số điện thoại không hợp lệ",
+      message: "Email không hợp lệ",
     };
   }
   const isPasswordValid = await bcrypt.compare(data.password, user.password);
@@ -62,7 +63,7 @@ export const loginService = async (
     "EX",
     15 * 24 * 60 * 60,
   );
-  const { password,role, ...rest } = user;
+  const { password, role, ...rest } = user;
   return { user: rest, accessToken, refreshToken, sessionId };
 };
 
@@ -134,6 +135,7 @@ export const googleAuthService = async (
       id: true,
       phone: true,
       fullName: true,
+      avatarUrl: true,
       email: true,
       role: true,
     },

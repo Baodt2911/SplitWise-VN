@@ -5,4 +5,6 @@ export * from "./expense.dto";
 export * from "./settlement.dto";
 export * from "./comment.dto";
 export * from "./otp.dto";
-export * from "./user_stats.dto"
+export * from "./user_stats.dto";
+export * from "./notification.dto";
+export * from "./activity.dto";

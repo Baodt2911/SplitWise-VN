@@ -3,36 +3,46 @@ import { Router } from "express";
 import {
   changePasswordController,
   getActivitiesController,
+  getInvitesController,
   getNotificationsController,
   updateProfileController,
   updateUserSettingsController,
 } from "../controllers";
 import {
   changePasswordSchema,
+  queryActivitySchema,
   updateProfileSchema,
   updateUserSettingsSchema,
 } from "../schemas";
 
 const router = Router();
 
-router.get("/activites", getActivitiesController);
+router.get(
+  "/activites",
+  validateAll({
+    query: queryActivitySchema,
+  }),
+  getActivitiesController,
+);
 router.get("/notifications", getNotificationsController);
+
+router.get("/me/invites", getInvitesController);
 
 router.patch(
   "/me",
   validateAll({ body: updateProfileSchema }),
-  updateProfileController
+  updateProfileController,
 );
 
 router.patch(
   "/me/settings",
   validateAll({ body: updateUserSettingsSchema }),
-  updateUserSettingsController
+  updateUserSettingsController,
 );
 router.patch(
-  "/users/me/password",
+  "/me/password",
   validateAll({ body: changePasswordSchema }),
-  changePasswordController
+  changePasswordController,
 );
 
 export default router;
