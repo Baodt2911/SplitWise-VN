@@ -1,6 +1,17 @@
 import { apiClient } from "./config";
 
-export type ParentCategory = "FOOD" | "TRANSPORT" | "ENTERTAINMENT" | "HOUSING" | "TRAVEL" | "SHOPPING" | "HEALTH" | "EDUCATION" | "PETS" | "GIFTS" | "OTHER";
+export type ParentCategory =
+  | "FOOD"
+  | "TRANSPORT"
+  | "ENTERTAINMENT"
+  | "HOUSING"
+  | "TRAVEL"
+  | "SHOPPING"
+  | "HEALTH"
+  | "EDUCATION"
+  | "PETS"
+  | "GIFTS"
+  | "OTHER";
 
 export interface CreateExpenseRequest {
   description: string;
@@ -31,7 +42,6 @@ export interface ApiError {
   field?: string;
 }
 
-
 export interface GetExpensesParams {
   page?: number;
   pageSize?: number;
@@ -56,44 +66,54 @@ export interface GetExpensesResponse {
 
 export const getExpenses = async (
   groupId: string,
-  params: GetExpensesParams
+  params: GetExpensesParams,
 ): Promise<GetExpensesResponse | ApiError> => {
   try {
+    // Serialize Date objects to ISO strings for API
+    const serializedParams = {
+      ...params,
+      expenseDateFrom: params.expenseDateFrom?.toISOString(),
+      expenseDateTo: params.expenseDateTo?.toISOString(),
+    };
+
     const response = await apiClient.get<GetExpensesResponse>(
       `/groups/${groupId}/expenses`,
-      { params }
+      { params: serializedParams },
     );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-        throw new Error("Không thể kết nối đến server");
+      throw new Error("Không thể kết nối đến server");
     }
-    const errorMessage = error.response?.data?.message || "Không thể tải danh sách chi phí";
+    const errorMessage =
+      error.response?.data?.message || "Không thể tải danh sách chi phí";
     return { message: errorMessage };
   }
 };
 
 export const getExpenseDetail = async (
   groupId: string,
-  expenseId: string
-): Promise<CreateExpenseRequest | ApiError> => { // Should ideally be ExpenseDetail interface
-    try {
-        const response = await apiClient.get<CreateExpenseRequest>(
-            `/groups/${groupId}/expenses/${expenseId}`
-        );
-        return response.data;
-    } catch (error: any) {
-         if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-            throw new Error("Không thể kết nối đến server");
-        }
-        const errorMessage = error.response?.data?.message || "Không thể tải chi tiết chi phí";
-        return { message: errorMessage };
+  expenseId: string,
+): Promise<CreateExpenseRequest | ApiError> => {
+  // Should ideally be ExpenseDetail interface
+  try {
+    const response = await apiClient.get<CreateExpenseRequest>(
+      `/groups/${groupId}/expenses/${expenseId}`,
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+      throw new Error("Không thể kết nối đến server");
     }
+    const errorMessage =
+      error.response?.data?.message || "Không thể tải chi tiết chi phí";
+    return { message: errorMessage };
+  }
 };
 
 export const createExpense = async (
   groupId: string,
-  data: CreateExpenseRequest
+  data: CreateExpenseRequest,
 ): Promise<CreateExpenseResponse | ApiError> => {
   try {
     // Ensure amount is a valid string number
@@ -102,25 +122,32 @@ export const createExpense = async (
       amount: String(data.amount).replace(/,/g, "").trim(),
       splits: data.splits.map((split) => ({
         ...split,
-        amount: split.amount ? String(split.amount).replace(/,/g, "").trim() : undefined,
-        percentage: split.percentage ? String(split.percentage).replace(/,/g, "").trim() : undefined,
-        shares: split.shares ? String(split.shares).replace(/,/g, "").trim() : undefined,
+        amount: split.amount
+          ? String(split.amount).replace(/,/g, "").trim()
+          : undefined,
+        percentage: split.percentage
+          ? String(split.percentage).replace(/,/g, "").trim()
+          : undefined,
+        shares: split.shares
+          ? String(split.shares).replace(/,/g, "").trim()
+          : undefined,
       })),
     };
 
     // Interceptor automatically adds accessToken header
     const response = await apiClient.post<CreateExpenseResponse>(
       `/groups/${groupId}/expenses`,
-      requestBody
+      requestBody,
     );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
       throw new Error("Không thể kết nối đến server");
     }
-    const errorMessage = error.response?.data?.message || "Không thể tạo chi phí";
+    const errorMessage =
+      error.response?.data?.message || "Không thể tạo chi phí";
     const field = error.response?.data?.field;
-    
+
     return {
       message: errorMessage,
       field: field,
@@ -131,45 +158,57 @@ export const createExpense = async (
 export const updateExpense = async (
   groupId: string,
   expenseId: string,
-  data: CreateExpenseRequest
+  data: CreateExpenseRequest,
 ): Promise<CreateExpenseResponse | ApiError> => {
   try {
-     const requestBody = {
+    const requestBody = {
       ...data,
       amount: String(data.amount).replace(/,/g, "").trim(),
       splits: data.splits.map((split) => ({
         ...split,
-        amount: split.amount ? String(split.amount).replace(/,/g, "").trim() : undefined,
-        percentage: split.percentage ? String(split.percentage).replace(/,/g, "").trim() : undefined,
-        shares: split.shares ? String(split.shares).replace(/,/g, "").trim() : undefined,
+        amount: split.amount
+          ? String(split.amount).replace(/,/g, "").trim()
+          : undefined,
+        percentage: split.percentage
+          ? String(split.percentage).replace(/,/g, "").trim()
+          : undefined,
+        shares: split.shares
+          ? String(split.shares).replace(/,/g, "").trim()
+          : undefined,
       })),
     };
 
     const response = await apiClient.put<CreateExpenseResponse>(
       `/groups/${groupId}/expenses/${expenseId}`,
-      requestBody
+      requestBody,
     );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
       throw new Error("Không thể kết nối đến server");
     }
-    const errorMessage = error.response?.data?.message || "Không thể cập nhật chi phí";
+    const errorMessage =
+      error.response?.data?.message || "Không thể cập nhật chi phí";
     const field = error.response?.data?.field;
     return { message: errorMessage, field };
   }
 };
 
-export const deleteExpense = async (groupId: string, expenseId: string): Promise<{ message: string } | ApiError> => {
+export const deleteExpense = async (
+  groupId: string,
+  expenseId: string,
+): Promise<{ message: string } | ApiError> => {
   try {
-    const response = await apiClient.delete<{ message: string }>(`/groups/${groupId}/expenses/${expenseId}`);
+    const response = await apiClient.delete<{ message: string }>(
+      `/groups/${groupId}/expenses/${expenseId}`,
+    );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
       throw new Error("Không thể kết nối đến server");
     }
-    const errorMessage = error.response?.data?.message || "Không thể xóa chi phí";
-     return { message: errorMessage };
+    const errorMessage =
+      error.response?.data?.message || "Không thể xóa chi phí";
+    return { message: errorMessage };
   }
 };
-

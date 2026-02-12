@@ -41,3 +41,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# google services
+/google-services.json
+/splitwise-84194-firebase-adminsdk-fbsvc-8ab0379912.json

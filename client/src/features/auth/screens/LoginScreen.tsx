@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -7,17 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google";
-import { useEffect, useMemo } from "react";
-
 import { Button } from "../components/Button";
 import { TextInput } from "../components/TextInput";
 import { createLoginSchema, type LoginFormData } from "../schemas/auth.schema";
@@ -31,14 +28,17 @@ import {
 } from "../../../services/api/auth.api";
 import { useAuthStore } from "../../../store/authStore";
 import { verifyGoogleToken } from "../../../services/api/googleAuth.api";
-
-WebBrowser.maybeCompleteAuthSession();
-
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { setupPushNotifications } from "../../../services/notifications";
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+});
 const LoginScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const { success, info: showInfo, error: showError } = useToast();
+  const { success, error: showError } = useToast();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const {
     control,
@@ -93,6 +93,9 @@ const LoginScreen = () => {
         sessionId: loginResponse.sessionId,
       });
 
+      // Đăng ký push notification sau khi đăng nhập thành công
+      setupPushNotifications();
+
       success("Đăng nhập thành công!", "Đăng nhập");
       // Navigate to home after successful login
       router.replace("/(tabs)/home");
@@ -104,20 +107,6 @@ const LoginScreen = () => {
     }
   };
 
-  const t = {
-    title: "Chào mừng trở lại",
-    subtitle: "Nhập email và mật khẩu để đăng nhập",
-    emailLabel: "Email",
-    emailPlaceholder: "Nhập địa chỉ email",
-    passwordLabel: "Mật khẩu",
-    passwordPlaceholder: "Nhập mật khẩu",
-    loginButton: "Đăng nhập",
-    forgotPassword: "Quên mật khẩu?",
-    orLoginWith: "Hoặc đăng nhập bằng",
-    noAccount: "Chưa có tài khoản?",
-    signUp: "Đăng ký",
-  };
-
   const isDark = theme === "dark";
 
   // Gradient colors based on theme
@@ -125,71 +114,39 @@ const LoginScreen = () => {
     ? ([colors.primaryLight, colors.background, colors.surface] as const)
     : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
-  const redirectUri = useMemo(() => {
-    return AuthSession.makeRedirectUri({
-      scheme: process.env.EXPO_PUBLIC_SCHEME,
-    });
-  }, []);
+  const handleLoginGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
 
-  const [googleRequest, googleResponse, promptGoogleAsync] =
-    Google.useAuthRequest({
-      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_WEB_ID,
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_WEB_ID,
-      androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ANDROID_ID,
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_IOS_ID,
-      redirectUri,
-    });
-
-  console.log("googleRequest:", googleRequest);
-  console.log("googleResponse:", googleResponse);
-  // Handle Google Auth Response
-  useEffect(() => {
-    handleGoogleAuthResponse();
-  }, [googleResponse]);
-
-  const handleGoogleAuthResponse = async () => {
-    if (googleResponse?.type === "success") {
-      const { authentication } = googleResponse;
-      const idToken = authentication?.idToken;
-
-      console.log("=== Google Auth Success ===");
-      console.log("ID Token:", idToken);
-
+      const idToken = tokens.idToken;
       if (idToken) {
-        try {
-          // Verify with our server
-          const authResult = await verifyGoogleToken(idToken);
+        const authResult = await verifyGoogleToken(idToken);
 
-          // Store auth data
-          await setAuth({
-            user: authResult.user,
-            accessToken: authResult.accessToken,
-            refreshToken: authResult.refreshToken,
-            sessionId: authResult.sessionId,
-          });
+        // Store auth data - same as regular login
+        await setAuth({
+          user: authResult.user,
+          accessToken: authResult.accessToken,
+          refreshToken: authResult.refreshToken,
+          sessionId: authResult.sessionId,
+        });
 
-          success("Đăng nhập thành công!", "Đăng nhập");
-          router.replace("/(tabs)/home");
-        } catch (err: any) {
-          const errorMessage = err.message || "Đăng nhập Google thất bại";
-          showError(errorMessage, "Lỗi");
-        }
+        // Đăng ký push notification sau khi đăng nhập thành công
+        setupPushNotifications();
+
+        success("Đăng nhập thành công!", "Đăng nhập");
+        // Navigate to home after successful login
+        router.replace("/(tabs)/home");
       }
-    } else if (googleResponse?.type === "error") {
-      console.error("Google authentication error:", googleResponse.error);
-      showError("Đăng nhập Google thất bại", "Lỗi");
-    }
-  };
-
-  const handleSocialLogin = async (provider: "google" | "facebook") => {
-    if (provider === "facebook") {
-      showInfo("Chức năng đang phát triển", "Thông báo");
-      return;
-    }
-
-    // Trigger Google login
-    if (googleRequest) {
-      promptGoogleAsync();
+    } catch (error: any) {
+      // Handle different types of errors
+      const errorMessage = error.message || "Đăng nhập Google thất bại";
+      showError(errorMessage, "Lỗi");
+      console.error("Google Sign-In Error:", error);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -230,7 +187,7 @@ const LoginScreen = () => {
                     color: colors.textPrimary,
                   }}
                 >
-                  {t.title}
+                  Chào mừng trở lại
                 </Text>
                 <Text
                   className="text-base text-center font-medium"
@@ -238,14 +195,14 @@ const LoginScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {t.subtitle}
+                  Nhập email và mật khẩu để đăng nhập
                 </Text>
               </View>
 
               {/* Form */}
               <TextInput
-                label={t.emailLabel}
-                placeholder={t.emailPlaceholder}
+                label="Email"
+                placeholder="Nhập địa chỉ email"
                 control={control}
                 name="email"
                 keyboardType="email-address"
@@ -253,8 +210,8 @@ const LoginScreen = () => {
               />
 
               <TextInput
-                label={t.passwordLabel}
-                placeholder={t.passwordPlaceholder}
+                label="Mật khẩu"
+                placeholder="Nhập mật khẩu"
                 control={control}
                 name="password"
                 secureTextEntry
@@ -272,12 +229,12 @@ const LoginScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {t.forgotPassword}
+                  Quên mật khẩu?
                 </Text>
               </TouchableOpacity>
 
               <Button
-                title={t.loginButton}
+                title="Đăng nhập"
                 onPress={handleSubmit(onSubmit)}
                 loading={isSubmitting}
               />
@@ -294,7 +251,7 @@ const LoginScreen = () => {
                     color: colors.textSecondary,
                   }}
                 >
-                  {t.orLoginWith}
+                  Hoặc đăng nhập bằng
                 </Text>
                 <View
                   className="flex-1 h-px"
@@ -305,31 +262,36 @@ const LoginScreen = () => {
               {/* Social Login Buttons */}
               <View className="flex-row justify-center gap-3 mb-4">
                 <TouchableOpacity
-                  onPress={() => handleSocialLogin("google")}
-                  className="w-14 h-14 rounded-xl items-center justify-center shadow-lg"
+                  onPress={handleLoginGoogle}
+                  disabled={isGoogleLoading}
+                  className="w-full rounded-xl shadow-lg overflow-hidden"
                   style={{
                     backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    opacity: isGoogleLoading ? 0.6 : 1,
                   }}
+                  activeOpacity={0.7}
                 >
-                  <Image
-                    source={require("../../../../assets/icons/google.png")}
-                    style={{ width: 24, height: 24 }}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleSocialLogin("facebook")}
-                  className="w-14 h-14 rounded-xl items-center justify-center shadow-lg"
-                  style={{
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <Image
-                    source={require("../../../../assets/icons/facebook.png")}
-                    style={{ width: 24, height: 24 }}
-                    resizeMode="contain"
-                  />
+                  <View className="flex-row items-center justify-center py-3.5 px-4">
+                    {isGoogleLoading ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <Image
+                          source={require("../../../../assets/icons/google.png")}
+                          style={{ width: 20, height: 20 }}
+                          resizeMode="contain"
+                        />
+                        <Text
+                          className="ml-3 text-base font-semibold"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          Đăng nhập với Google
+                        </Text>
+                      </>
+                    )}
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -342,7 +304,7 @@ const LoginScreen = () => {
                   color: colors.textSecondary,
                 }}
               >
-                {t.noAccount}
+                Chưa có tài khoản?
               </Text>
               <TouchableOpacity onPress={() => router.push("/auth/register")}>
                 <Text
@@ -351,7 +313,7 @@ const LoginScreen = () => {
                     color: colors.primary,
                   }}
                 >
-                  {t.signUp}
+                  Đăng ký
                 </Text>
               </TouchableOpacity>
             </View>

@@ -16,27 +16,27 @@ export const getThemeColors = (theme: AppTheme) => {
       background: "#0E1513", // Nền tối sâu
       surface: "#18201E", // Card hơi xanh
       card: "#18201E", // Card hơi xanh
-      
+
       // Text colors
       textPrimary: "#F5F5F5", // Trắng dịu
       textSecondary: "#9CA3AF", // Xám xanh
       textTertiary: "#6B7280", // Xám đậm hơn
-      
+
       // Primary colors
       primary: "#41AE8F", // Không đổi
       primaryDark: "#1B6F5A", // Đậm & sang
       primaryLight: "#7ADBC2", // Highlight
-      
+
       // UI elements
       border: "#27302D", // Viền xanh đen
       primaryText: "#FFFFFF", // Text on primary buttons
       icon: "#D1D5DB", // Icon sáng
-      
+
       // Status colors
       success: "#22C55E", // Xanh xác nhận
       warning: "#FBBF24", // Vàng ấm
       danger: "#EF4444", // Đỏ hiện đại
-      
+
       // Special
       paginationDot: "#41AE8F", // Pagination dot (primary color)
       imageBackground: "#18201E", // Image container background
@@ -50,30 +50,31 @@ export const getThemeColors = (theme: AppTheme) => {
     background: "#FAFAFA", // Nền tổng thể sáng mịn
     surface: "#FFFFFF", // Nền card
     card: "#FFFFFF", // Nền card
-    
+
     // Text colors
     textPrimary: "#333333", // Đậm hơn để dễ đọc
     textSecondary: "#6E6E6E", // Xám mềm
     textTertiary: "#9E9E9E", // Xám nhạt
-    
+
     // Primary colors
     primary: "#41AE8F", // Màu chính không đổi
     primaryDark: "#20856B", // Nhấn mạnh, rõ nét hơn
     primaryLight: "#F0FBF8", // Tone mint siêu nhẹ
-    
+
     // UI elements
     border: "#E5E7EB", // Tương thích UI mới
     primaryText: "#FFFFFF", // Text on primary buttons
     icon: "#6E6E6E", // Icon color
-    
+
     // Status colors
     success: "#27AE60", // Xanh xác nhận
     warning: "#F39C12", // Vàng nhấn mạnh
     danger: "#D9534F", // Đỏ nhẹ hơn bản classic
-    
+
     // Special
     paginationDot: "#41AE8F", // Pagination dot (primary color)
     imageBackground: "#F0FBF8", // Image container background (mint light)
   };
 };
 
+export type ThemeColors = ReturnType<typeof getThemeColors>;

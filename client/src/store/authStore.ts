@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import * as SecureStore from "expo-secure-store";
 import type { User } from "../types/models";
+import { resetAllStores } from "./resetStores";
+import { setLoggingOut } from "../services/api/config";
 
 export interface AuthState {
   user: User | null;
@@ -61,6 +63,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       setAuth: async (data) => {
+        // Reset logging out flag since user is logging in
+        setLoggingOut(false);
+
         // Store tokens in SecureStore
         await SecureStore.setItemAsync("accessToken", data.accessToken);
         await SecureStore.setItemAsync("refreshToken", data.refreshToken);
@@ -95,6 +100,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearAuth: async () => {
+        // Set logging out flag to prevent token refresh attempts and block API calls
+        setLoggingOut(true);
+
+        // Reset all stores first (groups, notifications, activities, etc.)
+        resetAllStores();
+
         // Remove tokens from SecureStore
         await SecureStore.deleteItemAsync("accessToken");
         await SecureStore.deleteItemAsync("refreshToken");
@@ -108,6 +119,10 @@ export const useAuthStore = create<AuthState>()(
           sessionId: null,
           isAuthenticated: false,
         });
+
+        // NOTE: Do NOT reset isLoggingOut flag here
+        // It will be reset when user logs in again via setAuth
+        console.log("[Auth] Auth cleared and all stores reset");
       },
 
       initializeAuth: async () => {
@@ -135,7 +150,10 @@ export const useAuthStore = create<AuthState>()(
                 sessionId,
                 isAuthenticated: true,
               });
-              console.log("[Auth] Auth initialized successfully for user:", user.fullName);
+              console.log(
+                "[Auth] Auth initialized successfully for user:",
+                user.fullName,
+              );
             } catch (parseError) {
               console.error("[Auth] Error parsing user data:", parseError);
               // Clear invalid data
@@ -173,7 +191,6 @@ export const useAuthStore = create<AuthState>()(
         // Don't persist isAuthenticated - it should be determined by checking SecureStore
         user: state.user,
       }),
-    }
-  )
+    },
+  ),
 );
-

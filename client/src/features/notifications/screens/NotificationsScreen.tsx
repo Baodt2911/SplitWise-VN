@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -15,7 +15,12 @@ import { usePreferencesStore } from "../../../store/preferencesStore";
 import { getThemeColors } from "../../../utils/themeColors";
 import { useNotificationStore } from "../../../store/notificationStore";
 import { NotificationItem } from "../components/NotificationItem";
-import { groupNotificationsByDate, getRelatedRoute } from "../../../utils/notificationUtils";
+import {
+  getRelatedRoute,
+  flattenNotifications,
+  type NotificationListItem,
+} from "../../../utils/notificationUtils";
+import type { Notification } from "../../../services/api/notification.api";
 
 export const NotificationsScreen: React.FC = () => {
   const { theme } = usePreferencesStore();
@@ -31,44 +36,235 @@ export const NotificationsScreen: React.FC = () => {
     markAsRead,
     markAllAsRead,
   } = useNotificationStore();
-  
+
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
   }, []);
-
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchNotifications();
     setRefreshing(false);
-  };
+  }, [fetchNotifications]);
 
-  const handleNotificationPress = async (
-    notificationId: string,
-    relatedId?: string,
-    relatedType?: string
-  ) => {
-    // Mark as read first
-    await markAsRead(notificationId);
+  const handleNotificationPress = useCallback(
+    async (
+      notificationId: string,
+      relatedId?: string,
+      relatedType?: string,
+    ) => {
+      // Mark as read first
+      await markAsRead(notificationId);
 
-    // Navigate to related item if available
-    if (relatedId && relatedType) {
-      const route = getRelatedRoute(relatedType, relatedId);
-      if (route) {
-        router.push(route as any);
+      // Navigate to related item if available
+      if (relatedId && relatedType) {
+        const route = getRelatedRoute(relatedType, relatedId);
+        if (route) {
+          router.push(route as any);
+        }
       }
-    }
-  };
+    },
+    [markAsRead],
+  );
 
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
-  };
+  }, [markAllAsRead]);
 
-  const groupedNotifications = groupNotificationsByDate(notifications);
+  // Flatten notifications for FlatList with safety check
+  const flatData = useMemo(() => {
+    const flattened = flattenNotifications(notifications);
+
+    // Double-check for unique keys to prevent VirtualizedList errors
+    const seenKeys = new Set<string>();
+    return flattened.filter((item) => {
+      const key = item.type === "header" ? item.id : item.data.id;
+      if (seenKeys.has(key)) {
+        console.warn("Duplicate key detected in FlatList:", key);
+        return false;
+      }
+      seenKeys.add(key);
+      return true;
+    });
+  }, [notifications]);
+
+  // Render item (header or notification)
+  const renderItem = useCallback(
+    ({ item }: { item: NotificationListItem }) => {
+      if (item.type === "header") {
+        return (
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingTop: 16,
+              paddingBottom: 8,
+              backgroundColor: colors.background,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "600",
+                color: colors.textPrimary,
+              }}
+            >
+              {item.title}
+            </Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={{ backgroundColor: colors.surface }}>
+          <NotificationItem
+            notification={item.data}
+            onPress={() =>
+              handleNotificationPress(
+                item.data.id,
+                item.data.relatedId,
+                item.data.relatedType,
+              )
+            }
+          />
+        </View>
+      );
+    },
+    [colors, handleNotificationPress],
+  );
+
+  // Key extractor with fallback
+  const keyExtractor = useCallback(
+    (item: NotificationListItem, index: number) => {
+      if (item.type === "header") {
+        return item.id || `header-${index}`;
+      }
+      return item.data.id || `notification-${index}`;
+    },
+    [],
+  );
+
+  // Handle end reached for pagination
+  const handleEndReached = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      loadMoreNotifications();
+    }
+  }, [hasMore, isLoadingMore, loadMoreNotifications]);
+
+  // Render list header (mark all read button)
+  const renderListHeader = useCallback(() => {
+    if (unreadCount === 0) return null;
+
+    return (
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: colors.background,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleMarkAllRead}
+          style={{
+            backgroundColor: `${colors.primary}15`,
+            marginHorizontal: 16,
+            padding: 16,
+            borderRadius: 8,
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "600",
+              color: colors.primary,
+            }}
+          >
+            Đánh dấu tất cả là đã đọc
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [unreadCount, colors, handleMarkAllRead]);
+
+  // Render footer (loading more indicator)
+  const renderFooter = useCallback(() => {
+    if (!hasMore) return null;
+
+    return (
+      <View
+        style={{
+          paddingVertical: 20,
+          alignItems: "center",
+        }}
+      >
+        {isLoadingMore ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+            Kéo xuống để tải thêm
+          </Text>
+        )}
+      </View>
+    );
+  }, [hasMore, isLoadingMore, colors]);
+
+  // Render empty component
+  const renderEmpty = useCallback(() => {
+    if (isLoading) return null;
+
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 32,
+          paddingTop: 100,
+        }}
+      >
+        <Icon name="bellOff" size={64} color={colors.textTertiary} />
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "600",
+            color: colors.textPrimary,
+            marginTop: 16,
+            marginBottom: 8,
+          }}
+        >
+          Chưa có thông báo
+        </Text>
+        <Text
+          style={{
+            fontSize: 14,
+            color: colors.textSecondary,
+            textAlign: "center",
+          }}
+        >
+          Bạn sẽ nhận được thông báo về hoạt động trong nhóm tại đây
+        </Text>
+      </View>
+    );
+  }, [isLoading, colors]);
+
+  // Refresh control
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        tintColor={colors.primary}
+      />
+    ),
+    [refreshing, handleRefresh, colors],
+  );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+    >
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
       {/* Header */}
@@ -99,7 +295,6 @@ export const NotificationsScreen: React.FC = () => {
         </View>
       </View>
 
-
       {/* Content */}
       {isLoading && notifications.length === 0 ? (
         <View
@@ -107,152 +302,28 @@ export const NotificationsScreen: React.FC = () => {
         >
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : notifications.length === 0 ? (
-        <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}
-        >
-          <Icon name="bellOff" size={64} color={colors.textTertiary} />
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "600",
-              color: colors.textPrimary,
-              marginTop: 16,
-              marginBottom: 8,
-            }}
-          >
-            Chưa có thông báo
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: colors.textSecondary,
-              textAlign: "center",
-            }}
-          >
-            Bạn sẽ nhận được thông báo về hoạt động trong nhóm tại đây
-          </Text>
-        </View>
       ) : (
-        <ScrollView
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          {/* Mark all read button - scrollable with content */}
-          {unreadCount > 0 && (
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                backgroundColor: colors.background,
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleMarkAllRead}
-                style={{
-                  backgroundColor: `${colors.primary}15`,
-                  marginHorizontal: 16,
-                  padding: 16,
-                  borderRadius: 8,
-                  alignItems: "center",
-                }}
-              >
-                <Text
-                  className="text-base font-semibold"
-                  style={{
-                    color: colors.primary,
-                  }}
-                >
-                  Đánh dấu tất cả là đã đọc
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {groupedNotifications.map((group) => (
-            <View key={group.date}>
-              {/* Date header */}
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingTop: 16,
-                  paddingBottom: 8,
-                  backgroundColor: colors.background,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {group.date}
-                </Text>
-              </View>
-
-              {/* Notifications for this date */}
-              <View style={{ backgroundColor: colors.surface }}>
-                {group.items.map((notification) => (
-                  <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    onPress={() =>
-                      handleNotificationPress(
-                        notification.id,
-                        notification.relatedId,
-                        notification.relatedType
-                      )
-                    }
-                  />
-                ))}
-              </View>
-            </View>
-          ))}
-
-          {/* Load More Button */}
-          {hasMore && (
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 20,
-                backgroundColor: colors.background,
-              }}
-            >
-              <TouchableOpacity
-                onPress={loadMoreNotifications}
-                disabled={isLoadingMore}
-                style={{
-                  backgroundColor: colors.surface,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                {isLoadingMore ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: colors.primary,
-                      fontWeight: "500",
-                    }}
-                  >
-                    Xem thông báo trước đó
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
+        <FlatList
+          data={flatData}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          refreshControl={refreshControl}
+          ListHeaderComponent={renderListHeader}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          windowSize={10}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews={true}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: 20,
+          }}
+        />
       )}
     </SafeAreaView>
   );

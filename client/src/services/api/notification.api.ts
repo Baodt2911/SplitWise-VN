@@ -17,20 +17,27 @@ export interface GetNotificationsResponse {
 
 export const getNotifications = async (
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
 ): Promise<GetNotificationsResponse> => {
   const response = await apiClient.get<GetNotificationsResponse>(
-    `/users/notifications?page=${page}&pageSize=${pageSize}`
+    `/users/notifications?page=${page}&pageSize=${pageSize}`,
+  );
+  // console.log('📡 Notification IDs:', response.data.notifications.map((n: any) => n.id));
+  return response.data;
+};
+
+export const markRead = async (
+  notificationId: string,
+): Promise<{ message: string }> => {
+  const response = await apiClient.patch<{ message: string }>(
+    `/notifications/${notificationId}/read`,
   );
   return response.data;
 };
 
-export const markRead = async (notificationId: string): Promise<{ message: string }> => {
-  const response = await apiClient.patch<{ message: string }>(`/notifications/${notificationId}/read`);
-  return response.data;
-};
-
 export const markReadAll = async (): Promise<{ message: string }> => {
-  const response = await apiClient.patch<{ message: string }>("/notifications/read-all");
+  const response = await apiClient.patch<{ message: string }>(
+    "/notifications/read-all",
+  );
   return response.data;
 };

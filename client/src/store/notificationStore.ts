@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { 
+import {
   getNotifications,
-  markRead, 
+  markRead,
   markReadAll,
-  type Notification 
+  type Notification,
 } from "../services/api/notification.api";
 
 interface NotificationState {
@@ -13,7 +13,7 @@ interface NotificationState {
   currentPage: number;
   hasMore: boolean;
   isLoadingMore: boolean;
-  
+
   fetchNotifications: () => Promise<void>;
   loadMoreNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -34,9 +34,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const data = await getNotifications(1, 10);
       const list = data.notifications || [];
       const unread = list.filter((n: Notification) => !n.isRead).length;
-      
-      set({ 
-        notifications: list, 
+
+      set({
+        notifications: list,
         unreadCount: unread,
         isLoading: false,
         currentPage: 1,
@@ -50,7 +50,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   loadMoreNotifications: async () => {
     const { currentPage, isLoadingMore, hasMore } = get();
-    
+
     if (isLoadingMore || !hasMore) return;
 
     set({ isLoadingMore: true });
@@ -58,16 +58,28 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const nextPage = currentPage + 1;
       const data = await getNotifications(nextPage, 10);
       const newList = data.notifications || [];
-      
+
       set((state) => {
-        const combined = [...state.notifications, ...newList];
+        // Strict deduplication: Filter out any items already in state
+        const existingIds = new Set(state.notifications.map((n) => n.id));
+        const uniqueNewList = newList.filter((n) => !existingIds.has(n.id));
+
+        if (uniqueNewList.length === 0) {
+          // If no new unique items, we might have reached the end or received duplicates
+          return {
+            isLoadingMore: false,
+            hasMore: newList.length === 10, // Keep calling if we got full page, might be duplicates across pages
+          };
+        }
+
+        const combined = [...state.notifications, ...uniqueNewList];
         const unread = combined.filter((n: Notification) => !n.isRead).length;
-        
+
         return {
           notifications: combined,
           unreadCount: unread,
           currentPage: nextPage,
-          hasMore: newList.length === 10, // If we got less than 10, no more pages
+          hasMore: newList.length === 10,
           isLoadingMore: false,
         };
       });
@@ -81,12 +93,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       await markRead(id);
       set((state) => {
-        const newNotifications = state.notifications.map(n => 
-          n.id === id ? { ...n, isRead: true } : n
+        const newNotifications = state.notifications.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n,
         );
         return {
           notifications: newNotifications,
-          unreadCount: newNotifications.filter(n => !n.isRead).length
+          unreadCount: newNotifications.filter((n) => !n.isRead).length,
         };
       });
     } catch (error) {
@@ -98,11 +110,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       await markReadAll();
       set((state) => ({
-        notifications: state.notifications.map(n => ({ ...n, isRead: true })),
-        unreadCount: 0
+        notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+        unreadCount: 0,
       }));
     } catch (error) {
       console.error("Failed to mark all as read", error);
     }
-  }
+  },
 }));

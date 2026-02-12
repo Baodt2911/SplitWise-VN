@@ -1,5 +1,6 @@
 import type { Activity, ActivityAction } from "../services/api/activity.api";
 import type { IconName } from "../components/common/Icon";
+import { dayjs } from "../utils/dateUtils";
 
 /**
  * Get icon for activity type
@@ -11,7 +12,7 @@ export const getActivityIcon = (action: ActivityAction): IconName => {
     UPDATE_GROUP: "edit",
     DELETE_GROUP: "trash",
     LEAVE_GROUP: "logOut",
-    
+
     // Member
     ADD_MEMBER: "userPlus",
     REMOVE_MEMBER: "userMinus",
@@ -19,12 +20,12 @@ export const getActivityIcon = (action: ActivityAction): IconName => {
     ACCEPT_INVITE: "userCheck",
     REJECT_INVITE: "xCircle",
     CHANGE_ROLE: "shield",
-    
+
     // Expense
     ADD_EXPENSE: "receipt",
     UPDATE_EXPENSE: "edit",
     DELETE_EXPENSE: "trash",
-    
+
     // Payment
     CREATE_PAYMENT: "dollarSign",
     CONFIRM_PAYMENT: "checkCircle",
@@ -46,7 +47,7 @@ export const getActivityColor = (action: ActivityAction): string => {
     UPDATE_GROUP: "#3B82F6", // blue
     DELETE_GROUP: "#EF4444", // red
     LEAVE_GROUP: "#6B7280", // gray
-    
+
     // Member
     ADD_MEMBER: "#10B981", // green
     REMOVE_MEMBER: "#EF4444", // red
@@ -54,12 +55,12 @@ export const getActivityColor = (action: ActivityAction): string => {
     ACCEPT_INVITE: "#10B981", // green
     REJECT_INVITE: "#EF4444", // red
     CHANGE_ROLE: "#8B5CF6", // purple
-    
+
     // Expense
     ADD_EXPENSE: "#10B981", // green
     UPDATE_EXPENSE: "#3B82F6", // blue
     DELETE_EXPENSE: "#EF4444", // red
-    
+
     // Payment
     CREATE_PAYMENT: "#F59E0B", // yellow
     CONFIRM_PAYMENT: "#10B981", // green
@@ -71,58 +72,39 @@ export const getActivityColor = (action: ActivityAction): string => {
   return colorMap[action] || "#6B7280";
 };
 
+// ... existing code ...
+
 /**
  * Format activity time with Vietnam timezone
  */
 export const formatActivityTime = (createdAt: string): string => {
-  // Convert UTC to Vietnam timezone
-  const utcDate = new Date(createdAt);
-  const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
-  
-  const now = new Date();
-  const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  
-  const diffMs = nowVietnam.getTime() - vietnamDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const date = dayjs(createdAt);
+  const now = dayjs();
+  const diffHours = now.diff(date, "hour");
 
-  if (diffMins < 1) return "Vừa xong";
-  if (diffMins < 60) return `${diffMins} phút trước`;
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffHours < 24) {
+    return date.fromNow();
+  }
 
-  // Format as date in Vietnam timezone
-  const hours = vietnamDate.getHours().toString().padStart(2, "0");
-  const mins = vietnamDate.getMinutes().toString().padStart(2, "0");
-  return `${vietnamDate.getDate()}/${vietnamDate.getMonth() + 1}, ${hours}:${mins}`;
+  return date.format("DD/MM, HH:mm");
 };
 
 /**
  * Get date label for grouping activities
  */
 export const getActivityDateLabel = (createdAt: string): string => {
-  // Convert UTC to Vietnam timezone
-  const utcDate = new Date(createdAt);
-  const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
-  
-  const now = new Date();
-  const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  const yesterday = new Date(nowVietnam);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const date = dayjs(createdAt);
+  const now = dayjs();
 
-  // Reset time for comparison
-  const dateOnly = new Date(vietnamDate.getFullYear(), vietnamDate.getMonth(), vietnamDate.getDate());
-  const todayOnly = new Date(nowVietnam.getFullYear(), nowVietnam.getMonth(), nowVietnam.getDate());
-  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-  if (dateOnly.getTime() === todayOnly.getTime()) {
+  if (date.isSame(now, "day")) {
     return "Hôm nay";
-  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    return "Hôm qua";
-  } else {
-    return `${vietnamDate.getDate()} Tháng ${vietnamDate.getMonth() + 1}, ${vietnamDate.getFullYear()}`;
   }
+
+  if (date.isSame(now.subtract(1, "day"), "day")) {
+    return "Hôm qua";
+  }
+
+  return date.format("DD [Tháng] M, YYYY");
 };
 
 /**

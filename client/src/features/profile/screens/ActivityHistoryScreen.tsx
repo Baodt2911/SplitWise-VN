@@ -1,8 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  SectionList,
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
@@ -16,33 +16,169 @@ import { useUserActivityStore } from "../../../store/userActivityStore";
 import { Icon } from "../../../components/common/Icon";
 import { ActivityItem } from "../components/ActivityItem";
 import { groupActivitiesByDate } from "../../../utils/activityUtils";
+import type { Activity } from "../../../services/api/activity.api";
+
+// Section type for SectionList
+interface ActivitySection {
+  title: string;
+  data: Activity[];
+}
 
 export const ActivityHistoryScreen: React.FC = () => {
   const { theme } = usePreferencesStore();
   const colors = getThemeColors(theme);
-  const { 
-    activities, 
-    isLoading, 
-    hasMore, 
-    isLoadingMore, 
+  const {
+    activities,
+    isLoading,
+    hasMore,
+    isLoadingMore,
     fetchActivities,
-    loadMoreActivities 
+    loadMoreActivities,
   } = useUserActivityStore();
-  
+
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await fetchActivities();
-  };
+  }, [fetchActivities]);
 
-  const groupedActivities = groupActivitiesByDate(activities);
+  // Transform grouped data into SectionList format
+  const sections: ActivitySection[] = useMemo(() => {
+    const grouped = groupActivitiesByDate(activities);
+    return grouped.map((group) => ({
+      title: group.label,
+      data: group.items,
+    }));
+  }, [activities]);
+
+  // Render section header
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: ActivitySection }) => (
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          backgroundColor: colors.background,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            textTransform: "uppercase",
+          }}
+        >
+          {section.title}
+        </Text>
+      </View>
+    ),
+    [colors],
+  );
+
+  // Render activity item
+  const renderItem = useCallback(
+    ({ item }: { item: Activity }) => (
+      <View style={{ backgroundColor: colors.surface }}>
+        <ActivityItem activity={item} />
+      </View>
+    ),
+    [colors],
+  );
+
+  // Key extractor
+  const keyExtractor = useCallback((item: Activity) => item.id, []);
+
+  // Handle end reached for pagination
+  const handleEndReached = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      loadMoreActivities();
+    }
+  }, [hasMore, isLoadingMore, loadMoreActivities]);
+
+  // Render footer (loading more indicator)
+  const renderFooter = useCallback(() => {
+    if (!hasMore) return null;
+
+    return (
+      <View
+        style={{
+          paddingVertical: 20,
+          alignItems: "center",
+        }}
+      >
+        {isLoadingMore ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+            Kéo xuống để tải thêm
+          </Text>
+        )}
+      </View>
+    );
+  }, [hasMore, isLoadingMore, colors]);
+
+  // Render empty component
+  const renderEmpty = useCallback(() => {
+    if (isLoading) return null;
+
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 32,
+          paddingTop: 100,
+        }}
+      >
+        <Icon name="calendar" size={64} color={colors.textTertiary} />
+        <Text
+          style={{
+            marginTop: 16,
+            fontSize: 16,
+            fontWeight: "600",
+            color: colors.textPrimary,
+            textAlign: "center",
+          }}
+        >
+          Chưa có hoạt động nào
+        </Text>
+        <Text
+          style={{
+            marginTop: 8,
+            fontSize: 14,
+            color: colors.textSecondary,
+            textAlign: "center",
+          }}
+        >
+          Các hoạt động của bạn sẽ xuất hiện ở đây
+        </Text>
+      </View>
+    );
+  }, [isLoading, colors]);
+
+  // Refresh control
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={isLoading && activities.length > 0}
+        onRefresh={handleRefresh}
+        tintColor={colors.primary}
+      />
+    ),
+    [isLoading, activities.length, handleRefresh, colors],
+  );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+    >
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
-      
+
       {/* Header */}
       <View
         style={{
@@ -79,117 +215,32 @@ export const ActivityHistoryScreen: React.FC = () => {
 
       {/* Content */}
       {isLoading && activities.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ marginTop: 16, color: colors.textSecondary }}>
             Đang tải...
           </Text>
         </View>
-      ) : activities.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Icon name="calendar" size={64} color={colors.textTertiary} />
-          <Text
-            style={{
-              marginTop: 16,
-              fontSize: 16,
-              fontWeight: "600",
-              color: colors.textPrimary,
-              textAlign: "center",
-            }}
-          >
-            Chưa có hoạt động nào
-          </Text>
-          <Text
-            style={{
-              marginTop: 8,
-              fontSize: 14,
-              color: colors.textSecondary,
-              textAlign: "center",
-            }}
-          >
-            Các hoạt động của bạn sẽ xuất hiện ở đây
-          </Text>
-        </View>
       ) : (
-        <ScrollView
-          style={{ marginTop: 20 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={handleRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          {groupedActivities.map((group) => (
-            <View key={group.label} style={{ marginBottom: 16 }}>
-              {/* Date header */}
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  backgroundColor: colors.background,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {group.label}
-                </Text>
-              </View>
-
-              {/* Activities */}
-              <View style={{ backgroundColor: colors.surface }}>
-                {group.items.map((activity) => (
-                  <ActivityItem key={activity.id} activity={activity} />
-                ))}
-              </View>
-            </View>
-          ))}
-
-          {/* Load More Button */}
-          {hasMore && (
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 20,
-                backgroundColor: colors.background,
-              }}
-            >
-              <TouchableOpacity
-                onPress={loadMoreActivities}
-                disabled={isLoadingMore}
-                style={{
-                  backgroundColor: colors.surface,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                {isLoadingMore ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "600",
-                      color: colors.primary,
-                    }}
-                  >
-                    Xem hoạt động trước đó
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
+        <SectionList
+          sections={sections}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          refreshControl={refreshControl}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
+          stickySectionHeadersEnabled={false}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingTop: 20,
+          }}
+        />
       )}
     </SafeAreaView>
   );

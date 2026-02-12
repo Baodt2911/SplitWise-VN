@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.splitwise.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -35,6 +36,15 @@
       "eas": {
         "projectId": "9f77250b-fee1-4fd2-a749-c3a3527032b4"
       }
-    }
+    },
+
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps._some_id_here_"
+        }
+      ]
+    ]
   }
 }

@@ -1,267 +1,268 @@
-import { useEffect, useCallback, useMemo, useState } from "react";
-import { FlatList, Text, TouchableOpacity, View, Image, ActivityIndicator, RefreshControl } from "react-native";
+import React, {
+  useEffect,
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
+import {
+  FlatList,
+  Text,
+  View,
+  ActivityIndicator,
+  RefreshControl,
+  StyleSheet,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useShallow } from "zustand/react/shallow";
+import axios from "axios";
 
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
-import { OverviewCard } from "../components/OverviewCard";
 import { GroupCard } from "../components/GroupCard";
-import { BottomNavBar } from "../../../components/common/BottomNavBar/BottomNavBar";
 import { Icon } from "../../../components/common/Icon";
 import { useGroupStore } from "../../../store/groupStore";
 import { useNotificationStore } from "../../../store/notificationStore";
 import { getGroups } from "../../../services/api/group.api";
-import { useToast } from "../../../hooks/useToast";
-
-export const HomeScreen = () => {
+import { HomeHeader } from "../components/HomeHeader";
+import { HomeTopBar } from "../components/HomeTopBar";
+export const HomeScreen = React.memo(() => {
   const theme = usePreferencesStore((state) => state.theme);
-  const colors = getThemeColors(theme);
-  const { error: showError } = useToast();
-  const { unreadCount, fetchNotifications } = useNotificationStore();
+  const colors = useMemo(() => getThemeColors(theme), [theme]);
 
-  // Group store
-  const {
-    groups,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    currentPage,
-    pageSize,
-    error,
-    refreshTrigger,
-    setGroups,
-    addGroups,
-    setLoading,
-    setLoadingMore,
-    setHasMore,
-    setCurrentPage,
-    setError,
-    reset,
-  } = useGroupStore();
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const fetchNotifications = useNotificationStore(
+    (state) => state.fetchNotifications,
+  );
 
-  const t = {
-    overview: "Tổng quan",
-    youOwe: "Bạn đang nợ",
-    owedToYou: "Nợ bạn",
-    yourGroups: "Nhóm của bạn",
-  };
+  const groups = useGroupStore((state) => state.groups);
+  const { isLoadingMore, hasMore, currentPage, pageSize, refreshTrigger } =
+    useGroupStore(
+      useShallow((state) => ({
+        isLoadingMore: state.isLoadingMore,
+        hasMore: state.hasMore,
+        currentPage: state.currentPage,
+        pageSize: state.pageSize,
+        refreshTrigger: state.refreshTrigger,
+      })),
+    );
+
+  const addGroups = useGroupStore((state) => state.addGroups);
+  const setGroupsBatch = useGroupStore((state) => state.setGroupsBatch);
 
   const [refreshing, setRefreshing] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Load groups
-  const loadGroups = useCallback(async (page: number, isLoadMore = false) => {
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
+  const isInitialLoadRef = useRef(true);
+  const isInitialLoading = groups.length === 0;
+
+  const containerStyle = useMemo(
+    () => ({ backgroundColor: colors.background }),
+    [colors.background],
+  );
+
+  const contentContainerStyle = useMemo(
+    () => ({ paddingBottom: 100, paddingHorizontal: 16 }),
+    [],
+  );
+
+  const loadGroups = useCallback(
+    async (page: number, isLoadMore = false) => {
+      try {
+        const response = await getGroups({ page, pageSize });
+
+        if (page === 1) {
+          setGroupsBatch({
+            groups: response.groups,
+            hasMore: response.groups.length === pageSize,
+            currentPage: page,
+            isLoading: false,
+            isLoadingMore: false,
+          });
+        } else {
+          const updatedGroups = [...groups, ...response.groups];
+          setGroupsBatch({
+            groups: updatedGroups,
+            hasMore: response.groups.length === pageSize,
+            currentPage: page,
+            isLoading: false,
+            isLoadingMore: false,
+          });
+        }
+      } catch (err: any) {
+        const isCancelled =
+          axios.isCancel(err) ||
+          err?.__CANCEL__ === true ||
+          err?.message?.includes("logging out") ||
+          err?.message?.includes("cancelled");
+
+        if (isCancelled) {
+          console.log("[HomeScreen] Request cancelled, ignoring error");
+          return;
+        }
+
+        setGroupsBatch({
+          isLoading: false,
+          isLoadingMore: false,
+          error: "Không thể tải danh sách nhóm",
+        });
       }
-      setError(null);
+    },
+    [pageSize, setGroupsBatch, groups],
+  );
 
-      const response = await getGroups({ page, pageSize });
-      
-      if (page === 1) {
-        setGroups(response.groups);
-      } else {
-        addGroups(response.groups);
-      }
-
-      // Check if there are more groups to load
-      setHasMore(response.groups.length === pageSize);
-      setCurrentPage(page);
-    } catch (err: any) {
-      const errorMessage = err.message || "Không thể tải danh sách nhóm";
-      setError(errorMessage);
-      showError(errorMessage, "Lỗi");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [pageSize, showError]);
-
-  // Initial load - check store first
   useEffect(() => {
-    // If we already have groups in store, don't reset and reload
     if (groups.length > 0) {
-      // Groups already loaded, just ensure we're not loading
-      setLoading(false);
       return;
     }
-    // No groups in store, load from API
-    reset();
     loadGroups(1, false);
-    // Also fetch notifications
     fetchNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refresh when trigger changes (e.g., after creating a group)
   useEffect(() => {
     if (refreshTrigger > 0) {
       loadGroups(1, false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
+  }, [refreshTrigger, loadGroups]);
 
-  // Handle refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await loadGroups(1, false);
+      fetchNotifications();
     } finally {
       setRefreshing(false);
     }
-  }, [loadGroups]);
+  }, [loadGroups, fetchNotifications]);
 
-  // Load more when reaching end
   const handleLoadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore && !isLoading && !refreshing) {
+    if (!isLoadingMore && hasMore && !isInitialLoading && !refreshing) {
       loadGroups(currentPage + 1, true);
     }
-  }, [isLoadingMore, hasMore, isLoading, refreshing, currentPage, loadGroups]);
+  }, [
+    isLoadingMore,
+    hasMore,
+    isInitialLoading,
+    refreshing,
+    currentPage,
+    loadGroups,
+  ]);
 
-  // Handle group press
   const handleGroupPress = useCallback((groupId: string) => {
     router.push(`/group/${groupId}`);
   }, []);
 
-  // Track if this is initial load
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
   useEffect(() => {
-    if (!isLoading && groups.length > 0) {
-      setIsInitialLoad(false);
+    if (!isInitialLoading && groups.length > 0) {
+      isInitialLoadRef.current = false;
     }
-  }, [isLoading, groups.length]);
+  }, [isInitialLoading, groups.length]);
 
-  // Render group item
-  const renderGroupItem = useCallback(({ item, index }: { item: typeof groups[0]; index: number }) => {
-    const groupCard = (
-      <GroupCard
-        group={item}
-        onPress={() => handleGroupPress(item.id)}
-      />
-    );
-
-    // Only animate on initial load, not on refresh or load more
-    if (isInitialLoad && !refreshing && !isLoadingMore && index < 10) {
-      return (
-        <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
-          {groupCard}
-        </Animated.View>
+  const renderGroupItem = useCallback(
+    ({ item, index }: { item: (typeof groups)[0]; index: number }) => {
+      const groupCard = (
+        <GroupCard group={item} onPress={() => handleGroupPress(item.id)} />
       );
-    }
 
-    return groupCard;
-  }, [handleGroupPress, refreshing, isLoadingMore, isInitialLoad]);
+      if (
+        isInitialLoadRef.current &&
+        !refreshing &&
+        !isLoadingMore &&
+        index < 10
+      ) {
+        return (
+          <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
+            {groupCard}
+          </Animated.View>
+        );
+      }
 
-  // Render footer (loading indicator)
+      return groupCard;
+    },
+    [handleGroupPress, refreshing, isLoadingMore],
+  );
+
   const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;
     return (
       <View className="py-4 items-center">
         <ActivityIndicator size="small" color={colors.primary} />
-              </View>
+      </View>
     );
   }, [isLoadingMore, colors.primary]);
 
-  // Render list header (Overview section) - memoized
-  const renderListHeader = useMemo(() => {
-    return (
-      <View className="px-4 pt-4 pb-2">
-          {/* Overview Section */}
-          <Text
-          className="text-lg font-bold mb-4 font-semibold"
-            style={{
-              color: colors.textPrimary,
-            }}
-          >
-            {t.overview}
-          </Text>
-
-          <View className="flex-row gap-3 mb-6">
-            <OverviewCard
-              title={t.youOwe}
-              amount="450,000₫"
-              type="owe"
-            />
-            <OverviewCard
-              title={t.owedToYou}
-              amount="320,000₫"
-              type="owed"
-            />
-          </View>
-
-          {/* Groups Section */}
-          <Text
-          className="text-lg font-bold mb-4 font-semibold"
-            style={{
-              color: colors.textPrimary,
-            }}
-          >
-            {t.yourGroups}
-          </Text>
+  const emptyComponent = useMemo(
+    () => (
+      <View className="items-center justify-center px-8 py-12">
+        <View
+          className="w-24 h-24 rounded-full items-center justify-center mb-6"
+          style={{ backgroundColor: colors.primaryLight }}
+        >
+          <Icon name="users" size={40} color={colors.primary} />
+        </View>
+        <Text
+          className="text-xl font-bold mb-3 text-center"
+          style={{ color: colors.textPrimary }}
+        >
+          Chưa có nhóm nào
+        </Text>
+        <Text
+          className="text-base text-center leading-6"
+          style={{ color: colors.textSecondary }}
+        >
+          Tạo nhóm đầu tiên của bạn để bắt đầu quản lý chi phí cùng bạn bè và
+          gia đình!
+        </Text>
       </View>
-    );
-  }, [t, colors.textPrimary]);
+    ),
+    [
+      colors.primaryLight,
+      colors.primary,
+      colors.textPrimary,
+      colors.textSecondary,
+    ],
+  );
 
-  // RefreshControl
-  const refreshControl = useMemo(() => {
-    return (
+  const renderListHeader = useCallback(() => {
+    if (groups.length === 0) return null;
+    return <HomeHeader colors={colors} hasGroups={true} />;
+  }, [colors, groups.length]);
+
+  const handleNotificationPress = useCallback(() => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    router.push("/notifications");
+    setTimeout(() => setIsNavigating(false), 500);
+  }, [isNavigating]);
+
+  const refreshControl = useMemo(
+    () => (
       <RefreshControl
         refreshing={refreshing}
         onRefresh={handleRefresh}
         tintColor={colors.primary}
         colors={[colors.primary]}
       />
-    );
-  }, [refreshing, handleRefresh, colors.primary]);
+    ),
+    [refreshing, handleRefresh, colors.primary],
+  );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaView className="flex-1" style={containerStyle}>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-        {/* Header */}
-        <View
-          className="flex-row items-center justify-between px-6 py-6"
-        >
-          {/* Logo bên trái */}
-          <Image
-            source={require("../../../../assets/icons/logo.png")}
-            className="w-32 h-8"
-          />
+        <HomeTopBar
+          colors={colors}
+          unreadCount={unreadCount}
+          onNotificationPress={handleNotificationPress}
+        />
 
-          {/* Icon thông báo bên phải */}
-          <TouchableOpacity 
-            className="relative pr-1"
-            onPress={() => {
-              if (isNavigating) return;
-              setIsNavigating(true);
-              router.push("/notifications");
-              setTimeout(() => setIsNavigating(false), 500);
-            }}
-          >
-            <Icon name="bell" size={24} color={colors.textPrimary} />
-            {unreadCount > 0 && (
-              <View
-                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full items-center justify-center"
-                style={{ backgroundColor: colors.danger }}
-              >
-                <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "bold" }}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {isLoading && groups.length === 0 ? (
+        {isInitialLoading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
@@ -269,30 +270,38 @@ export const HomeScreen = () => {
           <FlatList
             data={groups}
             renderItem={renderGroupItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             ListHeaderComponent={renderListHeader}
+            ListEmptyComponent={emptyComponent}
             ListFooterComponent={renderFooter}
             refreshControl={refreshControl}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
-            contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
+            contentContainerStyle={contentContainerStyle}
             showsVerticalScrollIndicator={false}
             removeClippedSubviews={true}
             maxToRenderPerBatch={10}
             updateCellsBatchingPeriod={50}
             initialNumToRender={10}
             windowSize={10}
-            getItemLayout={(data, index) => ({
-              length: 100, // Approximate height of GroupCard + margin
-              offset: 100 * index,
-              index,
-            })}
+            getItemLayout={getItemLayout}
           />
         )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
-};
+});
+
+const getItemLayout = (_: any, index: number) => ({
+  length: 100,
+  offset: 100 * index,
+  index,
+});
+
+const keyExtractor = (item: any) => item.id;
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+});
 
 export default HomeScreen;
-

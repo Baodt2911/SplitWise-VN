@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +18,7 @@ import { logout } from "../../../services/api/auth.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { ThemeModal } from "../components/ThemeModal";
+import { unregisterPushTokenApi } from "../../../services/notifications";
 
 export const ProfileScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
@@ -61,11 +63,25 @@ export const ProfileScreen = () => {
   const performLogout = async () => {
     setIsLoggingOut(true);
     try {
+      try {
+        const SecureStore = require("expo-secure-store");
+        const pushToken = await SecureStore.getItemAsync("expoPushToken");
+        console.log("Push token:", pushToken);
+
+        if (pushToken) {
+          await unregisterPushTokenApi(pushToken);
+          await SecureStore.deleteItemAsync("expoPushToken");
+        }
+      } catch (pushError) {
+        console.warn("Failed to unregister push token:", pushError);
+        // Continue with logout even if push token unregister fails
+      }
+
       const result = await logout();
       if ("message" in result && result.message) {
-        // Logout successful
+        // Logout successful - success toast TRƯỚC khi navigate
+        success("Đăng xuất thành công", "Đăng xuất");
         await clearAuth();
-        success("Đăng xuất thành công");
         router.replace("/auth/login");
       } else if ("field" in result) {
         // Server error
@@ -104,7 +120,8 @@ export const ProfileScreen = () => {
       case "notifications":
       case "activityHistory":
         setIsNavigating(true);
-        const route = key === "notifications" ? "/notifications" : "/activity-history";
+        const route =
+          key === "notifications" ? "/notifications" : "/activity-history";
         router.push(route);
         // Reset after a short delay
         setTimeout(() => setIsNavigating(false), 500);
@@ -120,7 +137,11 @@ export const ProfileScreen = () => {
 
   const settingsItems = [
     { key: "notifications", label: "Thông báo", icon: "bell" as const },
-    { key: "activityHistory", label: "Lịch sử hoạt động", icon: "clock" as const },
+    {
+      key: "activityHistory",
+      label: "Lịch sử hoạt động",
+      icon: "clock" as const,
+    },
     { key: "security", label: "Bảo mật", icon: "lock" as const },
     { key: "theme", label: "Giao diện", icon: "settings" as const },
     { key: "about", label: "Về ứng dụng", icon: "info" as const },
@@ -143,10 +164,18 @@ export const ProfileScreen = () => {
           {/* Avatar with edit button */}
           <View className="relative mb-4">
             <View
-              className="w-24 h-24 rounded-full items-center justify-center"
+              className="w-24 h-24 rounded-full items-center justify-center overflow-hidden"
               style={{ backgroundColor: colors.imageBackground }}
             >
-              <Text className="text-4xl">👤</Text>
+              {user?.avatarUrl ? (
+                <Image
+                  source={{ uri: user.avatarUrl }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Icon name="user" size={40} color={colors.textSecondary} />
+              )}
             </View>
             <TouchableOpacity
               className="absolute bottom-0 right-0 w-8 h-8 rounded-full items-center justify-center"

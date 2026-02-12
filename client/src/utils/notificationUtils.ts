@@ -1,4 +1,5 @@
 import type { Notification } from "../services/api/notification.api";
+import { dayjs } from "../utils/dateUtils";
 
 export type NotificationType =
   // Expense
@@ -26,7 +27,12 @@ export type NotificationType =
   // Other
   | "REMINDER";
 
-export type RelatedType = "EXPENSE" | "SETTLEMENT" | "GROUP" | "USER" | "COMMENT";
+export type RelatedType =
+  | "EXPENSE"
+  | "SETTLEMENT"
+  | "GROUP"
+  | "USER"
+  | "COMMENT";
 
 interface NotificationStyle {
   icon: string;
@@ -39,7 +45,7 @@ interface NotificationStyle {
 export const getNotificationStyle = (type: string): NotificationStyle => {
   const typeMap: Record<NotificationType, NotificationStyle> = {
     // Expense
-    EXPENSE_ADDED: { icon: "receipt", color: "#10B981" }, // green
+    EXPENSE_ADDED: { icon: "book", color: "#10B981" }, // green
     EXPENSE_UPDATED: { icon: "edit", color: "#3B82F6" }, // blue
     EXPENSE_DELETED: { icon: "trash", color: "#EF4444" }, // red
 
@@ -68,69 +74,41 @@ export const getNotificationStyle = (type: string): NotificationStyle => {
     REMINDER: { icon: "bell", color: "#F59E0B" }, // yellow
   };
 
-  return typeMap[type as NotificationType] || { icon: "bell", color: "#6B7280" };
+  return (
+    typeMap[type as NotificationType] || { icon: "bell", color: "#6B7280" }
+  );
 };
 
 /**
  * Format notification timestamp
  */
 export const formatNotificationTime = (createdAt: string): string => {
-  // Convert UTC to Vietnam timezone
-  const utcDate = new Date(createdAt);
-  const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000); // Add 7 hours
-  
-  const now = new Date();
-  const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  
-  const diffMs = nowVietnam.getTime() - vietnamDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Vừa xong";
-  if (diffMins < 60) return `${diffMins} phút trước`;
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-  if (diffDays < 7) return `${diffDays} ngày trước`;
-
-  // Format as date in Vietnam timezone
-  const hours = vietnamDate.getHours().toString().padStart(2, "0");
-  const mins = vietnamDate.getMinutes().toString().padStart(2, "0");
-  return `${vietnamDate.getDate()}/${vietnamDate.getMonth() + 1}, ${hours}:${mins}`;
+  return dayjs(createdAt).fromNow();
 };
 
 /**
  * Get date label for grouping
  */
 export const getDateLabel = (createdAt: string): string => {
-  // Convert UTC to Vietnam timezone
-  const utcDate = new Date(createdAt);
-  const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
-  
-  const now = new Date();
-  const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  const yesterday = new Date(nowVietnam);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const date = dayjs(createdAt);
+  const now = dayjs();
 
-  // Reset time for comparison
-  const dateOnly = new Date(vietnamDate.getFullYear(), vietnamDate.getMonth(), vietnamDate.getDate());
-  const todayOnly = new Date(nowVietnam.getFullYear(), nowVietnam.getMonth(), nowVietnam.getDate());
-  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-  if (dateOnly.getTime() === todayOnly.getTime()) {
+  if (date.isSame(now, "day")) {
     return "Hôm nay";
-  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    return "Hôm qua";
-  } else {
-    // Format as "24 Tháng 8, 2023"
-    return `${vietnamDate.getDate()} Tháng ${vietnamDate.getMonth() + 1}, ${vietnamDate.getFullYear()}`;
   }
+
+  if (date.isSame(now.subtract(1, "day"), "day")) {
+    return "Hôm qua";
+  }
+
+  return date.format("DD/MM/YYYY");
 };
 
 /**
  * Group notifications by date
  */
 export const groupNotificationsByDate = (
-  notifications: Notification[]
+  notifications: Notification[],
 ): { date: string; items: Notification[] }[] => {
   const groups: Record<string, Notification[]> = {};
 
@@ -151,7 +129,7 @@ export const groupNotificationsByDate = (
       if (b.date === "Hôm nay") return 1;
       if (a.date === "Hôm qua") return -1;
       if (b.date === "Hôm qua") return 1;
-      
+
       // Parse dates and compare
       const dateA = new Date(a.items[0].createdAt);
       const dateB = new Date(b.items[0].createdAt);
@@ -159,12 +137,133 @@ export const groupNotificationsByDate = (
     });
 };
 
+export type NotificationListItem =
+  | { type: "header"; title: string; id: string }
+  | { type: "item"; data: Notification };
+
+// Helper functions
+const isSameDay = (date1: Date, date2: Date): boolean => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+};
+
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+/**
+ * Flatten notifications for FlatList with strict deduplication
+ */
+export const flattenNotifications = (
+  notifications: Notification[],
+): NotificationListItem[] => {
+  if (!notifications || notifications.length === 0) {
+    return [];
+  }
+
+  const seenIds = new Set<string>();
+
+  // Group by date
+  // We manually implement grouping to ensure we handle duplicates correctly
+  const groups: Record<string, Notification[]> = {};
+
+  notifications.forEach((notification) => {
+    // Skip if we've seen this notification ID in this batch
+    if (seenIds.has(notification.id)) {
+      return;
+    }
+    seenIds.add(notification.id);
+
+    // Calculate date key
+    const utcDate = new Date(notification.createdAt);
+    // Add 7 hours for Vietnam time
+    const vietnamDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+
+    const now = new Date();
+    const nowVietnam = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const yesterday = new Date(nowVietnam);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset time for comparison
+    const dateOnly = new Date(
+      vietnamDate.getFullYear(),
+      vietnamDate.getMonth(),
+      vietnamDate.getDate(),
+    );
+    const todayOnly = new Date(
+      nowVietnam.getFullYear(),
+      nowVietnam.getMonth(),
+      nowVietnam.getDate(),
+    );
+    const yesterdayOnly = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+    );
+
+    let key: string;
+    if (dateOnly.getTime() === todayOnly.getTime()) {
+      key = "Hôm nay";
+    } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+      key = "Hôm qua";
+    } else {
+      key = `${vietnamDate.getDate()} Tháng ${vietnamDate.getMonth() + 1}, ${vietnamDate.getFullYear()}`;
+    }
+
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(notification);
+  });
+
+  const result: NotificationListItem[] = [];
+
+  // Convert to flat list with headers
+  // Sort keys: Hôm nay -> Hôm qua -> Others by date desc
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    if (a === "Hôm nay") return -1;
+    if (b === "Hôm nay") return 1;
+    if (a === "Hôm qua") return -1;
+    if (b === "Hôm qua") return 1;
+
+    // Parse simplified dates for sorting if needed, but the current keys are string based
+    // Ideally we would carry the timestamp. For now rely on string parsing or assume correct order from input if sorted
+    return 0;
+  });
+
+  sortedKeys.forEach((dateKey) => {
+    // Add header
+    result.push({
+      type: "header",
+      id: `header-${dateKey}`,
+      title: dateKey,
+    });
+
+    // Add items
+    groups[dateKey].forEach((item) => {
+      result.push({
+        type: "item",
+        data: item,
+      });
+    });
+  });
+
+  return result;
+};
+
 /**
  * Get navigation route for related item
  */
 export const getRelatedRoute = (
   type: string,
-  referenceId?: string
+  referenceId?: string,
 ): string | null => {
   if (!referenceId) return null;
 

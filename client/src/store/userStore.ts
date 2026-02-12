@@ -1,19 +1,18 @@
 import { create } from "zustand";
-import { 
-  updateProfile, 
-  updateSettings, 
-  getActivities, 
+import {
+  updateProfile,
+  updateSettings,
+  getActivities,
   getNotifications,
   type UpdateProfileRequest,
-  type UpdateSettingsRequest
+  type UpdateSettingsRequest,
 } from "../services/api/user.api";
-import { useAuthStore } from "./authStore";
 
 interface UserState {
   // Stats/Activities (Global)
   activities: any[];
   isLoadingActivities: boolean;
-  
+
   // Actions
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
   updateSettings: (data: UpdateSettingsRequest) => Promise<void>;
@@ -28,7 +27,8 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const response = await updateProfile(data);
       if ("user" in response) {
-        // Update auth store user
+        // Dynamic import to avoid require cycle
+        const { useAuthStore } = require("./authStore");
         useAuthStore.getState().setUser(response.user);
       }
     } catch (error) {
@@ -40,7 +40,9 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const response = await updateSettings(data);
       if (response.user) {
-         useAuthStore.getState().setUser(response.user);
+        // Dynamic import to avoid require cycle
+        const { useAuthStore } = require("./authStore");
+        useAuthStore.getState().setUser(response.user);
       }
     } catch (error) {
       throw error;
@@ -56,5 +58,5 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({ isLoadingActivities: false });
       console.error("Failed to fetch activities", error);
     }
-  }
+  },
 }));

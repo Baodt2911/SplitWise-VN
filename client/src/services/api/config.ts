@@ -9,7 +9,15 @@ const API_BASE_URL = __DEV__
     : "http://localhost:3000/api/v1"
   : "https://api.yourdomain.com/api/v1";
 // 10.0.2.2:3000
-console.log("[API] Final API Base URL:", API_BASE_URL, "| Platform:", Platform.OS, "| Dev:", __DEV__);
+// 192.168.1.222:3000
+console.log(
+  "[API] Final API Base URL:",
+  API_BASE_URL,
+  "| Platform:",
+  Platform.OS,
+  "| Dev:",
+  __DEV__,
+);
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -28,17 +36,29 @@ const PUBLIC_ENDPOINTS = [
   "/auth/resend-otp",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/auth/google",
   "/otp/send",
   "/otp/verify",
 ];
 
 // Flag to track if token is being refreshed to prevent multiple refresh calls
 let isRefreshing = false;
+// Flag to track if user is logging out - skip refresh attempts
+let isLoggingOut = false;
 // Queue of failed requests that need to be retried after token refresh
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
+
+// Export function to set logout state
+export const setLoggingOut = (value: boolean) => {
+  isLoggingOut = value;
+  if (value) {
+    // Clear the queue when logging out
+    failedQueue = [];
+  }
+};
 
 // Helper to process the queue of failed requests
 const processQueue = (error: any, token: string | null = null) => {
@@ -64,10 +84,19 @@ const refreshClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     const url = config.url || "";
-    
+
     // Check if endpoint is public (doesn't require token)
-    const isPublicEndpoint = PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint));
-    
+    const isPublicEndpoint = PUBLIC_ENDPOINTS.some((endpoint) =>
+      url.includes(endpoint),
+    );
+
+    // Block non-public requests while logging out
+    if (!isPublicEndpoint && isLoggingOut) {
+      console.log("[API] Blocking request during logout:", url);
+      // Cancel request by returning a rejected promise
+      return Promise.reject(new axios.Cancel("Request cancelled: logging out"));
+    }
+
     if (!isPublicEndpoint) {
       try {
         const accessToken = await SecureStore.getItemAsync("accessToken");
@@ -78,12 +107,12 @@ apiClient.interceptors.request.use(
         console.error("[API] Error getting accessToken:", error);
       }
     }
-    
+
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor to handle token expiration
@@ -101,6 +130,11 @@ apiClient.interceptors.response.use(
         error.response?.data?.message === "Token đã hết hạn") ||
       error.response?.status === 401
     ) {
+      // Skip refresh if logging out
+      if (isLoggingOut) {
+        return Promise.reject(error);
+      }
+
       if (originalRequest._retry) {
         return Promise.reject(error);
       }
@@ -124,20 +158,28 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = await SecureStore.getItemAsync("refreshToken");
-        
+
         if (!refreshToken) {
           // No refresh token, force logout
           throw new Error("No refresh token available");
         }
 
         console.log("[API] Refreshing token...");
-        const response = await refreshClient.post("/auth/refresh-token", {}, {
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
+        const response = await refreshClient.post(
+          "/auth/refresh-token",
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${refreshToken}`,
+            },
           },
-        });
+        );
 
-        const { accessToken, refreshToken: newRefreshToken, sessionId } = response.data;
+        const {
+          accessToken,
+          refreshToken: newRefreshToken,
+          sessionId,
+        } = response.data;
 
         // Update AuthStore state directly if possible, but SecureStore is the source of truth
         // We can dynamically import store to avoid circular issues or just let UI update on next render
@@ -149,7 +191,8 @@ apiClient.interceptors.response.use(
           sessionId,
         });
 
-        apiClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        apiClient.defaults.headers.common["Authorization"] =
+          `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
@@ -157,11 +200,11 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error("[API] Token refresh failed:", refreshError);
         processQueue(refreshError, null);
-        
+
         // Clear auth and logout
         const { useAuthStore } = require("../../store/authStore");
         await useAuthStore.getState().clearAuth();
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -169,6 +212,5 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
-

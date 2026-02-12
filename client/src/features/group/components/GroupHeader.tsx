@@ -3,7 +3,10 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Icon } from "../../../components/common/Icon";
 import { MemberAvatarList } from "./MemberAvatarList";
 import { BalanceListItem } from "./BalanceListItem";
-import type { GroupDetail, GroupBalance } from "../../../services/api/group.api";
+import type {
+  GroupDetail,
+  GroupBalance,
+} from "../../../services/api/group.api";
 
 interface GroupHeaderProps {
   group: GroupDetail;
@@ -15,9 +18,9 @@ interface GroupHeaderProps {
   onPaymentPress: (balance: GroupBalance) => void;
 }
 
-export const GroupHeader = ({ 
-  group, 
-  colors, 
+export const GroupHeader = ({
+  group,
+  colors,
   hasExpenses,
   currentUserId,
   formatCurrency,
@@ -28,31 +31,22 @@ export const GroupHeader = ({
 
   return (
     <View className="w-full pt-6">
-      {/* Members Section */}
-      <View className="mb-6 px-4">
-        <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
-            {group.members.length} thành viên
-          </Text>
-          <TouchableOpacity>
-            <Text className="text-sm font-semibold" style={{ color: colors.primary }}>Quản lý</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <MemberAvatarList members={group.members} colors={colors} />
-      </View>
-
       {/* Balance/Payment Section */}
       {hasBalances && (
-        <View 
-          className="rounded-xl shadow-sm mb-6" 
+        <View
+          className="rounded-xl shadow-sm mb-6"
           style={{ backgroundColor: colors.surface }}
         >
           <View className="flex-row items-center gap-2 px-4 pt-4 pb-4">
             <Icon name="lightbulb" size={20} color="#F59E0B" />
-            <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Thanh toán</Text>
+            <Text
+              className="text-xl font-bold"
+              style={{ color: colors.textPrimary }}
+            >
+              Thanh toán
+            </Text>
           </View>
-          
+
           <View className="px-4 pb-2">
             {group.balances!.map((balance, index) => (
               <BalanceListItem
@@ -72,7 +66,10 @@ export const GroupHeader = ({
       {/* Expenses Header */}
       {hasExpenses && (
         <View className="flex-row items-center gap-2 mb-4">
-          <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+          <Text
+            className="text-lg font-bold"
+            style={{ color: colors.textPrimary }}
+          >
             Chi phí gần đây
           </Text>
         </View>

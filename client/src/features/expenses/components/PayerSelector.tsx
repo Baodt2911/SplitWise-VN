@@ -1,7 +1,19 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView, Image } from "react-native";
+import React, { useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  FlatList,
+  Image,
+} from "react-native";
 import { Icon } from "../../../components/common/Icon";
-import { getMemberAvatarColor, getMemberInitials, getMemberTextColor } from "../../../utils/memberUtils";
+import {
+  getMemberAvatarColor,
+  getMemberInitials,
+  getMemberTextColor,
+} from "../../../utils/memberUtils";
 import { GroupMember } from "../../../services/api/group.api";
 
 interface PayerSelectorProps {
@@ -23,61 +35,59 @@ interface PayerMemberItemProps {
   onSelect: () => void;
 }
 
-const PayerMemberItem = React.memo<PayerMemberItemProps>(({
-  member,
-  isSelected,
-  isCurrentUser,
-  colors,
-  onSelect,
-}) => {
-  return (
-    <TouchableOpacity
-      className="py-4 px-4 rounded-xl border mb-2 flex-row items-center"
-      style={{
-        backgroundColor: isSelected ? colors.primary : colors.surface,
-        borderColor: isSelected ? colors.primary : colors.border,
-      }}
-      onPress={onSelect}
-    >
-      <View
-        className="w-10 h-10 rounded-full items-center justify-center mr-3"
+const PayerMemberItem = React.memo<PayerMemberItemProps>(
+  ({ member, isSelected, isCurrentUser, colors, onSelect }) => {
+    return (
+      <TouchableOpacity
+        className="py-4 px-4 rounded-xl border mb-2 flex-row items-center"
         style={{
-          backgroundColor: isSelected ? "#FFFFFF" : getMemberAvatarColor(member.userId),
+          backgroundColor: isSelected ? colors.primary : colors.surface,
+          borderColor: isSelected ? colors.primary : colors.border,
         }}
+        onPress={onSelect}
       >
-        {member.avatarUrl ? (
-          <Image
-            source={{ uri: member.avatarUrl }}
-            style={{ width: 40, height: 40, borderRadius: 20 }}
-            resizeMode="cover"
-          />
-        ) : (
-          <Text
-            className="font-bold"
-            style={{
-              fontSize: 16,
-              color: isSelected ? getMemberTextColor(member.userId) : getMemberTextColor(member.userId),
-            }}
-          >
-            {getMemberInitials(member.fullName)}
-          </Text>
-        )}
-      </View>
-      <Text
-        className="flex-1 font-medium"
-        style={{
-          fontSize: 14,
-          color: isSelected ? "#FFFFFF" : colors.textPrimary,
-        }}
-      >
-        {isCurrentUser ? "Bạn" : member.fullName}
-      </Text>
-      {isSelected && (
-        <Icon name="check" size={20} color="#FFFFFF" />
-      )}
-    </TouchableOpacity>
-  );
-});
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center mr-3"
+          style={{
+            backgroundColor: isSelected
+              ? "#FFFFFF"
+              : getMemberAvatarColor(member.userId),
+          }}
+        >
+          {member.avatarUrl ? (
+            <Image
+              source={{ uri: member.avatarUrl }}
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text
+              className="font-bold"
+              style={{
+                fontSize: 16,
+                color: isSelected
+                  ? getMemberTextColor(member.userId)
+                  : getMemberTextColor(member.userId),
+              }}
+            >
+              {getMemberInitials(member.fullName)}
+            </Text>
+          )}
+        </View>
+        <Text
+          className="flex-1 font-medium"
+          style={{
+            fontSize: 14,
+            color: isSelected ? "#FFFFFF" : colors.textPrimary,
+          }}
+        >
+          {isCurrentUser ? "Bạn" : member.fullName}
+        </Text>
+        {isSelected && <Icon name="check" size={20} color="#FFFFFF" />}
+      </TouchableOpacity>
+    );
+  },
+);
 
 PayerMemberItem.displayName = "PayerMemberItem";
 
@@ -90,6 +100,30 @@ export const PayerSelector = ({
   colors,
   currentUserId,
 }: PayerSelectorProps) => {
+  // Memoized renderItem per Rule 9
+  const renderItem = useCallback(
+    ({ item: member }: { item: GroupMember }) => {
+      const isSelected = selectedPayerId === member.userId;
+      const isCurrentUser = member.userId === currentUserId;
+      return (
+        <PayerMemberItem
+          member={member}
+          isSelected={isSelected}
+          isCurrentUser={isCurrentUser}
+          colors={colors}
+          onSelect={() => {
+            onSelect(member.userId);
+            onClose();
+          }}
+        />
+      );
+    },
+    [selectedPayerId, currentUserId, colors, onSelect, onClose],
+  );
+
+  // Stable key extractor per Rule 7
+  const keyExtractor = useCallback((item: GroupMember) => item.userId, []);
+
   return (
     <Modal
       visible={visible}
@@ -97,8 +131,8 @@ export const PayerSelector = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable 
-        className="flex-1 justify-end" 
+      <Pressable
+        className="flex-1 justify-end"
         style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         onPress={onClose}
       >
@@ -120,25 +154,13 @@ export const PayerSelector = ({
               <Icon name="x" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {members.map((member) => {
-              const isSelected = selectedPayerId === member.userId;
-              const isCurrentUser = member.userId === currentUserId;
-              return (
-                <PayerMemberItem
-                  key={member.userId}
-                  member={member}
-                  isSelected={isSelected}
-                  isCurrentUser={isCurrentUser}
-                  colors={colors}
-                  onSelect={() => {
-                    onSelect(member.userId);
-                    onClose();
-                  }}
-                />
-              );
-            })}
-          </ScrollView>
+          {/* FlatList per Rule 1 - dynamic list from API */}
+          <FlatList
+            data={members}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            showsVerticalScrollIndicator={false}
+          />
         </Pressable>
       </Pressable>
     </Modal>
