@@ -27,11 +27,14 @@ export const Alert = () => {
   };
 
   const alertType = getAlertType();
-  const headerColor = 
-    alertType === "success" ? colors.success :
-    alertType === "error" ? colors.danger :
-    alertType === "warning" ? colors.warning :
-    colors.primary;
+  const headerColor =
+    alertType === "success"
+      ? colors.success
+      : alertType === "error"
+        ? colors.danger
+        : alertType === "warning"
+          ? colors.warning
+          : colors.primary;
 
   return (
     <Modal
@@ -46,14 +49,9 @@ export const Alert = () => {
         onPress={handleDismiss}
       >
         <Pressable
-          className="rounded-3xl w-full max-w-sm overflow-hidden"
+          className="rounded-3xl w-full max-w-sm overflow-hidden shadow-lg"
           style={{
             backgroundColor: colors.surface,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 8,
-            elevation: 5,
           }}
           onPress={(e) => e.stopPropagation()}
         >
@@ -89,16 +87,21 @@ export const Alert = () => {
                 const isDestructive = button.style === "destructive";
                 const isCancel = button.style === "cancel";
                 const isPrimary = !isDestructive && !isCancel;
-                
+
                 // Use success color for primary button in success alert
-                const buttonColor = isPrimary && alertType === "success" 
-                  ? colors.success 
-                  : isPrimary 
-                    ? colors.primary 
-                    : undefined;
-                
+                const buttonColor =
+                  isPrimary && alertType === "success"
+                    ? colors.success
+                    : isPrimary
+                      ? colors.primary
+                      : undefined;
+
                 return (
-                  <View key={index} className={buttons.length > 1 ? "flex-1" : ""} style={{ minWidth: buttons.length === 1 ? undefined : 100 }}>
+                  <View
+                    key={index}
+                    className={buttons.length > 1 ? "flex-1" : ""}
+                    style={{ minWidth: buttons.length === 1 ? undefined : 100 }}
+                  >
                     <TouchableOpacity
                       onPress={() => {
                         // Always hide alert first
@@ -108,9 +111,9 @@ export const Alert = () => {
                       }}
                       className={`rounded-2xl py-3 px-6 items-center justify-center ${buttons.length === 1 ? "w-full" : ""}`}
                       style={{
-                        backgroundColor: isPrimary 
-                          ? (buttonColor || colors.primary)
-                          : isCancel 
+                        backgroundColor: isPrimary
+                          ? buttonColor || colors.primary
+                          : isCancel
                             ? "transparent"
                             : colors.danger,
                         borderWidth: isCancel ? 1 : 0,
@@ -121,10 +124,10 @@ export const Alert = () => {
                       <Text
                         className="text-base font-semibold"
                         style={{
-                          color: isPrimary 
-                            ? colors.primaryText 
-                            : isCancel 
-                              ? colors.textPrimary 
+                          color: isPrimary
+                            ? colors.primaryText
+                            : isCancel
+                              ? colors.textPrimary
                               : colors.primaryText,
                         }}
                       >
@@ -141,4 +144,3 @@ export const Alert = () => {
     </Modal>
   );
 };
-

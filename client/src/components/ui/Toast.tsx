@@ -9,11 +9,15 @@ import { useToastStore } from "../../store/toastStore";
 import { getThemeColors } from "../../utils/themeColors";
 import { usePreferencesStore } from "../../store/preferencesStore";
 
-const ToastItem = ({ toast }: { toast: { id: string; type: string; message: string; title?: string } }) => {
+const ToastItem = ({
+  toast,
+}: {
+  toast: { id: string; type: string; message: string; title?: string };
+}) => {
   const { hide } = useToastStore();
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  
+
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
 
@@ -68,10 +72,7 @@ const ToastItem = ({ toast }: { toast: { id: string; type: string; message: stri
   };
 
   return (
-    <Animated.View
-      className="mb-3"
-      style={animatedStyle}
-    >
+    <Animated.View className="mb-3" style={animatedStyle}>
       <Pressable
         onPress={handleHide}
         className="rounded-xl py-5 px-3 min-w-[80%] max-w-[90%] min-h-8 max-h-32 shadow-md"
@@ -140,4 +141,3 @@ export const ToastContainer = () => {
     </View>
   );
 };
-

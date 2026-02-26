@@ -737,68 +737,84 @@ export const getExpenseGroupService = async (
   };
 
   const skip = (page - 1) * pageSize;
-  const expenses = await prisma.expense.findMany({
-    where: {
-      groupId,
-      category,
-      expenseDate: {
-        gte: startDate,
-        lt: endDate,
-      },
-      paidBy,
-      description: {
-        contains: q,
-        mode: "insensitive",
-      },
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      description: true,
-      amount: true,
-      currency: true,
-      paidBy: true,
-      paidByUser: {
-        select: {
-          fullName: true,
-        },
-      },
-      category: true,
-      subCategory: {
-        select: {
-          id: true,
-          name: true,
-          key: true,
-          icon: true,
-        },
-      },
-      expenseDate: true,
-      splitType: true,
-      receiptUrl: true,
-      notes: true,
-      splits: {
-        select: {
-          id: true,
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-            },
-          },
-          amount: true,
-          shares: true,
-          percentage: true,
-        },
-      },
-      createdAt: true,
-      updatedAt: true,
-    },
-    skip,
-    take: pageSize,
-    orderBy: mapOrderBy[sort || "createdAt"],
-  });
 
-  return expenses.map((e) => mapExpense(userId, e));
+  const whereClause = {
+    groupId,
+    category,
+    expenseDate: {
+      gte: startDate,
+      lt: endDate,
+    },
+    paidBy,
+    description: {
+      contains: q,
+      mode: "insensitive" as const,
+    },
+    deletedAt: null,
+  };
+
+  const [expenses, total] = await Promise.all([
+    prisma.expense.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        currency: true,
+        paidBy: true,
+        paidByUser: {
+          select: {
+            fullName: true,
+          },
+        },
+        category: true,
+        subCategory: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            icon: true,
+          },
+        },
+        expenseDate: true,
+        splitType: true,
+        receiptUrl: true,
+        notes: true,
+        splits: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+            amount: true,
+            shares: true,
+            percentage: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      skip,
+      take: pageSize,
+      orderBy: mapOrderBy[sort || "createdAt"],
+    }),
+    prisma.expense.count({ where: whereClause }),
+  ]);
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    expenses: expenses.map((e) => mapExpense(userId, e)),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+  };
 };
 
 export const getDetailExpenseService = async (

@@ -347,26 +347,24 @@ export const GroupDetailScreen = () => {
           onPaymentPress={handlePaymentPress}
         />
         {/* Search and Filter Bar - only show when has expenses */}
-        {expenses.length > 0 && (
-          <View
-            className="rounded-lg pb-3 mb-4 shadow-sm"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <ExpenseSearchHeader
-              value={filters.q || ""}
-              onChangeText={(q) => handleFilterChange({ q: q || undefined })}
-              colors={colors}
-            />
-            <ExpenseFilterBar
-              filters={filters}
-              members={group?.members || []}
-              colors={colors}
-              onFilterChange={handleFilterChange}
-              onDatePress={() => setShowDatePicker(true)}
-              activeFilterCount={activeFilterCount}
-            />
-          </View>
-        )}
+        <View
+          className="rounded-lg pb-3 mb-4 shadow-sm"
+          style={{ backgroundColor: colors.surface }}
+        >
+          <ExpenseSearchHeader
+            value={filters.q || ""}
+            onChangeText={(q) => handleFilterChange({ q: q || undefined })}
+            colors={colors}
+          />
+          <ExpenseFilterBar
+            filters={filters}
+            members={group?.members || []}
+            colors={colors}
+            onFilterChange={handleFilterChange}
+            onDatePress={() => setShowDatePicker(true)}
+            activeFilterCount={activeFilterCount}
+          />
+        </View>
       </>
     );
   }, [
@@ -489,25 +487,47 @@ export const GroupDetailScreen = () => {
               Đang tải chi phí...
             </Text>
           </View>
-        ) : deduplicatedExpenses.length === 0 && !loadingExpenses ? (
-          <View className="flex-1 mt-6 px-4">
-            {/* Show members even if empty */}
-            {renderListHeader()}
-            <Text
-              className="text-base text-center font-normal mt-10"
-              style={{ color: colors.textSecondary }}
-            >
-              {activeFilterCount > 0
-                ? "Không tìm thấy chi phí nào phù hợp"
-                : "Chưa có chi phí nào"}
-            </Text>
-          </View>
         ) : (
           <FlatList
             data={deduplicatedExpenses}
             renderItem={renderExpenseItem}
             keyExtractor={(item) => item.id}
             ListHeaderComponent={renderListHeader}
+            ListEmptyComponent={
+              !loadingExpenses ? (
+                <View className="flex-1 mt-6 px-4">
+                  <Text
+                    className="text-base text-center font-normal mt-10"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    {activeFilterCount > 0
+                      ? "Không tìm thấy chi phí nào phù hợp"
+                      : "Chưa có chi phí nào"}
+                  </Text>
+                  {activeFilterCount > 0 && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleFilterChange({
+                          category: undefined,
+                          paidBy: undefined,
+                          expenseDateFrom: undefined,
+                          expenseDateTo: undefined,
+                          q: undefined,
+                        })
+                      }
+                      className="mt-4"
+                    >
+                      <Text
+                        className="text-sm font-medium text-center"
+                        style={{ color: colors.primary }}
+                      >
+                        Xóa bộ lọc
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null
+            }
             ListFooterComponent={
               pagination.isLoadingMore ? (
                 <View className="py-4 items-center">
@@ -522,7 +542,8 @@ export const GroupDetailScreen = () => {
               ) : deduplicatedExpenses.length > 0 && !pagination.hasMore ? (
                 <View className="py-4 items-center">
                   <Text style={{ color: colors.textSecondary }}>
-                    Đã hiển thị tất cả {pagination.total} chi phí
+                    Đã hiển thị tất cả{" "}
+                    {pagination.total || deduplicatedExpenses.length} chi phí
                   </Text>
                 </View>
               ) : null
@@ -539,7 +560,6 @@ export const GroupDetailScreen = () => {
             initialNumToRender={10}
             maxToRenderPerBatch={10}
             updateCellsBatchingPeriod={50}
-            removeClippedSubviews={true}
           />
         )}
       </View>

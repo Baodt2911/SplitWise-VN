@@ -7,6 +7,7 @@ import { useNotificationStore } from "./notificationStore";
 import { useUserActivityStore } from "./userActivityStore";
 import { useUserStore } from "./userStore";
 import { usePreferencesStore } from "./preferencesStore";
+import { useBalanceStatsStore } from "./balanceStatsStore";
 
 export const resetAllStores = () => {
   // Reset group store
@@ -30,6 +31,9 @@ export const resetAllStores = () => {
     activities: [],
     isLoadingActivities: false,
   });
+
+  // Reset balance stats store
+  useBalanceStatsStore.getState().reset();
 
   console.log("[Stores] All stores have been reset");
 };

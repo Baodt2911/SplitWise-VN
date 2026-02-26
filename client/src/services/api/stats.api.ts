@@ -8,23 +8,43 @@ export interface OverviewStats {
   // Assuming simple structure for now based on context
 }
 
-export const getOverviewStats = async (period: "week" | "month" | "year" = "month"): Promise<OverviewStats> => {
+export const getOverviewStats = async (
+  period: "week" | "month" | "year" = "month",
+): Promise<OverviewStats> => {
   const response = await apiClient.get<OverviewStats>("/stats/me/overview", {
-    params: { period }
+    params: { period },
   });
   return response.data;
 };
 
-export const getBalancesStats = async (): Promise<any> => {
-  const response = await apiClient.get("/stats/me/balances");
+export interface BalanceDetail {
+  fullName: string;
+  payeeId: string;
+  groupId: string;
+  amount: string;
+  type: "oweYou" | "youOwe";
+}
+
+export interface BalancesStats {
+  total: {
+    youOwe: string | null;
+    oweYou: string | null;
+  };
+  details: BalanceDetail[];
+}
+
+export const getBalancesStats = async (): Promise<BalancesStats> => {
+  const response = await apiClient.get<BalancesStats>("/stats/me/balances");
   return response.data;
 };
 
-export const exportStats = async (format: "csv" | "pdf" = "csv"): Promise<any> => {
+export const exportStats = async (
+  format: "csv" | "pdf" = "csv",
+): Promise<any> => {
   // This might return a blob or file download link
   const response = await apiClient.get("/stats/me/export", {
     params: { format },
-    responseType: "blob" // or 'arraybuffer'
+    responseType: "blob", // or 'arraybuffer'
   });
   return response.data;
 };

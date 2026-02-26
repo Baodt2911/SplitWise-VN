@@ -14,14 +14,12 @@ export const getExpenseGroupController = catchAsync(
   async (req: Request<{ groupId: string }>, res: Response) => {
     const userId = req.user?.userId;
     const { page = 1, pageSize = 10 } = req.query as any as QueryExpenseDTO;
-    const expenses = await getExpenseGroupService(userId!, req.params.groupId, {
+    const result = await getExpenseGroupService(userId!, req.params.groupId, {
       ...req.query,
       page: +page,
       pageSize: +pageSize,
     });
-    res.status(StatusCodes.OK).json({
-      expenses,
-    });
+    res.status(StatusCodes.OK).json(result);
   },
 );
 
