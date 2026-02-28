@@ -12,8 +12,8 @@ router.post(
   "/signature",
   validateAll({
     body: z.object({
-      groupId: z.uuid("groupId is required"),
       type: z.enum(["avatar", "receipt"]),
+      groupId: z.string().uuid().optional(),
     }),
   }),
   cloudinarySignatureController,
@@ -25,7 +25,7 @@ router.delete(
       public_id: z.string().min(1, "public_id is required"),
     }),
     body: z.object({
-      groupId: z.uuid("groupId is required"),
+      groupId: z.string().uuid().optional(),
       type: z.enum(["avatar", "receipt"]),
     }),
   }),

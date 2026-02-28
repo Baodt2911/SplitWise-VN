@@ -12,9 +12,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Icon } from "./Icon";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { getThemeColors } from "../../utils/themeColors";
-import { useCategoryStore } from "../../store/categoryStore";
+import { useQuery } from "@tanstack/react-query";
 import { getCategoryIcon } from "../../constants/category.constants";
-import { ParentCategory } from "../../services/api/expense.api";
+import { getExpenseCategories } from "../../services/api/category.api";
+import { type ParentCategory } from "../../services/api/expense.api";
 
 interface CategorySelectorProps {
   isVisible: boolean;
@@ -132,16 +133,11 @@ export const CategorySelector = ({
   const { t } = useTranslation();
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const categories = useCategoryStore((state) => state.categories) || {};
-  const fetchCategories = useCategoryStore((state) => state.fetchCategories);
-  const isLoading = useCategoryStore((state) => state.isLoading);
-
-  // Fetch categories when modal opens if not already loaded
-  useEffect(() => {
-    if (isVisible) {
-      fetchCategories();
-    }
-  }, [isVisible, fetchCategories]);
+  const { data: categories = {}, isLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => getExpenseCategories(),
+    enabled: isVisible,
+  });
 
   // Transform grouped categories to SectionList format
   const sections: CategorySection[] = useMemo(() => {

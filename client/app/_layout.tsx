@@ -10,11 +10,12 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Alert } from "../src/components/ui/Alert";
 import { ToastContainer } from "../src/components/ui/Toast";
-import { useCategoryStore } from "../src/store/categoryStore";
 import { usePreferencesStore } from "../src/store/preferencesStore";
 import { getThemeColors } from "../src/utils/themeColors";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "../src/lib/queryClient";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,7 +67,13 @@ export default function RootLayout() {
       // Note: initializeAuth is called in index.tsx to ensure proper timing
 
       // Prefetch categories (cached if already exists)
-      useCategoryStore.getState().fetchCategories();
+      queryClient.prefetchQuery({
+        queryKey: ["categories"],
+        queryFn: () =>
+          import("../src/services/api/category.api").then((m) =>
+            m.getExpenseCategories(),
+          ),
+      });
     }
   }, [loaded]);
 
@@ -90,15 +97,17 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={screenOptions} />
-        <Alert />
-        <ToastContainer />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: colors.background }}
+      >
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={screenOptions} />
+          <Alert />
+          <ToastContainer />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

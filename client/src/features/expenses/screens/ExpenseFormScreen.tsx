@@ -18,7 +18,7 @@ import { getThemeColors } from "../../../utils/themeColors";
 import { uploadImage } from "../../../services/api/upload.api";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useAuthStore } from "../../../store/authStore";
-import { useCategoryStore } from "../../../store/categoryStore";
+import { getExpenseCategories } from "../../../services/api/category.api";
 import { Icon } from "../../../components/common/Icon";
 import { AmountInputWithKeypad } from "../../../components/common/AmountInputWithKeypad";
 import { AmountKeypadBottomSheet } from "../../../components/common/AmountKeypadBottomSheet";
@@ -38,7 +38,7 @@ import {
   type CreateExpenseFormData,
 } from "../schemas/expense.schema";
 import { useToast } from "../../../hooks/useToast";
-import { useGroupStore } from "../../../store/groupStore";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { CategorySelector } from "../../../components/common/CategorySelector";
 import { getCategoryIcon } from "../../../constants/category.constants";
@@ -74,17 +74,13 @@ export const ExpenseFormScreen = ({
   const colors = getThemeColors(theme);
   const user = useAuthStore((state) => state.user);
   const { success, error: showError } = useToast();
-  const getGroupDetailFromStore = useGroupStore(
-    (state) => state.getGroupDetail,
-  );
-  const setGroupDetail = useGroupStore((state) => state.setGroupDetail);
-
-  const groupFromStore = useGroupStore((state) =>
-    params.id ? state.groupDetails[params.id] : undefined,
-  );
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  const categories = useCategoryStore((state) => state.categories);
+  const { data: categories = {} } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => getExpenseCategories(),
+  });
 
   // Helper to find sub-category key
   const getSubCategoryKey = useCallback(
@@ -105,8 +101,6 @@ export const ExpenseFormScreen = ({
     [categories],
   );
 
-  const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -157,54 +151,22 @@ export const ExpenseFormScreen = ({
   const paidBy = watch("paidBy");
   const expenseDate = watch("expenseDate");
 
-  // Load group detail - check store first, only call API if not in store
-  useEffect(() => {
-    if (!params.id) {
-      showErrorRef.current("Không tìm thấy ID nhóm", "Lỗi");
-      router.back();
-      return;
-    }
+  const { data: groupData, isLoading } = useQuery({
+    queryKey: ["group", params.id],
+    queryFn: () => getGroupDetail(params.id!),
+    enabled: !!params.id,
+  });
 
-    // Check store first
-    const storedGroup = getGroupDetailFromStore(params.id);
-    if (storedGroup) {
-      // Use data from store, no API call needed
-      setGroup(storedGroup);
-      setIsLoading(false);
-      // Set default paidBy to current user (only when creating, not editing)
-      if (user?.id && !isEdit) {
+  const group = groupData?.group || null;
+
+  useEffect(() => {
+    if (user?.id && !isEdit && group) {
+      // Only set initial paidBy if it hasn't been modified yet
+      if (!paidBy) {
         setValue("paidBy", user.id);
       }
-    } else {
-      // Not in store, load from API
-      const loadGroup = async () => {
-        try {
-          setIsLoading(true);
-          const response = await getGroupDetail(params.id);
-          setGroup(response.group);
-          setGroupDetail(params.id, response.group);
-
-          // Set default paidBy to current user (only when creating, not editing)
-          if (user?.id && !isEdit) {
-            setValue("paidBy", user.id);
-          }
-        } catch (err: any) {
-          const errorMessage = err.message || "Không thể tải thông tin nhóm";
-          showErrorRef.current(errorMessage, "Lỗi");
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadGroup();
     }
-  }, [params.id, user?.id, setValue, getGroupDetailFromStore, setGroupDetail]);
-
-  // Update when store changes (e.g., after creating expense)
-  useEffect(() => {
-    if (groupFromStore && params.id) {
-      setGroup(groupFromStore);
-    }
-  }, [groupFromStore, params.id]);
+  }, [user?.id, isEdit, group, paidBy, setValue]);
 
   // Helper to populate form
   const populateForm = useCallback(
@@ -302,53 +264,26 @@ export const ExpenseFormScreen = ({
     [setValue],
   );
 
-  // Fetch expense details if isEdit
   const hasPopulatedRef = useRef(false);
 
+  const { data: expenseDetail } = useQuery({
+    queryKey: ["expense", params.id, finalExpenseId],
+    queryFn: async () => {
+      const expense = await getExpenseDetail(params.id!, finalExpenseId!);
+      if ("message" in expense && !("description" in expense)) {
+        throw new Error(expense.message);
+      }
+      return expense as CreateExpenseRequest;
+    },
+    enabled: !!isEdit && !!params.id && !!finalExpenseId,
+  });
+
   useEffect(() => {
-    if (!isEdit || !finalExpenseId || !params.id || !group) return;
-    if (hasPopulatedRef.current) return;
-
-    // Try to populate from store first
-    const storeGroup = useGroupStore.getState().getGroupDetail(params.id);
-    if (storeGroup?.expenses) {
-      const expenseFromStore = storeGroup.expenses.find(
-        (e: any) => e.id === finalExpenseId,
-      );
-      if (expenseFromStore) {
-        populateForm(expenseFromStore);
-        hasPopulatedRef.current = true;
-        return;
-      }
+    if (expenseDetail && !hasPopulatedRef.current) {
+      populateForm(expenseDetail);
+      hasPopulatedRef.current = true;
     }
-
-    const fetchExpense = async () => {
-      try {
-        const expense = await getExpenseDetail(params.id, finalExpenseId);
-
-        if ("message" in expense && !("description" in expense)) {
-          showErrorRef.current(expense.message, "Lỗi");
-          return;
-        }
-
-        const expenseData = expense as CreateExpenseRequest;
-        populateForm(expenseData);
-        hasPopulatedRef.current = true;
-
-        // Update store
-        useGroupStore
-          .getState()
-          .updateExpense(params.id, finalExpenseId, expenseData);
-      } catch (err: any) {
-        showErrorRef.current(
-          err.message || "Không thể tải chi tiết chi phí",
-          "Lỗi",
-        );
-      }
-    };
-
-    fetchExpense();
-  }, [isEdit, finalExpenseId, params.id, group, populateForm]);
+  }, [expenseDetail, populateForm]);
 
   // Get all members including current user
   const allMembers = useMemo(() => {
@@ -388,35 +323,38 @@ export const ExpenseFormScreen = ({
     }> = [];
 
     if (splitType === "equal") {
-      const perPerson = amountNum / selectedMembers.length;
+      // Use integer division — VND has no decimal cents
+      const perPerson = Math.round(amountNum / selectedMembers.length);
       selectedMembers.forEach((userId) => {
         splits.push({
           userId,
-          amount: perPerson.toFixed(2),
+          amount: perPerson.toString(),
         });
       });
     } else if (splitType === "exact") {
-      // Use exact amounts from state
+      // Use exact amounts from state — clean same way as the total amount
       selectedMembers.forEach((userId) => {
-        const exactAmount = exactAmounts[userId] || "0";
+        const rawAmount = exactAmounts[userId] || "0";
+        // Strip everything except digits (same as cleanAmount in onSubmit)
+        const cleanExact = rawAmount.replace(/[^\d]/g, "") || "0";
         splits.push({
           userId,
-          amount: exactAmount.replace(/,/g, ""),
+          amount: cleanExact,
         });
       });
     } else if (splitType === "percentage") {
-      // Calculate amounts from percentages
+      // Calculate amounts from percentages — round to nearest integer (VND)
       selectedMembers.forEach((userId) => {
         const percentage = parseFloat(percentages[userId] || "0");
-        const calculatedAmount = (amountNum * percentage) / 100;
+        const calculatedAmount = Math.round((amountNum * percentage) / 100);
         splits.push({
           userId,
           percentage: percentage.toFixed(2),
-          amount: calculatedAmount.toFixed(2),
+          amount: calculatedAmount.toString(),
         });
       });
     } else if (splitType === "shares") {
-      // Calculate amounts from shares
+      // Calculate amounts from shares — round to nearest integer (VND)
       const totalShares = selectedMembers.reduce((sum, userId) => {
         return sum + parseFloat(shares[userId] || "0");
       }, 0);
@@ -424,11 +362,13 @@ export const ExpenseFormScreen = ({
       if (totalShares > 0) {
         selectedMembers.forEach((userId) => {
           const userShares = parseFloat(shares[userId] || "0");
-          const calculatedAmount = (amountNum * userShares) / totalShares;
+          const calculatedAmount = Math.round(
+            (amountNum * userShares) / totalShares,
+          );
           splits.push({
             userId,
             shares: userShares.toFixed(2),
-            amount: calculatedAmount.toFixed(2),
+            amount: calculatedAmount.toString(),
           });
         });
       } else {
@@ -578,9 +518,12 @@ export const ExpenseFormScreen = ({
         const splitData: any = { userId: split.userId };
         if (splitType === "equal" || splitType === "exact") {
           const amountValue = split.amount || "0";
-          // Remove commas and ensure it's a valid number string
-          const cleanAmount = amountValue.toString().replace(/,/g, "").trim();
-          splitData.amount = cleanAmount || "0";
+          // Strip all non-digit characters (same as cleanAmount for the total)
+          const cleanSplitAmount = amountValue
+            .toString()
+            .replace(/[^\d]/g, "")
+            .trim();
+          splitData.amount = cleanSplitAmount || "0";
         } else if (splitType === "percentage") {
           const percentageValue = split.percentage || "0";
           splitData.percentage = percentageValue.toString().trim() || "0";
@@ -623,8 +566,8 @@ export const ExpenseFormScreen = ({
               name: `expense_${Date.now()}.jpg`,
               type: "image/jpeg",
             },
-            params.id,
             "receipt",
+            params.id,
           );
 
           if (uploadResult?.secure_url) {
@@ -662,26 +605,18 @@ export const ExpenseFormScreen = ({
       }
 
       if ("message" in result && result.message && !("field" in result)) {
-        // Update store
+        // Invalidate queries to refresh data and global state
+        queryClient.invalidateQueries({ queryKey: ["expenses", params.id] });
+        queryClient.invalidateQueries({ queryKey: ["group", params.id] });
+        queryClient.invalidateQueries({ queryKey: ["balances"] });
+        queryClient.invalidateQueries({ queryKey: ["groups"] });
+
         if (isEdit && finalExpenseId) {
-          // For update, we might need to refresh the list or update the specific item
-          // For now, let's just refresh the expenses list in the background or assume the user will pull to refresh
-          // Or better, update the specific item in the store if possible.
-          // Update the specific item in the store
-          if ("data" in result && result.data) {
-            useGroupStore
-              .getState()
-              .updateExpense(params.id, finalExpenseId, result.data);
-          } else {
-            // Fallback if no data returned, trigger refresh
-            useGroupStore.getState().triggerRefresh();
-          }
+          queryClient.invalidateQueries({
+            queryKey: ["expense", params.id, finalExpenseId],
+          });
           success("Cập nhật chi phí thành công");
         } else {
-          // Add new expense to store immediately
-          if ("data" in result && result.data) {
-            useGroupStore.getState().addExpense(params.id, result.data);
-          }
           success("Tạo chi phí thành công");
         }
 

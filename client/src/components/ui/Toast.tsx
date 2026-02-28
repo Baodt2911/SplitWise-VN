@@ -75,50 +75,48 @@ const ToastItem = ({
     <Animated.View className="mb-3" style={animatedStyle}>
       <Pressable
         onPress={handleHide}
-        className="rounded-xl py-5 px-3 min-w-[80%] max-w-[90%] min-h-8 max-h-32 shadow-md"
+        className="flex-row items-start rounded-xl py-4 px-3 min-w-[80%] max-w-[90%] shadow-md"
         style={{
           backgroundColor: colors.surface,
           borderLeftWidth: 4,
           borderLeftColor: toastColors.border,
         }}
       >
-        <View className="flex flex-row items-start">
-          <View
-            className="w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5"
-            style={{
-              backgroundColor: toastColors.bg + "20",
-            }}
+        {/* Icon circle */}
+        <View
+          className="w-7 h-7 rounded-full items-center justify-center mr-3 flex-shrink-0"
+          style={{
+            marginTop: toast.title ? 1 : 0,
+            backgroundColor: toastColors.bg + "20",
+          }}
+        >
+          <Text
+            className="text-sm font-medium"
+            style={{ color: toastColors.bg, lineHeight: 16 }}
           >
+            {toastColors.icon}
+          </Text>
+        </View>
+
+        {/* Text content */}
+        <View className="flex-1">
+          {toast.title && (
             <Text
-              className="text-sm font-normal"
-              style={{
-                color: toastColors.bg,
-              }}
+              className="text-base font-semibold mb-0.5"
+              style={{ color: colors.textPrimary }}
+              numberOfLines={3}
             >
-              {toastColors.icon}
+              {toast.title}
             </Text>
-          </View>
-          <View className="flex-1" style={{ flexShrink: 1, minHeight: 24 }}>
-            {toast.title && (
-              <Text
-                className="text-base mb-1.5 font-semibold"
-                style={{
-                  color: colors.textPrimary,
-                }}
-                numberOfLines={3}
-              >
-                {toast.title}
-              </Text>
-            )}
+          )}
+          {!!toast.message && (
             <Text
-              className="text-sm leading-5 font-medium"
-              style={{
-                color: colors.textSecondary,
-              }}
+              className="text-sm font-medium"
+              style={{ color: colors.textSecondary }}
             >
               {toast.message}
             </Text>
-          </View>
+          )}
         </View>
       </Pressable>
     </Animated.View>

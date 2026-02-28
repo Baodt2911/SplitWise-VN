@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -13,40 +19,84 @@ import { router } from "expo-router";
 import { Icon } from "../../../components/common/Icon";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { getThemeColors } from "../../../utils/themeColors";
-import { useNotificationStore } from "../../../store/notificationStore";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { NotificationItem } from "../components/NotificationItem";
 import {
   getRelatedRoute,
   flattenNotifications,
   type NotificationListItem,
 } from "../../../utils/notificationUtils";
+import {
+  getNotifications,
+  markRead,
+  markReadAll,
+} from "../../../services/api/notification.api";
 import type { Notification } from "../../../services/api/notification.api";
 
 export const NotificationsScreen: React.FC = () => {
   const { theme } = usePreferencesStore();
   const colors = getThemeColors(theme);
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    hasMore,
-    isLoadingMore,
-    fetchNotifications,
-    loadMoreNotifications,
-    markAsRead,
-    markAllAsRead,
-  } = useNotificationStore();
-
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage: isLoadingMore,
+    hasNextPage: hasMore,
+    fetchNextPage: loadMoreNotifications,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: ["notifications", "list"],
+    queryFn: async ({ pageParam = 1 }) => await getNotifications(pageParam, 10),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      // If exactly 10 items returned on the last page, there could be more
+      return lastPage.notifications.length === 10
+        ? allPages.length + 1
+        : undefined;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    refetchOnMount: false, // Prevent strict mode or cache double-fetches
+  });
+
+  const notifications = useMemo(() => {
+    return data?.pages.flatMap((page) => page.notifications) || [];
+  }, [data]);
+
+  const unreadCount = notifications.filter(
+    (n: Notification) => !n.isRead,
+  ).length;
+
+  // Handle Mark Read
+  const { mutateAsync: markAsRead } = useMutation({
+    mutationFn: markRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  // Handle Mark All Read
+  const { mutateAsync: markAllAsRead } = useMutation({
+    mutationFn: markReadAll,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchNotifications();
-    setRefreshing(false);
-  }, [fetchNotifications]);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const handleNotificationPress = useCallback(
     async (
@@ -248,18 +298,6 @@ export const NotificationsScreen: React.FC = () => {
     );
   }, [isLoading, colors]);
 
-  // Refresh control
-  const refreshControl = useMemo(
-    () => (
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        tintColor={colors.primary}
-      />
-    ),
-    [refreshing, handleRefresh, colors],
-  );
-
   return (
     <SafeAreaView
       className="flex-1"
@@ -307,7 +345,13 @@ export const NotificationsScreen: React.FC = () => {
           data={flatData}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          refreshControl={refreshControl}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
           ListHeaderComponent={renderListHeader}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
@@ -320,8 +364,9 @@ export const NotificationsScreen: React.FC = () => {
           updateCellsBatchingPeriod={50}
           removeClippedSubviews={true}
           contentContainerStyle={{
-            flexGrow: 1,
             paddingBottom: 20,
+            flexGrow: 1,
+            paddingTop: 8,
           }}
         />
       )}

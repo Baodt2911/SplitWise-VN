@@ -2,38 +2,12 @@
  * Reset all stores on logout
  * This ensures no data from the previous user persists
  */
-import { useGroupStore } from "./groupStore";
-import { useNotificationStore } from "./notificationStore";
-import { useUserActivityStore } from "./userActivityStore";
-import { useUserStore } from "./userStore";
+import { queryClient } from "../lib/queryClient";
 import { usePreferencesStore } from "./preferencesStore";
-import { useBalanceStatsStore } from "./balanceStatsStore";
 
 export const resetAllStores = () => {
-  // Reset group store
-  useGroupStore.getState().reset();
-
-  // Reset notification store - manually reset state
-  useNotificationStore.setState({
-    notifications: [],
-    unreadCount: 0,
-    isLoading: false,
-    currentPage: 1,
-    hasMore: true,
-    isLoadingMore: false,
-  });
-
-  // Reset user activity store
-  useUserActivityStore.getState().clearActivities();
-
-  // Reset user store
-  useUserStore.setState({
-    activities: [],
-    isLoadingActivities: false,
-  });
-
-  // Reset balance stats store
-  useBalanceStatsStore.getState().reset();
+  // Clear all React Query caches for server-state
+  queryClient.clear();
 
   console.log("[Stores] All stores have been reset");
 };

@@ -2,8 +2,9 @@ import React, { memo, useEffect } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { OverviewCard } from "./OverviewCard";
-import { ThemeColors } from "../../../utils/themeColors";
-import { useBalanceStatsStore } from "../../../store/balanceStatsStore";
+import { useQuery } from "@tanstack/react-query";
+import { getBalancesStats } from "../../../services/api/stats.api";
+import type { ThemeColors } from "../../../utils/themeColors";
 
 // Format currency VND
 function formatCurrency(amount: string | null): string {
@@ -22,11 +23,10 @@ interface HomeHeaderProps {
 }
 
 export const HomeHeader = memo(({ colors, hasGroups }: HomeHeaderProps) => {
-  const { data, fetchBalances } = useBalanceStatsStore();
-
-  useEffect(() => {
-    fetchBalances();
-  }, [fetchBalances]);
+  const { data } = useQuery({
+    queryKey: ["balances"],
+    queryFn: getBalancesStats,
+  });
 
   return (
     <View className="px-4 pt-4 pb-2">

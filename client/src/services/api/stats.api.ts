@@ -1,18 +1,43 @@
 import { apiClient } from "./config";
 
-export interface OverviewStats {
-  totalPaid: string;
-  totalReceived: string; // or totalDebt/Credit based on server response structure
-  totalExpenses: string;
-  // user_stats.route.ts -> getOverviewStatsController
-  // Assuming simple structure for now based on context
+export interface StatsOverviewSummary {
+  totalExpense: string;
+  totalReceived: string;
+  expenseChangePercent: string;
+  receivedChangePercent: string;
+}
+
+export interface CategoryBreakdownItem {
+  category: string;
+  amount: string;
+}
+
+export interface StatsOverviewTrend {
+  labels: string[];
+  expense: string[];
+  received: string[];
+}
+
+export interface StatsOverviewComparison {
+  percentHigherThanAverage: string;
+  topCategory: string;
+}
+
+export interface StatsOverview {
+  month: string;
+  monthLabel: string;
+  summary: StatsOverviewSummary;
+  categoryBreakdown: CategoryBreakdownItem[];
+  trend: StatsOverviewTrend;
+  comparison: StatsOverviewComparison;
 }
 
 export const getOverviewStats = async (
-  period: "week" | "month" | "year" = "month",
-): Promise<OverviewStats> => {
-  const response = await apiClient.get<OverviewStats>("/stats/me/overview", {
-    params: { period },
+  month?: number,
+  year?: number,
+): Promise<StatsOverview> => {
+  const response = await apiClient.get<StatsOverview>("/stats/me/overview", {
+    params: { month, year },
   });
   return response.data;
 };

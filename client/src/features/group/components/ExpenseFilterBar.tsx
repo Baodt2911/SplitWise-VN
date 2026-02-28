@@ -8,7 +8,8 @@ import {
   Pressable,
 } from "react-native";
 import { Icon } from "../../../components/common/Icon";
-import type { ExpenseFilters } from "../../../store/groupStore";
+import type { ExpenseFilters } from "../../../services/api/expense.api";
+import { getThemeColors } from "../../../utils/themeColors";
 import type { GroupMember } from "../../../services/api/group.api";
 
 interface FilterChipProps {
@@ -43,16 +44,17 @@ const FilterChip: React.FC<FilterChipProps> = ({
       {label}
     </Text>
     {isActive && onClear && (
-      <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation?.();
-          onClear();
-        }}
-        className="ml-1"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Icon name="x" size={14} color="#FFFFFF" />
-      </TouchableOpacity>
+      <View className="ml-1 pl-1">
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            onClear();
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon name="x" size={14} color="#FFFFFF" />
+        </Pressable>
+      </View>
     )}
     {!isActive && (
       <Icon

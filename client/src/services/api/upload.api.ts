@@ -53,8 +53,8 @@ const resizeImage = async (
 
 export const uploadImage = async (
   file: { uri: string; name?: string; type?: string },
-  groupId: string,
-  type: string,
+  type: "avatar" | "receipt",
+  groupId?: string,
   options?: {
     maxWidth?: number;
     maxHeight?: number;
@@ -72,13 +72,21 @@ export const uploadImage = async (
   );
 
   // Get signature
-  const { data } = await apiClient.post<SignatureResponse>(
-    "/cloudinary/signature",
-    {
-      groupId,
-      type,
-    },
-  );
+  const requestBody: { type: "avatar" | "receipt"; groupId?: string } = {
+    type,
+  };
+  if (groupId) {
+    requestBody.groupId = groupId;
+  }
+
+  // Server wraps payload as { message, data: { signature, params, apiKey, cloudName } }
+  // Axios also wraps the HTTP response in its own .data property,
+  // so the actual payload is at response.data.data
+  const signatureResponse = await apiClient.post<{
+    message: string;
+    data: SignatureResponse;
+  }>("/cloudinary/signature", requestBody);
+  const signatureData = signatureResponse.data.data;
 
   // File for React Native FormData with resized image
   formData.append("file", {
@@ -88,34 +96,45 @@ export const uploadImage = async (
   } as any);
 
   // Required fields
-  formData.append("api_key", data.apiKey);
-  formData.append("timestamp", data.params.timestamp.toString());
-  formData.append("signature", data.signature);
+  formData.append("api_key", signatureData.apiKey);
+  formData.append("timestamp", signatureData.params.timestamp.toString());
+  formData.append("signature", signatureData.signature);
 
   // Params signed by server (MUST match exactly)
-  Object.entries(data.params).forEach(([key, value]) => {
-    formData.append(key, value.toString());
+  Object.entries(signatureData.params).forEach(([key, value]) => {
+    formData.append(key, String(value));
   });
 
-  const dataUpload = await fetch(
-    `https://api.cloudinary.com/v1_1/${data.cloudName}/image/upload`,
-    {
-      method: "POST",
-      body: formData,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "multipart/form-data",
+  try {
+    const dataUpload = await fetch(
+      `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
+      {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
       },
-    },
-  );
+    );
 
-  return dataUpload.json();
+    if (!dataUpload.ok) {
+      const errorText = await dataUpload.text();
+      console.error("Cloudinary upload failed:", dataUpload.status, errorText);
+      throw new Error(`Cloudinary error: ${errorText}`);
+    }
+
+    return await dataUpload.json();
+  } catch (error) {
+    console.error("Upload API Exception:", error);
+    throw error;
+  }
 };
 
 export const deleteImage = async (
   publicId: string,
-  groupId: string,
   type: "avatar" | "receipt",
+  groupId?: string,
 ) => {
   const encodedPublicId = encodeURIComponent(publicId);
   return await apiClient.delete(`/cloudinary/delete/${encodedPublicId}`, {

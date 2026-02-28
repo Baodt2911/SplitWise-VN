@@ -20,9 +20,17 @@ import {
   type GroupDetail,
   type GroupBalance,
 } from "../../../services/api/group.api";
-import { getExpenses, deleteExpense } from "../../../services/api/expense.api";
+import {
+  getExpenses,
+  deleteExpense,
+  type ExpenseFilters,
+} from "../../../services/api/expense.api";
 import { useToast } from "../../../hooks/useToast";
-import { useGroupStore, type ExpenseFilters } from "../../../store/groupStore";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useAlertStore } from "../../../store/alertStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { ExpenseListItem } from "../components/ExpenseListItem";
@@ -38,90 +46,19 @@ export const GroupDetailScreen = () => {
   const colors = getThemeColors(theme);
   const { error: showError } = useToast();
 
-  // Get action functions
-  const {
-    getGroupDetail: getGroupDetailFromStore,
-    setGroupDetail,
-    setExpenses: setExpensesInStore,
-    appendExpenses: appendExpensesInStore,
-    getExpenseFilters,
-    setExpenseFilters,
-    resetExpenseFilters,
-    getExpensePagination,
-    setExpensePagination,
-    resetExpensePagination,
-    deleteExpense: deleteExpenseFromStore,
-    fetchGroup,
-    fetchExpenses,
-    loadMoreExpenses,
-  } = useGroupStore();
+  const queryClient = useQueryClient();
 
-  // Subscribe only to group detail for this specific group
-  const groupFromStore = useGroupStore((state) =>
-    params.id ? state.groupDetails[params.id] : undefined,
-  );
-
-  // Memoize filters and pagination to avoid recalculation on every render
-  const filters = useMemo(
-    () => (params.id ? getExpenseFilters(params.id) : {}),
-    [params.id, getExpenseFilters],
-  );
-
-  // Subscribe to pagination state
-  const paginationFromStore = useGroupStore((state) =>
-    params.id ? state.expensePagination[params.id] : undefined,
-  );
-
-  const pagination = useMemo(
-    () =>
-      paginationFromStore || {
-        page: 1,
-        pageSize: 10,
-        total: 0,
-        totalPages: 0,
-        hasMore: true,
-        isLoadingMore: false,
-      },
-    [paginationFromStore],
-  );
+  // Local state for filters since they don't need to be global
+  const [filters, setFilters] = useState<Partial<ExpenseFilters>>({
+    sort: "expenseDate",
+    order: "desc",
+  });
 
   // Date picker modal state
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const gradientColors: [string, string] = [colors.primary, colors.primaryDark];
-  // Derived state from store - sanitization
-  const group = useMemo(() => {
-    if (!groupFromStore) return null;
-    return {
-      ...groupFromStore,
-      members: Array.isArray(groupFromStore.members)
-        ? groupFromStore.members
-        : [],
-    };
-  }, [groupFromStore]);
-
-  const expenses = useMemo(
-    () => groupFromStore?.expenses || [],
-    [groupFromStore],
-  );
-
-  // Strict deduplication for FlatList
-  const deduplicatedExpenses = useMemo(() => {
-    const seenIds = new Set<string>();
-    return expenses.filter((item) => {
-      if (seenIds.has(item.id)) {
-        console.warn("Duplicate expense key detected:", item.id);
-        return false;
-      }
-      seenIds.add(item.id);
-      return true;
-    });
-  }, [expenses]);
-
-  // Loading state only for initial load when no data exists
-  const [initialLoading, setInitialLoading] = useState(!group);
-  const [loadingExpenses, setLoadingExpenses] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Use refs to avoid dependency issues
   const showErrorRef = useRef(showError);
@@ -131,47 +68,74 @@ export const GroupDetailScreen = () => {
   }, [showError]);
 
   // Fetch group detail
-  const fetchGroupData = useCallback(async () => {
-    if (!params.id) return;
-    try {
-      const currentGroup = getGroupDetailFromStore(params.id);
-      if (!currentGroup) setInitialLoading(true);
-      await getGroupDetail(params.id); // Call API directly or use a store action that calls API
-    } finally {
-      setInitialLoading(false);
-    }
-  }, [params.id, getGroupDetailFromStore]);
+  const { data: groupData, isLoading: initialLoading } = useQuery({
+    queryKey: ["group", params.id],
+    queryFn: () => getGroupDetail(params.id!),
+    enabled: !!params.id,
+  });
 
-  // Fetch expenses
-  const handleFetchExpenses = useCallback(async () => {
-    if (!params.id) return;
-    setLoadingExpenses(true);
-    await fetchExpenses(params.id);
-    setLoadingExpenses(false);
-  }, [params.id, fetchExpenses]);
+  const group = useMemo(() => {
+    if (!groupData?.group) return null;
+    return {
+      ...groupData.group,
+      members: Array.isArray(groupData.group.members)
+        ? groupData.group.members
+        : [],
+    };
+  }, [groupData]);
 
-  // Load more expenses
-  const handleLoadMore = useCallback(() => {
-    if (!params.id) return;
-    loadMoreExpenses(params.id);
-  }, [params.id, loadMoreExpenses]);
-
-  // Handle filter change - directly trigger refetch after updating filters
-  const handleFilterChange = useCallback(
-    async (newFilters: Partial<ExpenseFilters>) => {
-      if (!params.id) return;
-      setExpenseFilters(params.id, newFilters);
-      // Reset pagination handled in fetchExpenses
-
-      // Use setTimeout to ensure store is updated before fetching
-      setTimeout(() => {
-        handleFetchExpenses();
-      }, 0);
+  // Fetch expenses with infinite scrolling and filters
+  const {
+    data: expensesData,
+    isLoading: loadingExpenses,
+    isFetchingNextPage: paginationIsLoadingMore,
+    hasNextPage: paginationHasMore,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["expenses", params.id, filters],
+    queryFn: async ({ pageParam = 1 }) =>
+      await getExpenses(params.id!, {
+        ...filters,
+        page: pageParam,
+        pageSize: 10,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      // @ts-ignore Ignore type checking for server response struct
+      return lastPage.pagination &&
+        lastPage.pagination.page < lastPage.pagination.totalPages
+        ? // @ts-ignore
+          lastPage.pagination.page + 1
+        : undefined;
     },
-    [params.id, setExpenseFilters, handleFetchExpenses],
-  );
+    enabled: !!params.id,
+  });
 
-  // Note: No separate effect for filters - handleFilterChange triggers fetch directly
+  const expenses = useMemo(() => {
+    // @ts-ignore
+    return expensesData?.pages.flatMap((page) => page.expenses) || [];
+  }, [expensesData]);
+
+  // Strict deduplication for FlatList
+  const deduplicatedExpenses = useMemo(() => {
+    const seenIds = new Set<string>();
+    return expenses.filter((item: any) => {
+      if (seenIds.has(item.id)) {
+        return false;
+      }
+      seenIds.add(item.id);
+      return true;
+    });
+  }, [expenses]);
+
+  // Handle filter change
+  const handleFilterChange = useCallback(
+    (newFilters: Partial<ExpenseFilters>) => {
+      setFilters((prev) => ({ ...prev, ...newFilters }));
+    },
+    [],
+  );
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -183,24 +147,30 @@ export const GroupDetailScreen = () => {
     return count;
   }, [filters]);
 
-  // Initial load
+  // Initial load checks
   useEffect(() => {
     if (!params.id) {
       showErrorRef.current("Không tìm thấy ID nhóm", "Lỗi");
       router.back();
-      return;
     }
-    fetchGroup(params.id);
-    fetchExpenses(params.id);
-  }, [params.id, fetchGroup, fetchExpenses]);
+  }, [params.id]);
 
-  // Handle refresh - Only fetch expenses as requested
+  // Handle load more
+  const handleLoadMore = useCallback(() => {
+    if (paginationHasMore && !paginationIsLoadingMore && !refreshing) {
+      fetchNextPage();
+    }
+  }, [paginationHasMore, paginationIsLoadingMore, refreshing, fetchNextPage]);
+
+  // Handle refresh
   const handleRefresh = useCallback(async () => {
     if (!params.id) return;
     setRefreshing(true);
-    await fetchExpenses(params.id);
+    // Invalidate everything to refresh properly
+    await queryClient.invalidateQueries({ queryKey: ["group", params.id] });
+    await queryClient.invalidateQueries({ queryKey: ["expenses", params.id] });
     setRefreshing(false);
-  }, [params.id, fetchExpenses]);
+  }, [params.id, queryClient]);
 
   // Format date - convert UTC to Vietnam timezone
   // Format date - convert UTC to Vietnam timezone
@@ -245,27 +215,32 @@ export const GroupDetailScreen = () => {
           onPress: async () => {
             if (!params.id) return;
             try {
-              // Optimistic update
-              deleteExpenseFromStore(params.id, expenseId);
-
               const result = await deleteExpense(params.id, expenseId);
               if (result.message && !result.message.includes("thành công")) {
-                // Revert or show error if failed (for now just show error)
                 showErrorRef.current(result.message, "Lỗi");
-                fetchExpenses(params.id); // Refresh to revert
+              } else {
+                // Success: invalidate
+                queryClient.invalidateQueries({
+                  queryKey: ["expenses", params.id],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["group", params.id],
+                });
+                // Also invalidate global balances if any
+                queryClient.invalidateQueries({ queryKey: ["balances"] });
+                queryClient.invalidateQueries({ queryKey: ["groups"] });
               }
             } catch (err: any) {
               showErrorRef.current(
                 err.message || "Không thể xóa chi phí",
                 "Lỗi",
               );
-              fetchExpenses(params.id); // Refresh to revert
             }
           },
         },
       ]);
     },
-    [params.id, deleteExpenseFromStore, fetchExpenses, showAlert],
+    [params.id, queryClient, showAlert],
   );
 
   // Handle balance press - navigate to payment screen
@@ -494,7 +469,7 @@ export const GroupDetailScreen = () => {
             keyExtractor={(item) => item.id}
             ListHeaderComponent={renderListHeader}
             ListEmptyComponent={
-              !loadingExpenses ? (
+              !loadingExpenses && !initialLoading ? (
                 <View className="flex-1 mt-6 px-4">
                   <Text
                     className="text-base text-center font-normal mt-10"
@@ -529,21 +504,20 @@ export const GroupDetailScreen = () => {
               ) : null
             }
             ListFooterComponent={
-              pagination.isLoadingMore ? (
+              paginationIsLoadingMore ? (
                 <View className="py-4 items-center">
                   <ActivityIndicator size="small" color={colors.primary} />
                 </View>
-              ) : pagination.hasMore && deduplicatedExpenses.length >= 10 ? (
+              ) : paginationHasMore && deduplicatedExpenses.length >= 10 ? (
                 <View className="py-4 items-center">
                   <Text style={{ color: colors.textSecondary }}>
                     Kéo xuống để tải thêm
                   </Text>
                 </View>
-              ) : deduplicatedExpenses.length > 0 && !pagination.hasMore ? (
+              ) : deduplicatedExpenses.length > 0 && !paginationHasMore ? (
                 <View className="py-4 items-center">
                   <Text style={{ color: colors.textSecondary }}>
-                    Đã hiển thị tất cả{" "}
-                    {pagination.total || deduplicatedExpenses.length} chi phí
+                    Đã hiển thị tất cả {deduplicatedExpenses.length} chi phí
                   </Text>
                 </View>
               ) : null

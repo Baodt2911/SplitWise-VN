@@ -1,19 +1,39 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from "react";
-import { Text, View, TouchableOpacity, Image, ScrollView, Switch, ActivityIndicator } from "react-native";
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Switch,
+  ActivityIndicator,
+} from "react-native";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as ImagePicker from "expo-image-picker";
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetView,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 import { LinearGradient } from "expo-linear-gradient";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { TextInput } from "../../../features/auth/components/TextInput";
 import { Icon } from "../Icon";
-import { createGroupSchema, type CreateGroupFormData } from "../../../features/home/schemas/group.schema";
-import { createGroup, updateGroup, type ApiError, type CreateGroupResponse } from "../../../services/api/group.api";
+import {
+  createGroupSchema,
+  type CreateGroupFormData,
+} from "../../../features/home/schemas/group.schema";
+import {
+  createGroup,
+  updateGroup,
+  type ApiError,
+  type CreateGroupResponse,
+} from "../../../services/api/group.api";
 import { uploadImage } from "../../../services/api/upload.api";
 import { useToast } from "../../../hooks/useToast";
-import { useGroupStore } from "../../../store/groupStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CreateGroupBottomSheetProps {
   isOpen: boolean;
@@ -24,6 +44,7 @@ export const CreateGroupBottomSheet = ({
   isOpen,
   onClose,
 }: CreateGroupBottomSheetProps) => {
+  const queryClient = useQueryClient();
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -45,7 +66,14 @@ export const CreateGroupBottomSheet = ({
     mode: "onBlur",
   });
 
-  const { handleSubmit, watch, setValue, setError, reset: resetForm, formState: { isSubmitting } } = methods;
+  const {
+    handleSubmit,
+    watch,
+    setValue,
+    setError,
+    reset: resetForm,
+    formState: { isSubmitting },
+  } = methods;
   const isPublic = watch("isPublic");
 
   // Reset form when sheet closes
@@ -56,11 +84,14 @@ export const CreateGroupBottomSheet = ({
     }
   }, [isOpen, methods]);
 
-  const handleSheetChanges = useCallback((index: number) => {
-    if (index === -1) {
-      onClose();
-    }
-  }, [onClose]);
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   // Open/close sheet based on isOpen prop
   useEffect(() => {
@@ -81,7 +112,7 @@ export const CreateGroupBottomSheet = ({
         enableTouchThrough={false}
       />
     ),
-    []
+    [],
   );
 
   const pickImage = async () => {
@@ -104,10 +135,8 @@ export const CreateGroupBottomSheet = ({
     }
   };
 
-
   const onSubmit = async (data: CreateGroupFormData) => {
     try {
-
       // 1. Create Group first
       const result = await createGroup({
         name: data.name,
@@ -120,7 +149,7 @@ export const CreateGroupBottomSheet = ({
       if ("field" in result) {
         const apiError = result as ApiError;
         showError(apiError.message, "Lỗi");
-        
+
         // Set error to form field if field is specified
         if (apiError.field) {
           setError(apiError.field as keyof CreateGroupFormData, {
@@ -138,31 +167,35 @@ export const CreateGroupBottomSheet = ({
       if (imageUri && finalGroupData?.id) {
         try {
           const uploadResult = await uploadImage(
-            { uri: imageUri, name: `group_${finalGroupData.id}_avatar.jpg`, type: 'image/jpeg' },
+            {
+              uri: imageUri,
+              name: `group_${finalGroupData.id}_avatar.jpg`,
+              type: "image/jpeg",
+            },
+            "avatar",
             finalGroupData.id,
-            'avatar'
           );
-          
+
           if (uploadResult?.secure_url) {
             // 3. Update group with avatar URL
             const updateResult = await updateGroup(finalGroupData.id, {
-               avatarUrl: uploadResult.secure_url
+              avatarUrl: uploadResult.secure_url,
             });
-            
+
             if (!("field" in updateResult)) {
-                 // Type assertion/check optimization might be needed here depending on exact return type of updateGroup
-                 // Assuming it returns { data: GroupDetail } or similar, but updateGroup returns UpdateGroupResponse | ApiError
-                 // UpdateGroupResponse has data: GroupDetail
-                 const updateSuccess = updateResult as any; // Using any to bypass strict type check for now if needed, or proper casting
-                 if(updateSuccess.data) {
-                    // Merge properties. GroupDetail has more fields than Group, but we just want to update avatarUrl in store
-                    // The store expects Group (from getGroups). 
-                    // Let's just update the avatarUrl in finalGroupData
-                    finalGroupData = {
-                        ...finalGroupData,
-                        avatarUrl: uploadResult.secure_url
-                    };
-                 }
+              // Type assertion/check optimization might be needed here depending on exact return type of updateGroup
+              // Assuming it returns { data: GroupDetail } or similar, but updateGroup returns UpdateGroupResponse | ApiError
+              // UpdateGroupResponse has data: GroupDetail
+              const updateSuccess = updateResult as any; // Using any to bypass strict type check for now if needed, or proper casting
+              if (updateSuccess.data) {
+                // Merge properties. GroupDetail has more fields than Group, but we just want to update avatarUrl in store
+                // The store expects Group (from getGroups).
+                // Let's just update the avatarUrl in finalGroupData
+                finalGroupData = {
+                  ...finalGroupData,
+                  avatarUrl: uploadResult.secure_url,
+                };
+              }
             }
           }
         } catch (uploadError) {
@@ -172,21 +205,13 @@ export const CreateGroupBottomSheet = ({
         }
       }
 
-      // Success - add new group to store directly (no need to refetch)
+      // Success - Invalidate groups query to refetch from server via React Query
       if (finalGroupData) {
-        const { prependGroup } = useGroupStore.getState();
-        prependGroup({
-          ...finalGroupData,
-          memberCount: 1,
-          expenseCount: 0,
-          peopleOweYou: [],
-          totalPeopleOweYou: "",
-          yourDebts: "",
-        });
+        queryClient.invalidateQueries({ queryKey: ["groups"] });
       }
-      
+
       success(successResult.message, "Thành công");
-      
+
       // Reset form and close
       resetForm();
       setImageUri(null);
@@ -258,20 +283,20 @@ export const CreateGroupBottomSheet = ({
               {t.avatar}
             </Text>
             {imageUri ? (
-                <View
-                  className="w-20 h-20 rounded-full overflow-hidden"
-                  style={{
-                    backgroundColor: colors.background,
-                  }}
-                >
-                  <TouchableOpacity onPress={pickImage}>
+              <View
+                className="w-20 h-20 rounded-full overflow-hidden"
+                style={{
+                  backgroundColor: colors.background,
+                }}
+              >
+                <TouchableOpacity onPress={pickImage}>
                   <Image
                     source={{ uri: imageUri }}
                     className="w-full h-full rounded-full"
                     resizeMode="cover"
                   />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
+              </View>
             ) : (
               <TouchableOpacity
                 onPress={pickImage}
@@ -395,4 +420,3 @@ export const CreateGroupBottomSheet = ({
     </BottomSheet>
   );
 };
-

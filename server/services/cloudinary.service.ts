@@ -1,13 +1,16 @@
+import { StatusCodes } from "http-status-codes";
 import { cloudinary } from "../configs";
 import { checkGroupAdmin, checkGroupMember } from "../middlewares";
 
 export const cloudinarySignatureService = async (
   userId: string,
-  groupId: string,
   type: "avatar" | "receipt",
+  groupId?: string,
 ) => {
   const timestamp = Math.floor(Date.now() / 1000);
-  await checkGroupMember(userId, groupId);
+  if (groupId) {
+    await checkGroupMember(userId, groupId);
+  }
 
   if (!process.env.CLOUDINARY_API_SECRET) {
     throw new Error("CLOUDINARY_API_SECRET chưa được cấu hình");
@@ -17,13 +20,19 @@ export const cloudinarySignatureService = async (
   if (type === "avatar") {
     paramsToSign = {
       timestamp,
-      folder: `groups/${groupId}`,
+      folder: groupId ? `groups/${groupId}` : `users/${userId}`,
       public_id: "avatar",
       overwrite: true,
     };
   }
 
   if (type === "receipt") {
+    if (!groupId) {
+      throw {
+        status: StatusCodes.BAD_REQUEST,
+        message: "groupId is required",
+      };
+    }
     paramsToSign = {
       timestamp,
       folder: `groups/${groupId}/receipts`,
@@ -48,16 +57,19 @@ export const cloudinarySignatureService = async (
 
 export const cloudinaryDeleteService = async (
   userId: string,
-  groupId: string,
+  groupId: string | undefined,
   public_id: string,
   type: "avatar" | "receipt",
 ) => {
-  if (type === "avatar") {
+  if (type === "avatar" && groupId) {
+    // Only check group admin if deleting a group avatar
     await checkGroupAdmin(userId, groupId);
   }
   if (type === "receipt") {
+    if (!groupId)
+      throw { status: 400, message: "groupId is required for receipts" };
     await checkGroupMember(userId, groupId);
   }
-   await cloudinary.uploader.destroy(public_id);
+  await cloudinary.uploader.destroy(public_id);
   return true;
 };

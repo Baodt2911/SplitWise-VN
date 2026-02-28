@@ -14,8 +14,11 @@ import { Icon } from "../../../components/common/Icon";
 import { OverviewCard } from "../../home/components/OverviewCard";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { getThemeColors } from "../../../utils/themeColors";
-import { useBalanceStatsStore } from "../../../store/balanceStatsStore";
-import type { BalanceDetail } from "../../../services/api/stats.api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getBalancesStats,
+  type BalanceDetail,
+} from "../../../services/api/stats.api";
 
 // Format currency VND
 function formatCurrency(amount: string | null): string {
@@ -109,18 +112,16 @@ export const BalanceOverviewScreen: React.FC = () => {
   const {
     data,
     isLoading,
-    isRefreshing: refreshing,
-    fetchBalances,
-    refreshBalances,
-  } = useBalanceStatsStore();
-
-  useEffect(() => {
-    fetchBalances();
-  }, [fetchBalances]);
+    isRefetching: refreshing,
+    refetch,
+  } = useQuery({
+    queryKey: ["balances"],
+    queryFn: getBalancesStats,
+  });
 
   const handleRefresh = useCallback(async () => {
-    await refreshBalances();
-  }, [refreshBalances]);
+    await refetch();
+  }, [refetch]);
 
   const handleItemPress = useCallback((item: BalanceDetail) => {
     router.push(`/group/${item.groupId}` as any);

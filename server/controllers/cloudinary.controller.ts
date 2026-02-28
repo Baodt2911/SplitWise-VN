@@ -8,14 +8,15 @@ import {
 
 export const cloudinarySignatureController = catchAsync(
   async (
-    req: Request<{}, {}, { groupId: string; type: "avatar" | "receipt" }>,
+    req: Request<{}, {}, { groupId?: string; type: "avatar" | "receipt" }>,
     res: Response,
   ) => {
     const userId = req.user?.userId;
     const { groupId, type } = req.body;
-    const data = await cloudinarySignatureService(userId!, groupId, type);
+    const data = await cloudinarySignatureService(userId!, type, groupId);
     res.status(StatusCodes.OK).json({
-      ...data,
+      message: "Lấy thông tin Cloudinary thành công",
+      data,
     });
   },
 );

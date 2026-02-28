@@ -39,28 +39,22 @@ import {
 } from "../../../services/api/group.api";
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
-import { useGroupStore } from "../../../store/groupStore";
 import * as Clipboard from "expo-clipboard";
 import { uploadImage, deleteImage } from "../../../services/api/upload.api";
 import { MemberListItem } from "../components/MemberListItem";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 export const GroupSettingsScreen = () => {
+  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ id: string }>();
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
   const currentUser = useAuthStore((state) => state.user);
   const { error: showError, success: showSuccess } = useToast();
   const { alert } = useAlert();
-  const getGroupDetailFromStore = useGroupStore(
-    (state) => state.getGroupDetail,
-  );
-  const setGroupDetail = useGroupStore((state) => state.setGroupDetail);
-  const groupFromStore = useGroupStore((state) =>
-    params.id ? state.groupDetails[params.id] : undefined,
-  );
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [allowMemberEdit, setAllowMemberEdit] = useState(false);
   const [requirePaymentConfirmation, setRequirePaymentConfirmation] =
@@ -96,124 +90,44 @@ export const GroupSettingsScreen = () => {
     showSuccessRef.current = showSuccess;
   }, [showError, showSuccess]);
 
-  // Load group detail - check store first, only call API if forceRefresh or not in store
-  const loadGroupDetail = useCallback(
-    async (forceRefresh = false) => {
-      if (!params.id) {
-        showErrorRef.current("Không tìm thấy ID nhóm", "Lỗi");
-        router.back();
-        return;
-      }
+  // Fetch group data using React Query
+  const {
+    data: groupData,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["group", params.id],
+    queryFn: () => getGroupDetail(params.id!),
+    enabled: !!params.id,
+  });
 
-      // Check store first if not forcing refresh
-      if (!forceRefresh) {
-        const storedGroup = getGroupDetailFromStore(params.id);
-        if (storedGroup) {
-          // Use data from store, no API call needed
-          const safeStored = {
-            ...storedGroup,
-            members: Array.isArray(storedGroup.members)
-              ? storedGroup.members
-              : [],
-          };
-          setGroup(safeStored);
-          setIsPublic(safeStored.isPublic);
-          setAllowMemberEdit(safeStored.allowMemberEdit);
-          setRequirePaymentConfirmation(safeStored.requirePaymentConfirmation);
-          setAutoReminderEnabled(safeStored.autoReminderEnabled);
-          setIsLoading(false);
-          return; // Exit early, no API call
-        }
-      }
-
-      // Not in store or force refresh, load from API
-      try {
-        setIsLoading(true);
-        const response = await getGroupDetail(params.id);
-        const safeGroup = {
-          ...response.group,
-          members: Array.isArray(response.group.members)
-            ? response.group.members
-            : [],
-        };
-        setGroup(safeGroup);
-        setIsPublic(safeGroup.isPublic);
-        setAllowMemberEdit(response.group.allowMemberEdit);
-        setRequirePaymentConfirmation(
-          response.group.requirePaymentConfirmation,
-        );
-        setAutoReminderEnabled(response.group.autoReminderEnabled);
-        setAllowMemberDirectAdd(response.group.allowMemberDirectAdd);
-        setReminderDays(response.group.reminderDays);
-        setTempReminderDays(String(response.group.reminderDays));
-        // Save to store
-        setGroupDetail(params.id, safeGroup);
-      } catch (err: any) {
-        const errorMessage = err.message || "Không thể tải thông tin nhóm";
-        showErrorRef.current(errorMessage, "Lỗi");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [params.id, setGroupDetail, getGroupDetailFromStore],
-  );
-
-  // Initial load - check store first, only call API if not in store
+  // Sync data to local state when loaded
   useEffect(() => {
-    if (params.id) {
-      const storedGroup = getGroupDetailFromStore(params.id);
-      if (storedGroup) {
-        // Use data from store, no API call needed
-        const safeStored = {
-          ...storedGroup,
-          members: Array.isArray(storedGroup.members)
-            ? storedGroup.members
-            : [],
-        };
-        setGroup(safeStored);
-        setIsPublic(safeStored.isPublic);
-        setAllowMemberEdit(safeStored.allowMemberEdit);
-        setRequirePaymentConfirmation(safeStored.requirePaymentConfirmation);
-        setAutoReminderEnabled(safeStored.autoReminderEnabled);
-        setAllowMemberDirectAdd(safeStored.allowMemberDirectAdd);
-        setReminderDays(safeStored.reminderDays);
-        setTempReminderDays(String(safeStored.reminderDays));
-        setIsLoading(false);
-      } else {
-        // Not in store, load from API
-        loadGroupDetail();
-      }
-    }
-  }, [params.id, getGroupDetailFromStore, loadGroupDetail]);
-
-  // Update when store changes
-  useEffect(() => {
-    if (groupFromStore) {
+    if (groupData?.group) {
       const safeStored = {
-        ...groupFromStore,
-        members: Array.isArray(groupFromStore.members)
-          ? groupFromStore.members
+        ...groupData.group,
+        members: Array.isArray(groupData.group.members)
+          ? groupData.group.members
           : [],
       };
       setGroup(safeStored);
       setIsPublic(safeStored.isPublic);
-      setAllowMemberEdit(groupFromStore.allowMemberEdit);
-      setRequirePaymentConfirmation(groupFromStore.requirePaymentConfirmation);
-      setAutoReminderEnabled(groupFromStore.autoReminderEnabled);
-      setAllowMemberDirectAdd(groupFromStore.allowMemberDirectAdd);
-      setReminderDays(groupFromStore.reminderDays);
-      setTempReminderDays(String(groupFromStore.reminderDays));
+      setAllowMemberEdit(safeStored.allowMemberEdit);
+      setRequirePaymentConfirmation(safeStored.requirePaymentConfirmation);
+      setAutoReminderEnabled(safeStored.autoReminderEnabled);
+      setAllowMemberDirectAdd(safeStored.allowMemberDirectAdd);
+      setReminderDays(safeStored.reminderDays);
+      setTempReminderDays(String(safeStored.reminderDays));
     }
-  }, [groupFromStore]);
+  }, [groupData]);
 
-  // Get member initials - only first letter
   // Get member initials - first letter of last word
-  const getMemberInitials = useCallback((name: string) => {
+  const getMemberInitials = useCallback((name: string | undefined | null) => {
+    if (!name || typeof name !== "string") return "?";
     const trimmedName = name.trim();
     if (trimmedName.length === 0) return "?";
     const words = trimmedName.split(/\s+/).filter((word) => word.length > 0);
     if (words.length === 0) return "?";
-    // Get first letter of last word
     const lastWord = words[words.length - 1];
     return lastWord[0].toUpperCase();
   }, []);
@@ -304,8 +218,8 @@ export const GroupSettingsScreen = () => {
             name: `group_${group.id}_avatar.jpg`,
             type: "image/jpeg",
           },
-          group.id,
           "avatar",
+          group.id,
         );
 
         if (uploadResult?.secure_url) {
@@ -357,44 +271,60 @@ export const GroupSettingsScreen = () => {
       if (Object.keys(changes).length > 0) {
         console.log("=== Updating group with changes ===");
         console.log("Changes:", JSON.stringify(changes, null, 2));
+        const updatedFields = { ...changes };
+        if (newAvatarUrl) {
+          updatedFields.avatarUrl = newAvatarUrl;
+        } else if (
+          infoState.avatarUrl !== (group.avatarUrl || "") &&
+          !infoState.avatarUrl.startsWith("file://")
+        ) {
+          updatedFields.avatarUrl = infoState.avatarUrl;
+        } else if (infoState.avatarUrl === "" && group.avatarUrl) {
+          // If avatar is cleared
+          updatedFields.avatarUrl = null;
+          if (group.avatarUrl.includes("cloudinary.com")) {
+            const urlParts = group.avatarUrl.split("/");
+            const fileWithExt = urlParts[urlParts.length - 1];
+            const publicIdParts = urlParts.slice(
+              urlParts.indexOf("upload") + 2,
+              -1,
+            );
+            const fileName = fileWithExt.split(".")[0];
+            oldPublicId = [...publicIdParts, fileName].join("/");
+          }
+        }
 
-        const result = await updateGroup(group.id, changes);
-
-        console.log("=== Update result ===");
-        console.log("Result:", JSON.stringify(result, null, 2));
-
-        if ("data" in result) {
-          const mergedGroup = {
-            ...group,
-            ...result.data,
-            members: group.members,
-          };
+        setIsUpdating(true);
+        const result = await updateGroup(group.id, updatedFields);
+        if ("message" in result && ("data" in result || !("field" in result))) {
           console.log("Update successful! Setting group detail...");
-          setGroupDetail(group.id, mergedGroup);
+          queryClient.invalidateQueries({ queryKey: ["group", params.id] });
 
           // 4. Delete old image after successful update
           if (oldPublicId) {
-            console.log("Deleting old image, public_id:", oldPublicId);
             try {
-              await deleteImage(oldPublicId, group.id, "avatar");
-              console.log("Old image deleted successfully");
-            } catch (deleteError) {
-              console.error("Failed to delete old avatar:", deleteError);
+              console.log("Deleting old image:", oldPublicId);
+              await deleteImage(oldPublicId, "avatar", group.id);
+            } catch (delErr) {
+              console.log("Failed to delete old image (ignoring):", delErr);
             }
           }
-        } else if ("message" in result) {
-          console.error("Update failed:", result.message);
-          showErrorRef.current(result.message, "Lỗi");
-          return;
+
+          showSuccessRef.current("Đã cập nhật thông tin nhóm", "Thành công");
+        } else {
+          showErrorRef.current(
+            (result as any).message || "Không thể cập nhật nhóm",
+            "Lỗi",
+          );
         }
       } else {
         console.log("No changes to update");
       }
-
       setIsEditingInfo(false);
     } catch (err: any) {
-      console.error("Save group info error:", err);
-      showErrorRef.current(err.message || "Lỗi", "Lỗi");
+      showErrorRef.current(err.message || "Đã có lỗi xảy ra", "Lỗi");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -406,13 +336,8 @@ export const GroupSettingsScreen = () => {
       const result = await updateGroup(group.id, { [field]: value });
       // Check if result has data (success)
       if ("data" in result) {
-        // Update store with merged data (preserve members/expenses as API might not return them)
-        const mergedGroup = {
-          ...group,
-          ...result.data,
-          members: group.members, // Explicitly preserve members
-        };
-        setGroupDetail(group.id, mergedGroup);
+        queryClient.invalidateQueries({ queryKey: ["group", params.id] });
+        showSuccessRef.current("Cập nhật cài đặt thành công", "Thành công");
       } else if ("message" in result) {
         // Error case
         showErrorRef.current(result.message, "Lỗi");
@@ -454,11 +379,13 @@ export const GroupSettingsScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              setIsLoading(true);
               const result = await leaveGroup(group.id);
               if ("message" in result && !("field" in result)) {
                 showSuccessRef.current("Đã rời nhóm thành công", "Thành công");
-                useGroupStore.getState().removeGroup(group.id);
+                queryClient.invalidateQueries({ queryKey: ["groups"] });
+                queryClient.invalidateQueries({
+                  queryKey: ["group", params.id],
+                });
                 router.replace("/(tabs)/home");
               } else {
                 throw new Error(
@@ -467,8 +394,6 @@ export const GroupSettingsScreen = () => {
               }
             } catch (err: any) {
               showErrorRef.current(err.message || "Không thể rời nhóm", "Lỗi");
-            } finally {
-              setIsLoading(false);
             }
           },
         },
@@ -490,11 +415,13 @@ export const GroupSettingsScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              setIsLoading(true);
               const result = await deleteGroup(group.id);
               if ("message" in result && !("field" in result)) {
                 showSuccessRef.current("Đã xóa nhóm thành công", "Thành công");
-                useGroupStore.getState().removeGroup(group.id);
+                queryClient.invalidateQueries({ queryKey: ["groups"] });
+                queryClient.invalidateQueries({
+                  queryKey: ["group", params.id],
+                });
                 router.replace("/(tabs)/home");
               } else {
                 throw new Error(
@@ -503,8 +430,6 @@ export const GroupSettingsScreen = () => {
               }
             } catch (err: any) {
               showErrorRef.current(err.message || "Không thể xóa nhóm", "Lỗi");
-            } finally {
-              setIsLoading(false);
             }
           },
         },
@@ -550,11 +475,10 @@ export const GroupSettingsScreen = () => {
 
       if ("message" in result && !("field" in result)) {
         showSuccessRef.current("Đã thêm thành viên thành công", "Thành công");
+        queryClient.invalidateQueries({ queryKey: ["group", params.id] });
         setInputValue("");
         setShowAddMemberModal(false);
         addMemberSheetRef.current?.close();
-        // Refresh group details
-        await loadGroupDetail(true);
       } else {
         throw new Error((result as any).message || "Không thể thêm thành viên");
       }
@@ -579,15 +503,16 @@ export const GroupSettingsScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              setIsLoading(true);
+              setIsUpdating(true);
               const result = await removeMember(group.id, memberId);
               if ("message" in result && !("field" in result)) {
                 showSuccessRef.current(
                   "Đã xóa thành viên thành công",
                   "Thành công",
                 );
-                // Refresh group details
-                await loadGroupDetail(true);
+                queryClient.invalidateQueries({
+                  queryKey: ["group", params.id],
+                });
               } else {
                 throw new Error(
                   (result as any).message || "Không thể xóa thành viên",
@@ -599,7 +524,7 @@ export const GroupSettingsScreen = () => {
                 "Lỗi",
               );
             } finally {
-              setIsLoading(false);
+              setIsUpdating(false);
             }
           },
         },
@@ -648,7 +573,15 @@ export const GroupSettingsScreen = () => {
         </View>
       );
     },
-    [currentUser, isAdmin, colors, handleRemoveMember],
+    [
+      currentUser,
+      isAdmin,
+      colors,
+      handleRemoveMember,
+      getMemberInitials,
+      getMemberAvatarColor,
+      getMemberTextColor,
+    ],
   );
 
   const renderHeader = useMemo(() => {
@@ -1339,7 +1272,6 @@ export const GroupSettingsScreen = () => {
           data={group.members}
           renderItem={renderMemberItem}
           keyExtractor={(item: GroupMember) => item.id}
-
           ListHeaderComponent={renderHeader}
           ListFooterComponent={renderFooter}
           contentContainerStyle={{ paddingBottom: 20 }}

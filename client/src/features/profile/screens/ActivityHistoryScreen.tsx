@@ -12,7 +12,8 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
-import { useUserActivityStore } from "../../../store/userActivityStore";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { getUserActivities } from "../../../services/api/activity.api";
 import { Icon } from "../../../components/common/Icon";
 import { ActivityItem } from "../components/ActivityItem";
 import { groupActivitiesByDate } from "../../../utils/activityUtils";
@@ -28,21 +29,34 @@ export const ActivityHistoryScreen: React.FC = () => {
   const { theme } = usePreferencesStore();
   const colors = getThemeColors(theme);
   const {
-    activities,
+    data,
     isLoading,
-    hasMore,
-    isLoadingMore,
-    fetchActivities,
-    loadMoreActivities,
-  } = useUserActivityStore();
-
-  useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+    isFetchingNextPage: isLoadingMore,
+    hasNextPage: hasMore,
+    fetchNextPage: loadMoreActivities,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: ["activities", "user"],
+    queryFn: async ({ pageParam = 1 }) =>
+      await getUserActivities(pageParam, 10),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      // If the last page returned exactly 10 items, there might be more
+      return lastPage.activities.length === 10
+        ? allPages.length + 1
+        : undefined;
+    },
+  });
 
   const handleRefresh = useCallback(async () => {
-    await fetchActivities();
-  }, [fetchActivities]);
+    await refetch();
+  }, [refetch]);
+
+  // Transform grouped data into SectionList format
+  const activities = useMemo(() => {
+    return data?.pages.flatMap((page) => page.activities) || [];
+  }, [data]);
 
   // Transform grouped data into SectionList format
   const sections: ActivitySection[] = useMemo(() => {
@@ -164,12 +178,12 @@ export const ActivityHistoryScreen: React.FC = () => {
   const refreshControl = useMemo(
     () => (
       <RefreshControl
-        refreshing={isLoading && activities.length > 0}
+        refreshing={isRefetching}
         onRefresh={handleRefresh}
         tintColor={colors.primary}
       />
     ),
-    [isLoading, activities.length, handleRefresh, colors],
+    [isRefetching, handleRefresh, colors],
   );
 
   return (

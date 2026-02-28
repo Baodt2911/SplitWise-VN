@@ -1,0 +1,3 @@
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/dfe46e81-d177-429f-a95c-0c69bb26d966","status":404,"timestamp":"2026-02-28T17:46:59.653Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/1ef591e5-15bd-4441-a8b7-cb084e3f994b","status":404,"timestamp":"2026-02-28T17:47:50.615Z"}
+{"level":"error","message":"groupId is required","method":"POST","path":"/api/v1/cloudinary/signature","status":400,"timestamp":"2026-02-28T17:51:03.710Z"}

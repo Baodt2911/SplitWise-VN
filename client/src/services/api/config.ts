@@ -5,7 +5,7 @@ import * as SecureStore from "expo-secure-store";
 // Get API URL - use 10.0.2.2 for Android emulator, localhost for iOS simulator
 const API_BASE_URL = __DEV__
   ? Platform.OS === "android"
-    ? "https://21ea-42-114-186-204.ngrok-free.app/api/v1"
+    ? "https://c270-42-114-33-42.ngrok-free.app/api/v1"
     : "http://localhost:3000/api/v1"
   : "https://api.yourdomain.com/api/v1";
 // 10.0.2.2:3000

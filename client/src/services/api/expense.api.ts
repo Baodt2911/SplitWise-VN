@@ -1,4 +1,5 @@
 import { apiClient } from "./config";
+import type { GroupExpense } from "./group.api";
 
 export type ParentCategory =
   | "FOOD"
@@ -54,8 +55,10 @@ export interface GetExpensesParams {
   order?: "asc" | "desc";
 }
 
+export type ExpenseFilters = Omit<GetExpensesParams, "page" | "pageSize">;
+
 export interface GetExpensesResponse {
-  expenses: CreateExpenseRequest[]; // Simplified, usually server returns detailed object with ID etc.
+  expenses: GroupExpense[];
   pagination: {
     page: number;
     pageSize: number;
@@ -67,7 +70,7 @@ export interface GetExpensesResponse {
 export const getExpenses = async (
   groupId: string,
   params: GetExpensesParams,
-): Promise<GetExpensesResponse | ApiError> => {
+): Promise<GetExpensesResponse> => {
   try {
     // Serialize Date objects to ISO strings for API
     const serializedParams = {
@@ -87,7 +90,7 @@ export const getExpenses = async (
     }
     const errorMessage =
       error.response?.data?.message || "Không thể tải danh sách chi phí";
-    return { message: errorMessage };
+    throw new Error(errorMessage);
   }
 };
 

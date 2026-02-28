@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ScrollView,
   Text,
@@ -19,6 +20,8 @@ import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import { ThemeModal } from "../components/ThemeModal";
 import { unregisterPushTokenApi } from "../../../services/notifications";
+import { uploadImage, deleteImage } from "../../../services/api/upload.api";
+import { updateProfile } from "../../../services/api/user.api";
 
 export const ProfileScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
@@ -28,6 +31,7 @@ export const ProfileScreen = () => {
   const { success, error } = useToast();
   const { alert } = useAlert();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -35,11 +39,6 @@ export const ProfileScreen = () => {
   const bankAccount = {
     bankName: "Vietcombank",
     accountNumber: "1234567890",
-  };
-
-  const statistics = {
-    totalSpent: 2450000,
-    totalReceived: 1820000,
   };
 
   const formatPhoneNumber = (phone: string) => {
@@ -58,6 +57,85 @@ export const ProfileScreen = () => {
       style: "currency",
       currency: "VND",
     }).format(amount);
+  };
+
+  const handlePickAvatar = async () => {
+    try {
+      // Request permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        error("Bạn cần cấp quyền truy cập ảnh để đổi ảnh đại diện");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await handleUploadAvatar(result.assets[0].uri);
+      }
+    } catch (err) {
+      error("Không thể mở thư viện ảnh");
+    }
+  };
+
+  const handleUploadAvatar = async (uri: string) => {
+    setIsUploadingAvatar(true);
+    try {
+      const filename = uri.split("/").pop();
+      const match = /\.(\w+)$/.exec(filename || "");
+      const type = match ? `image/${match[1]}` : `image`;
+
+      const currentUser = useAuthStore.getState().user;
+
+      // Delete old avatar from Cloudinary if exists
+      const oldAvatarUrl = currentUser?.avatarUrl;
+      if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary")) {
+        // Extract public_id: everything after /upload/v{version}/ up to the extension
+        const match = oldAvatarUrl.match(
+          /\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/,
+        );
+        if (match?.[1]) {
+          deleteImage(match[1], "avatar").catch(() => {
+            // Ignore deletion errors — image may already be gone
+          });
+        }
+      }
+
+      // Upload to cloudinary
+      const uploadResult = await uploadImage(
+        { uri, name: filename, type },
+        "avatar",
+      );
+
+      const newAvatarUrl = uploadResult.secure_url;
+
+      if (currentUser) {
+        useAuthStore.setState({
+          user: { ...currentUser, avatarUrl: newAvatarUrl },
+        });
+      }
+
+      // Sync with server in background
+      updateProfile({ avatarUrl: newAvatarUrl }).catch(() => {
+        // Rollback on failure
+        if (currentUser) {
+          useAuthStore.setState({ user: currentUser });
+        }
+        error("Không thể lưu ảnh đại diện lên server");
+      });
+
+      success("Cập nhật ảnh đại diện thành công");
+    } catch (err: any) {
+      error(err.message || "Lỗi khi tải ảnh lên");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const performLogout = async () => {
@@ -167,7 +245,9 @@ export const ProfileScreen = () => {
               className="w-24 h-24 rounded-full items-center justify-center overflow-hidden"
               style={{ backgroundColor: colors.imageBackground }}
             >
-              {user?.avatarUrl ? (
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : user?.avatarUrl ? (
                 <Image
                   source={{ uri: user.avatarUrl }}
                   className="w-full h-full"
@@ -180,6 +260,8 @@ export const ProfileScreen = () => {
             <TouchableOpacity
               className="absolute bottom-0 right-0 w-8 h-8 rounded-full items-center justify-center"
               style={{ backgroundColor: colors.primary }}
+              onPress={handlePickAvatar}
+              disabled={isUploadingAvatar}
             >
               <Icon name="edit" size={16} color="#FFFFFF" />
             </TouchableOpacity>
@@ -257,71 +339,6 @@ export const ProfileScreen = () => {
                   Sửa
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Statistics Section */}
-          <View className="mb-6">
-            <View className="flex-row items-center mb-3">
-              <Text
-                className="text-xl font-extrabold"
-                style={{
-                  color: colors.textPrimary,
-                }}
-              >
-                Thống kê
-              </Text>
-            </View>
-            <View className="flex-row gap-3">
-              {/* Total Spent Card */}
-              <View
-                className="flex-1 rounded-2xl px-4 py-4 shadow-sm"
-                style={{
-                  backgroundColor: colors.background,
-                }}
-              >
-                <Text
-                  className="text-xs mb-2 font-normal"
-                  style={{
-                    color: colors.textSecondary,
-                  }}
-                >
-                  Tổng chi
-                </Text>
-                <Text
-                  className="text-lg font-bold"
-                  style={{
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {formatCurrency(statistics.totalSpent)}
-                </Text>
-              </View>
-
-              {/* Total Received Card */}
-              <View
-                className="flex-1 rounded-2xl px-4 py-4 shadow-sm"
-                style={{
-                  backgroundColor: colors.background,
-                }}
-              >
-                <Text
-                  className="text-xs mb-2 font-normal"
-                  style={{
-                    color: colors.textSecondary,
-                  }}
-                >
-                  Tổng nhận
-                </Text>
-                <Text
-                  className="text-lg font-bold"
-                  style={{
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {formatCurrency(statistics.totalReceived)}
-                </Text>
-              </View>
             </View>
           </View>
 

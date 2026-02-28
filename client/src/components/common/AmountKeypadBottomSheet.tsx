@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { View, BackHandler, Pressable } from "react-native";
-import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetView,
+  BottomSheetBackdrop,
+} from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getThemeColors } from "../../utils/themeColors";
 import { usePreferencesStore } from "../../store/preferencesStore";
@@ -53,26 +56,32 @@ export const AmountKeypadBottomSheet = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      onClose();
-      return true; // Prevent default back behavior
-    });
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        onClose();
+        return true; // Prevent default back behavior
+      },
+    );
 
     return () => backHandler.remove();
   }, [isOpen, onClose]);
 
   // Calculate result from expression
   const calculateResult = useCallback((expression: string): string => {
-    if (!expression || typeof expression !== "string" || expression.trim() === "") return "";
+    if (
+      !expression ||
+      typeof expression !== "string" ||
+      expression.trim() === ""
+    )
+      return "";
 
     try {
       // Remove commas (dấu phẩy) - chỉ giữ dấu chấm cho thập phân
       let processed = expression.replace(/,/g, "");
-      
+
       // Replace operators with JavaScript operators
-      processed = processed
-        .replace(/×/g, "*")
-        .replace(/÷/g, "/");
+      processed = processed.replace(/×/g, "*").replace(/÷/g, "/");
 
       // Validate expression format - allow numbers, operators, and decimal points (no commas)
       if (!/^[\d.+\-*/]+$/.test(processed)) {
@@ -118,7 +127,7 @@ export const AmountKeypadBottomSheet = ({
 
       // Use eval as fallback, but with validation
       const result = eval(processed);
-      
+
       if (typeof result !== "number" || isNaN(result) || !isFinite(result)) {
         return expression; // Return original if invalid result
       }
@@ -141,7 +150,7 @@ export const AmountKeypadBottomSheet = ({
   // When there's an operator, check each number part separately
   const isValidDecimal = useCallback((value: string): boolean => {
     if (!value.includes(".")) return true;
-    
+
     // If value contains operators, check each number part separately
     if (/[+\-×÷]/.test(value)) {
       // Split by operators but keep operators
@@ -157,7 +166,7 @@ export const AmountKeypadBottomSheet = ({
       }
       return true;
     }
-    
+
     // Single number - check decimal part
     const parts = value.split(".");
     if (parts.length !== 2) return true;
@@ -167,148 +176,90 @@ export const AmountKeypadBottomSheet = ({
   const handleKeyPress = useCallback(
     (key: string) => {
       if (key === "=") {
-        // Calculate result, don't close keypad
-        setInternalAmount((prev) => {
-          const result = calculateResult(prev);
-          onChange(result);
-          return result;
-        });
+        const result = calculateResult(internalAmount);
+        setInternalAmount(result);
+        onChange(result);
         return;
       }
 
-      setInternalAmount((prev) => {
-        let newValue = prev;
+      let prev = internalAmount;
+      let newValue = prev;
 
-        if (key === "AC" || key === "C") {
-          // All Clear - reset to empty
-          newValue = "";
-        } else if (key === "del") {
-          // Delete last character
-          newValue = prev.slice(0, -1);
-        } else if (key === "000") {
-          // Add triple zero (only if not in decimal part of current number)
-          // Check only the current number part (after last operator)
-          const lastOperatorIndex = Math.max(
-            prev.lastIndexOf("+"),
-            prev.lastIndexOf("-"),
-            prev.lastIndexOf("×"),
-            prev.lastIndexOf("÷")
-          );
-          let currentNumber = lastOperatorIndex >= 0 
-            ? prev.slice(lastOperatorIndex + 1) 
-            : prev;
-          
-          // Remove commas before checking (commas are only for display)
-          currentNumber = currentNumber.replace(/,/g, "");
-          
-          // Can't add 000 if current number has decimal point
-          if (currentNumber.includes(".")) {
-            return prev;
-          }
-          
-          // Not in decimal part, add 000
-          // Check max length - allow more for expressions
-          const maxAllowed = /[+\-×÷]/.test(prev) ? maxLength * 2 : maxLength;
-          if (prev.length + 3 > maxAllowed) return prev;
-          newValue = prev ? prev + "000" : "000";
-        } else if (key === ".") {
-          // Add decimal point (if not already present in current number)
-          // Check only the current number part (after last operator)
-          const lastOperatorIndex = Math.max(
-            prev.lastIndexOf("+"),
-            prev.lastIndexOf("-"),
-            prev.lastIndexOf("×"),
-            prev.lastIndexOf("÷")
-          );
-          let currentNumber = lastOperatorIndex >= 0 
-            ? prev.slice(lastOperatorIndex + 1) 
-            : prev;
-          
-          // Remove commas before checking (commas are only for display)
-          currentNumber = currentNumber.replace(/,/g, "");
-          
-          // Can't add decimal point if current number already has one
-          if (currentNumber.includes(".")) {
-            return prev;
-          }
-          
-          // Check if last character is an operator
-          const lastChar = prev.slice(-1);
-          if (["÷", "×", "-", "+"].includes(lastChar)) {
-            newValue = prev + "0."; // Add 0. after operator
-          } else if (prev === "" || prev === "0") {
-            newValue = "0.";
-          } else {
-            newValue = prev + ".";
-          }
-        } else if (["÷", "×", "-", "+"].includes(key)) {
-          // Operators - replace trailing operator or append
-          const lastChar = prev.slice(-1);
-          if (["÷", "×", "-", "+", "."].includes(lastChar)) {
-            // Remove trailing operator or decimal point before adding new operator
-            newValue = prev.slice(0, -1) + key;
-          } else if (prev === "") {
-            // Can't start with operator
-            return prev;
-          } else {
-            newValue = prev + key;
-          }
+      if (key === "AC" || key === "C") {
+        newValue = "";
+      } else if (key === "del") {
+        newValue = prev.slice(0, -1);
+      } else if (key === "000") {
+        const lastOperatorIndex = Math.max(
+          prev.lastIndexOf("+"),
+          prev.lastIndexOf("-"),
+          prev.lastIndexOf("×"),
+          prev.lastIndexOf("÷"),
+        );
+        let currentNumber =
+          lastOperatorIndex >= 0 ? prev.slice(lastOperatorIndex + 1) : prev;
+        currentNumber = currentNumber.replace(/,/g, "");
+        if (currentNumber.includes(".")) return;
+        const maxAllowed = /[+\-×÷]/.test(prev) ? maxLength * 2 : maxLength;
+        if (prev.length + 3 > maxAllowed) return;
+        newValue = prev ? prev + "000" : "000";
+      } else if (key === ".") {
+        const lastOperatorIndex = Math.max(
+          prev.lastIndexOf("+"),
+          prev.lastIndexOf("-"),
+          prev.lastIndexOf("×"),
+          prev.lastIndexOf("÷"),
+        );
+        let currentNumber =
+          lastOperatorIndex >= 0 ? prev.slice(lastOperatorIndex + 1) : prev;
+        currentNumber = currentNumber.replace(/,/g, "");
+        if (currentNumber.includes(".")) return;
+        const lastChar = prev.slice(-1);
+        if (["÷", "×", "-", "+"].includes(lastChar)) {
+          newValue = prev + "0.";
+        } else if (prev === "" || prev === "0") {
+          newValue = "0.";
         } else {
-          // Regular number key
-          // Check if we're in decimal part of the current number (after last operator)
-          const lastOperatorIndex = Math.max(
-            prev.lastIndexOf("+"),
-            prev.lastIndexOf("-"),
-            prev.lastIndexOf("×"),
-            prev.lastIndexOf("÷")
-          );
-          const currentNumber = lastOperatorIndex >= 0 
-            ? prev.slice(lastOperatorIndex + 1) 
-            : prev;
-          
-          if (currentNumber.includes(".")) {
-            const decimalParts = currentNumber.split(".");
-            if (decimalParts.length === 2 && decimalParts[1].length >= 2) {
-              // Max 2 decimal places for current number
-              return prev;
-            }
-          }
-
-          // Check max length - only check if no operators (single number)
-          // For expressions with operators, allow longer input
-          if (!/[+\-×÷]/.test(prev) && prev.length >= maxLength) {
-            return prev;
-          }
-          // For expressions, check total length but allow more
-          if (prev.length >= maxLength * 2) {
-            return prev;
-          }
-
-          // Handle leading zero
-          if (prev === "0" && key !== "0") {
-            newValue = key;
-          } else if (prev === "" || /[+\-×÷]/.test(prev.slice(-1))) {
-            // Start new number after operator
-            newValue = prev + key;
-          } else {
-            newValue = prev + key;
-          }
+          newValue = prev + ".";
         }
-
-        // Validate decimal format
-        if (newValue && !isValidDecimal(newValue)) {
-          return prev; // Don't update if invalid decimal
+      } else if (["÷", "×", "-", "+"].includes(key)) {
+        const lastChar = prev.slice(-1);
+        if (["÷", "×", "-", "+", "."].includes(lastChar)) {
+          newValue = prev.slice(0, -1) + key;
+        } else if (prev === "") {
+          return;
+        } else {
+          newValue = prev + key;
         }
+      } else {
+        const lastOperatorIndex = Math.max(
+          prev.lastIndexOf("+"),
+          prev.lastIndexOf("-"),
+          prev.lastIndexOf("×"),
+          prev.lastIndexOf("÷"),
+        );
+        const currentNumber =
+          lastOperatorIndex >= 0 ? prev.slice(lastOperatorIndex + 1) : prev;
+        if (currentNumber.includes(".")) {
+          const decimalParts = currentNumber.split(".");
+          if (decimalParts.length === 2 && decimalParts[1].length >= 2) return;
+        }
+        if (!/[+\-×÷]/.test(prev) && prev.length >= maxLength) return;
+        if (prev.length >= maxLength * 2) return;
+        if (prev === "0" && key !== "0") {
+          newValue = key;
+        } else {
+          newValue = prev + key;
+        }
+      }
 
-        // Remove commas (dấu phẩy) before saving to state - only keep decimal point
-        const cleanedValue = newValue.replace(/,/g, "");
+      if (newValue && !isValidDecimal(newValue)) return;
 
-        // Update parent component immediately
-        onChange(cleanedValue);
-        return cleanedValue;
-      });
+      const cleanedValue = newValue.replace(/,/g, "");
+      setInternalAmount(cleanedValue);
+      onChange(cleanedValue);
     },
-    [onChange, maxLength, calculateResult, isValidDecimal]
+    [internalAmount, onChange, maxLength, calculateResult, isValidDecimal],
   );
 
   const handleSheetChanges = useCallback(
@@ -318,7 +269,7 @@ export const AmountKeypadBottomSheet = ({
         onClose();
       }
     },
-    [onClose]
+    [onClose],
   );
 
   // Don't render BottomSheet at all if not open
@@ -327,22 +278,22 @@ export const AmountKeypadBottomSheet = ({
   }
 
   return (
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={0}
-        snapPoints={snapPoints}
-        onChange={handleSheetChanges}
-        enablePanDownToClose
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.border }}
-        animateOnMount={true}
-        enableDynamicSizing={false}
-        enableOverDrag={false}
-      >
+    <BottomSheet
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={snapPoints}
+      onChange={handleSheetChanges}
+      enablePanDownToClose
+      backgroundStyle={{ backgroundColor: colors.background }}
+      handleIndicatorStyle={{ backgroundColor: colors.border }}
+      animateOnMount={true}
+      enableDynamicSizing={false}
+      enableOverDrag={false}
+    >
       <BottomSheetView style={{ flex: 1 }}>
         {/* Keypad */}
-        <MoneyKeypad 
-          onKeyPress={handleKeyPress} 
+        <MoneyKeypad
+          onKeyPress={handleKeyPress}
           hasOperator={/[\÷×\-\+]/.test(internalAmount)}
         />
 
@@ -352,4 +303,3 @@ export const AmountKeypadBottomSheet = ({
     </BottomSheet>
   );
 };
-

@@ -19,10 +19,10 @@ export const getNotifications = async (
   page: number = 1,
   pageSize: number = 10,
 ): Promise<GetNotificationsResponse> => {
+  console.log(`📡 Fetching notifications: page=${page}, pageSize=${pageSize}`);
   const response = await apiClient.get<GetNotificationsResponse>(
     `/users/notifications?page=${page}&pageSize=${pageSize}`,
   );
-  // console.log('📡 Notification IDs:', response.data.notifications.map((n: any) => n.id));
   return response.data;
 };
 

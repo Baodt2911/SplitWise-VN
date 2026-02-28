@@ -20,9 +20,10 @@ import "dayjs/locale/vi";
 import { Icon } from "../../../components/common/Icon";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { getThemeColors } from "../../../utils/themeColors";
-import { useGroupStore } from "../../../store/groupStore";
 import { useAuthStore } from "../../../store/authStore";
 import { getExpenseDetail } from "../../../services/api/expense.api";
+import { getGroupDetail } from "../../../services/api/group.api";
+import { useQuery } from "@tanstack/react-query";
 import { getCategoryIcon } from "../../../constants/category.constants";
 import {
   getMemberInitials,
@@ -37,42 +38,31 @@ export const ExpenseDetailScreen = () => {
   const colors = getThemeColors(theme);
   const user = useAuthStore((state) => state.user);
 
-  const group = useGroupStore((state) =>
-    params.id ? state.groupDetails[params.id] : undefined,
-  );
+  const { data: groupData } = useQuery({
+    queryKey: ["group", params.id],
+    queryFn: () => getGroupDetail(params.id!),
+    enabled: !!params.id,
+  });
 
-  const storeExpense = useMemo(() => {
-    if (!group?.expenses) return null;
-    return group.expenses.find((e: any) => e.id === params.expenseId);
-  }, [group, params.expenseId]);
+  const group = groupData?.group;
 
-  const [fetchedExpense, setFetchedExpense] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const { data: expense, isLoading } = useQuery({
+    queryKey: ["expense", params.id, params.expenseId],
+    queryFn: async () => {
+      const res = await getExpenseDetail(params.id!, params.expenseId!);
+      // Server wraps response as { expense: {...} }, check for error first
+      if ("message" in res && !("expense" in (res as any))) {
+        throw new Error((res as any).message);
+      }
+      // Unwrap the expense from the server response
+      return (res as any).expense ?? (res as any);
+    },
+    enabled: !!params.id && !!params.expenseId,
+  });
+
   const [comment, setComment] = useState("");
 
-  // Fetch expense if not in store
-  React.useEffect(() => {
-    if (!storeExpense && params.id && params.expenseId) {
-      const fetchExpense = async () => {
-        try {
-          setLoading(true);
-          const res = await getExpenseDetail(params.id, params.expenseId);
-          if (!("message" in res)) {
-            setFetchedExpense(res);
-          }
-        } catch (error) {
-          console.error("Failed to fetch expense detail", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchExpense();
-    }
-  }, [storeExpense, params.id, params.expenseId]);
-
-  const expense = storeExpense || fetchedExpense;
-
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView
         className="flex-1"
@@ -273,73 +263,79 @@ export const ExpenseDetailScreen = () => {
             </View>
           </View>
 
-          {/* Split Details Card */}
-          <View
-            className="rounded-xl p-5 mb-4 shadow-sm"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <View className="flex-row items-center gap-2 mb-4">
-              <Icon name="pieChart" size={20} color={colors.textSecondary} />
-              <Text
-                className="text-base font-bold"
-                style={{ color: colors.textPrimary }}
-              >
-                Chia cho {expense.splits.length} người (
-                {expense.splitType === "EQUAL" ? "đều" : "khác"})
-              </Text>
-            </View>
+          {/* Split Details Card — only show when there are actual splits */}
+          {expense.splits?.length > 0 && (
+            <View
+              className="rounded-xl p-5 mb-4 shadow-sm"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <View className="flex-row items-center gap-2 mb-4">
+                <Icon name="pieChart" size={20} color={colors.textSecondary} />
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Chia cho {expense.splits.length} người (
+                  {expense.splitType === "EQUAL" ? "đều" : "khác"})
+                </Text>
+              </View>
 
-            <View className="gap-3">
-              {expense.splits.map((split: any) => {
-                const memberInfo = getMemberInfo(split.userId);
-                return (
-                  <View
-                    key={split.id}
-                    className="flex-row items-center justify-between"
-                  >
-                    <View className="flex-row items-center gap-3">
-                      {memberInfo.avatarUrl ? (
-                        <Image
-                          source={{ uri: memberInfo.avatarUrl }}
-                          className="w-10 h-10 rounded-full"
-                        />
-                      ) : (
-                        <View
-                          className="w-10 h-10 rounded-full items-center justify-center"
-                          style={{
-                            backgroundColor: getMemberAvatarColor(split.userId),
-                          }}
-                        >
-                          <Text
-                            className="font-bold"
-                            style={{ color: getMemberTextColor(split.userId) }}
+              <View className="gap-3">
+                {expense.splits.map((split: any) => {
+                  const memberInfo = getMemberInfo(split.userId);
+                  return (
+                    <View
+                      key={split.id}
+                      className="flex-row items-center justify-between"
+                    >
+                      <View className="flex-row items-center gap-3">
+                        {memberInfo.avatarUrl ? (
+                          <Image
+                            source={{ uri: memberInfo.avatarUrl }}
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          <View
+                            className="w-10 h-10 rounded-full items-center justify-center"
+                            style={{
+                              backgroundColor: getMemberAvatarColor(
+                                split.userId,
+                              ),
+                            }}
                           >
-                            {getMemberInitials(memberInfo.fullName)}
-                          </Text>
-                        </View>
-                      )}
-                      <Text
-                        className="font-medium"
-                        style={{ color: colors.textPrimary }}
-                      >
-                        {memberInfo.fullName}
-                      </Text>
+                            <Text
+                              className="font-bold"
+                              style={{
+                                color: getMemberTextColor(split.userId),
+                              }}
+                            >
+                              {getMemberInitials(memberInfo.fullName)}
+                            </Text>
+                          </View>
+                        )}
+                        <Text
+                          className="font-medium"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          {memberInfo.fullName}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-2">
+                        <Text
+                          className="font-semibold"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          {formatCurrency(split.amount)}
+                        </Text>
+                        {/* Assuming everyone is included/checked for now */}
+                        <Icon name="check" size={20} color="#22C55E" />
+                      </View>
                     </View>
-                    <View className="flex-row items-center gap-2">
-                      <Text
-                        className="font-semibold"
-                        style={{ color: colors.textPrimary }}
-                      >
-                        {formatCurrency(split.amount)}
-                      </Text>
-                      {/* Assuming everyone is included/checked for now */}
-                      <Icon name="check" size={20} color="#22C55E" />
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Receipt Card */}
           {expense.receiptUrl && (

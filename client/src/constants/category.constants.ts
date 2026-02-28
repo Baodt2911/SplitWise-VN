@@ -70,7 +70,7 @@ export const CATEGORY_ICONS: Record<string, string> = {
   // OTHER
   fees: "receipt",
   other_expenses: "help-circle",
-  
+
   // Parent Categories
   FOOD: "silverware-fork-knife",
   TRANSPORT: "car",
@@ -90,4 +90,36 @@ export const CATEGORY_ICONS: Record<string, string> = {
 
 export const getCategoryIcon = (iconKey: string): string => {
   return CATEGORY_ICONS[iconKey] || CATEGORY_ICONS.default;
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  FOOD: "Ăn uống",
+  TRANSPORT: "Di chuyển",
+  ENTERTAINMENT: "Giải trí",
+  HOUSING: "Nhà ở",
+  TRAVEL: "Du lịch",
+  SHOPPING: "Mua sắm",
+  HEALTH: "Sức khỏe",
+  EDUCATION: "Giáo dục",
+  PETS: "Thú cưng",
+  GIFTS: "Quà tặng",
+  OTHER: "Khác",
+};
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  FOOD: "#FF6B35",
+  TRANSPORT: "#FFB800",
+  ENTERTAINMENT: "#41AE8F",
+  HOUSING: "#506EF7",
+  TRAVEL: "#E53935",
+  SHOPPING: "#9C27B0",
+  HEALTH: "#00BCD4",
+  EDUCATION: "#795548",
+  PETS: "#FF9800",
+  GIFTS: "#E91E63",
+  OTHER: "#607D8B",
+};
+
+export const getCategoryLabel = (category: string): string => {
+  return CATEGORY_LABELS[category] || category;
 };

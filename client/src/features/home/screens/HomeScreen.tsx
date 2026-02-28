@@ -18,47 +18,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useShallow } from "zustand/react/shallow";
-import axios from "axios";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { GroupCard } from "../components/GroupCard";
 import { Icon } from "../../../components/common/Icon";
-import { useGroupStore } from "../../../store/groupStore";
-import { useNotificationStore } from "../../../store/notificationStore";
+import {
+  getNotifications,
+  type Notification,
+} from "../../../services/api/notification.api";
 import { getGroups } from "../../../services/api/group.api";
 import { HomeHeader } from "../components/HomeHeader";
 import { HomeTopBar } from "../components/HomeTopBar";
+
 export const HomeScreen = React.memo(() => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = useMemo(() => getThemeColors(theme), [theme]);
 
-  const unreadCount = useNotificationStore((state) => state.unreadCount);
-  const fetchNotifications = useNotificationStore(
-    (state) => state.fetchNotifications,
-  );
+  const { data: notificationData, refetch: refetchNotifications } = useQuery({
+    queryKey: ["notifications", "summary"],
+    queryFn: () => getNotifications(1, 10),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    refetchOnMount: false,
+  });
 
-  const groups = useGroupStore((state) => state.groups);
-  const { isLoadingMore, hasMore, currentPage, pageSize, refreshTrigger } =
-    useGroupStore(
-      useShallow((state) => ({
-        isLoadingMore: state.isLoadingMore,
-        hasMore: state.hasMore,
-        currentPage: state.currentPage,
-        pageSize: state.pageSize,
-        refreshTrigger: state.refreshTrigger,
-      })),
-    );
-
-  const addGroups = useGroupStore((state) => state.addGroups);
-  const setGroupsBatch = useGroupStore((state) => state.setGroupsBatch);
+  const unreadCount =
+    notificationData?.notifications?.filter((n: Notification) => !n.isRead)
+      .length || 0;
 
   const [refreshing, setRefreshing] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
   const isInitialLoadRef = useRef(true);
-  const isInitialLoading = groups.length === 0;
 
   const containerStyle = useMemo(
     () => ({ backgroundColor: colors.background }),
@@ -70,87 +62,48 @@ export const HomeScreen = React.memo(() => {
     [],
   );
 
-  const loadGroups = useCallback(
-    async (page: number, isLoadMore = false) => {
-      try {
-        const response = await getGroups({ page, pageSize });
-
-        if (page === 1) {
-          setGroupsBatch({
-            groups: response.groups,
-            hasMore: response.groups.length === pageSize,
-            currentPage: page,
-            isLoading: false,
-            isLoadingMore: false,
-          });
-        } else {
-          const updatedGroups = [...groups, ...response.groups];
-          setGroupsBatch({
-            groups: updatedGroups,
-            hasMore: response.groups.length === pageSize,
-            currentPage: page,
-            isLoading: false,
-            isLoadingMore: false,
-          });
-        }
-      } catch (err: any) {
-        const isCancelled =
-          axios.isCancel(err) ||
-          err?.__CANCEL__ === true ||
-          err?.message?.includes("logging out") ||
-          err?.message?.includes("cancelled");
-
-        if (isCancelled) {
-          console.log("[HomeScreen] Request cancelled, ignoring error");
-          return;
-        }
-
-        setGroupsBatch({
-          isLoading: false,
-          isLoadingMore: false,
-          error: "Không thể tải danh sách nhóm",
-        });
-      }
+  // React Query for Groups
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: ["groups"],
+    queryFn: async ({ pageParam = 1 }) => {
+      return getGroups({ page: pageParam, pageSize: 15 });
     },
-    [pageSize, setGroupsBatch, groups],
-  );
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      // If the last page returned full capacity, assume there is a next page
+      return lastPage.groups.length === 15 ? allPages.length + 1 : undefined;
+    },
+  });
 
-  useEffect(() => {
-    if (groups.length > 0) {
-      return;
-    }
-    loadGroups(1, false);
-    fetchNotifications();
-  }, []);
+  // Flatten infinite query pages into a single array
+  const groups = useMemo(() => {
+    return data?.pages.flatMap((page) => page.groups) || [];
+  }, [data]);
 
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      loadGroups(1, false);
-    }
-  }, [refreshTrigger, loadGroups]);
+  const isInitialLoading = isLoading && groups.length === 0;
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadGroups(1, false);
-      fetchNotifications();
+      await Promise.all([refetch(), refetchNotifications()]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadGroups, fetchNotifications]);
+  }, [refetch, refetchNotifications]);
 
   const handleLoadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore && !isInitialLoading && !refreshing) {
-      loadGroups(currentPage + 1, true);
+    if (hasNextPage && !isFetchingNextPage && !refreshing) {
+      fetchNextPage();
     }
-  }, [
-    isLoadingMore,
-    hasMore,
-    isInitialLoading,
-    refreshing,
-    currentPage,
-    loadGroups,
-  ]);
+  }, [hasNextPage, isFetchingNextPage, refreshing, fetchNextPage]);
 
   const handleGroupPress = useCallback((groupId: string) => {
     router.push(`/group/${groupId}`);
@@ -171,7 +124,7 @@ export const HomeScreen = React.memo(() => {
       if (
         isInitialLoadRef.current &&
         !refreshing &&
-        !isLoadingMore &&
+        !isFetchingNextPage &&
         index < 10
       ) {
         return (
@@ -183,17 +136,17 @@ export const HomeScreen = React.memo(() => {
 
       return groupCard;
     },
-    [handleGroupPress, refreshing, isLoadingMore],
+    [handleGroupPress, refreshing, isFetchingNextPage],
   );
 
   const renderFooter = useCallback(() => {
-    if (!isLoadingMore) return null;
+    if (!isFetchingNextPage) return null;
     return (
       <View className="py-4 items-center">
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
-  }, [isLoadingMore, colors.primary]);
+  }, [isFetchingNextPage, colors.primary]);
 
   const emptyComponent = useMemo(
     () => (
