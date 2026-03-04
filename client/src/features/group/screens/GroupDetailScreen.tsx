@@ -250,11 +250,23 @@ export const GroupDetailScreen = () => {
   }, []);
 
   // Handle payment button press
-  const handlePaymentPress = useCallback((balance: GroupBalance) => {
-    // TODO: Navigate to payment screen with pre-filled data
-    console.log("Payment button pressed:", balance);
-    // router.push(`/group/${params.id}/payment?payerId=${balance.payer.id}&payeeId=${balance.payee.id}&amount=${balance.amount}`);
-  }, []);
+  const handlePaymentPress = useCallback(
+    (balance: GroupBalance) => {
+      router.push({
+        pathname: `/group/${params.id}/payment` as any,
+        params: {
+          groupId: params.id,
+          groupName: group?.name ?? "",
+          payerId: balance.payer.id,
+          payerName: balance.payer.fullName,
+          payeeId: balance.payee.id,
+          payeeName: balance.payee.fullName,
+          amount: balance.amount,
+        },
+      });
+    },
+    [params.id, group?.name],
+  );
 
   // Render expense item
   const handleExpensePress = useCallback(

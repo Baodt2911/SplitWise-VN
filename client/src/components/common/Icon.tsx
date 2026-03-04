@@ -32,7 +32,7 @@ const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   // Money & Finance
   dollarSign: "currency-usd",
   wallet: "wallet",
-  receipt: "receipt",
+  receipt: "receipt-text-outline",
   creditCard: "credit-card",
   pieChart: "chart-pie",
 
@@ -42,6 +42,7 @@ const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   search: "magnify",
   filter: "filter",
   moreVertical: "dots-vertical",
+  list: "format-list-bulleted",
   eye: "eye",
   eyeOff: "eye-off",
   lock: "lock",
@@ -59,6 +60,7 @@ const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   camera: "camera",
   lightbulb: "lightbulb-on",
   image: "image",
+  download: "download",
 
   // Notification icons
   checkCircle: "check-circle",

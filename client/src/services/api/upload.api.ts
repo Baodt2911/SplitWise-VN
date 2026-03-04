@@ -23,27 +23,22 @@ interface SignatureResponse {
  */
 const resizeImage = async (
   uri: string,
-  maxWidth: number = 1024,
-  maxHeight: number = 1024,
-  quality: number = 0.8,
+  maxWidth: number = 800,
+  maxHeight: number = 800,
+  quality: number = 0.7,
 ): Promise<string> => {
   try {
-    const manipResult = await ImageManipulator.manipulateAsync(
+    const manipContext = ImageManipulator.ImageManipulator.manipulate(
       uri,
-      [
-        {
-          resize: {
-            width: maxWidth,
-            height: maxHeight,
-          },
-        },
-      ],
-      {
-        compress: quality,
-        format: ImageManipulator.SaveFormat.JPEG,
-      },
-    );
-    return manipResult.uri;
+    ).resize({
+      width: maxWidth,
+    });
+    const imageRef = await manipContext.renderAsync();
+    const saveResult = await imageRef.saveAsync({
+      compress: quality,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    return saveResult.uri;
   } catch (error) {
     console.error("Error resizing image:", error);
     // Return original URI if resize fails
@@ -63,15 +58,6 @@ export const uploadImage = async (
 ) => {
   const formData = new FormData();
 
-  // Resize image before upload
-  const resizedUri = await resizeImage(
-    file.uri,
-    options?.maxWidth || 1024,
-    options?.maxHeight || 1024,
-    options?.quality || 0.8,
-  );
-
-  // Get signature
   const requestBody: { type: "avatar" | "receipt"; groupId?: string } = {
     type,
   };
@@ -79,13 +65,25 @@ export const uploadImage = async (
     requestBody.groupId = groupId;
   }
 
-  // Server wraps payload as { message, data: { signature, params, apiKey, cloudName } }
-  // Axios also wraps the HTTP response in its own .data property,
-  // so the actual payload is at response.data.data
-  const signatureResponse = await apiClient.post<{
-    message: string;
-    data: SignatureResponse;
-  }>("/cloudinary/signature", requestBody);
+  console.time("Resize & Signature Parallel");
+  // Run resize and signature API concurrently
+  const [resizedUri, signatureResponse] = await Promise.all([
+    resizeImage(
+      file.uri,
+      options?.maxWidth || 800,
+      options?.maxHeight || 800,
+      options?.quality || 0.7,
+    ),
+    // Server wraps payload as { message, data: { signature, params, apiKey, cloudName } }
+    // Axios also wraps the HTTP response in its own .data property,
+    // so the actual payload is at response.data.data
+    apiClient.post<{
+      message: string;
+      data: SignatureResponse;
+    }>("/cloudinary/signature", requestBody),
+  ]);
+  console.timeEnd("Resize & Signature Parallel");
+
   const signatureData = signatureResponse.data.data;
 
   // File for React Native FormData with resized image
@@ -105,6 +103,7 @@ export const uploadImage = async (
     formData.append(key, String(value));
   });
 
+  console.time("Cloudinary Upload");
   try {
     const dataUpload = await fetch(
       `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
@@ -118,6 +117,8 @@ export const uploadImage = async (
       },
     );
 
+    console.timeEnd("Cloudinary Upload");
+
     if (!dataUpload.ok) {
       const errorText = await dataUpload.text();
       console.error("Cloudinary upload failed:", dataUpload.status, errorText);
@@ -126,6 +127,7 @@ export const uploadImage = async (
 
     return await dataUpload.json();
   } catch (error) {
+    console.timeEnd("Cloudinary Upload");
     console.error("Upload API Exception:", error);
     throw error;
   }

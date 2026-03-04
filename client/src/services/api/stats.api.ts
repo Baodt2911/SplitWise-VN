@@ -64,11 +64,13 @@ export const getBalancesStats = async (): Promise<BalancesStats> => {
 };
 
 export const exportStats = async (
+  month?: number,
+  year?: number,
   format: "csv" | "pdf" = "csv",
 ): Promise<any> => {
   // This might return a blob or file download link
   const response = await apiClient.get("/stats/me/export", {
-    params: { format },
+    params: { month, year, format },
     responseType: "blob", // or 'arraybuffer'
   });
   return response.data;

@@ -70,7 +70,6 @@ export const useAuthStore = create<AuthState>()(
         await SecureStore.setItemAsync("accessToken", data.accessToken);
         await SecureStore.setItemAsync("refreshToken", data.refreshToken);
         await SecureStore.setItemAsync("sessionId", data.sessionId);
-        await SecureStore.setItemAsync("user", JSON.stringify(data.user));
 
         set({
           user: data.user,
@@ -95,7 +94,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setUser: async (user) => {
-        await SecureStore.setItemAsync("user", JSON.stringify(user));
         set({ user });
       },
 
@@ -110,7 +108,6 @@ export const useAuthStore = create<AuthState>()(
         await SecureStore.deleteItemAsync("accessToken");
         await SecureStore.deleteItemAsync("refreshToken");
         await SecureStore.deleteItemAsync("sessionId");
-        await SecureStore.deleteItemAsync("user");
 
         set({
           user: null,
@@ -131,18 +128,19 @@ export const useAuthStore = create<AuthState>()(
           const accessToken = await SecureStore.getItemAsync("accessToken");
           const refreshToken = await SecureStore.getItemAsync("refreshToken");
           const sessionId = await SecureStore.getItemAsync("sessionId");
-          const userStr = await SecureStore.getItemAsync("user");
 
           console.log("[Auth] Initializing auth from SecureStore:", {
             hasAccessToken: !!accessToken,
             hasRefreshToken: !!refreshToken,
             hasSessionId: !!sessionId,
-            hasUser: !!userStr,
           });
 
-          if (accessToken && refreshToken && sessionId && userStr) {
+          if (accessToken && refreshToken && sessionId) {
             try {
-              const user = JSON.parse(userStr) as User;
+              // Fetch user from server
+              const { getCurrentUser } = require("../services/api/user.api");
+              const { user } = await getCurrentUser();
+
               set({
                 user,
                 accessToken,
@@ -154,10 +152,16 @@ export const useAuthStore = create<AuthState>()(
                 "[Auth] Auth initialized successfully for user:",
                 user.fullName,
               );
-            } catch (parseError) {
-              console.error("[Auth] Error parsing user data:", parseError);
-              // Clear invalid data
-              await SecureStore.deleteItemAsync("user");
+            } catch (error) {
+              console.error("[Auth] Error fetching user data:", error);
+              // Clear invalid data if API fails to authenticate
+              set({
+                user: null,
+                accessToken: null,
+                refreshToken: null,
+                sessionId: null,
+                isAuthenticated: false,
+              });
             }
           } else {
             console.log("[Auth] No auth data found in SecureStore");
@@ -186,11 +190,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-storage",
       storage: createJSONStorage(() => secureStorage),
-      partialize: (state) => ({
-        // Only persist user for convenience, tokens are in SecureStore
-        // Don't persist isAuthenticated - it should be determined by checking SecureStore
-        user: state.user,
-      }),
+      partialize: (state) => ({}),
     },
   ),
 );

@@ -13,16 +13,9 @@ export const Alert = () => {
   };
 
   const getAlertType = () => {
-    // Determine alert type based on title
-    if (title?.toLowerCase().includes("success")) {
-      return "success";
-    }
-    if (title?.toLowerCase().includes("error")) {
-      return "error";
-    }
-    if (title?.toLowerCase().includes("warning")) {
-      return "warning";
-    }
+    if (title?.toLowerCase().includes("success")) return "success";
+    if (title?.toLowerCase().includes("error")) return "error";
+    if (title?.toLowerCase().includes("warning")) return "warning";
     return "info";
   };
 
@@ -50,45 +43,41 @@ export const Alert = () => {
       >
         <Pressable
           className="rounded-3xl w-full max-w-sm overflow-hidden shadow-lg"
-          style={{
-            backgroundColor: colors.surface,
-          }}
+          style={{ backgroundColor: colors.surface }}
           onPress={(e) => e.stopPropagation()}
         >
-          {/* Header with colored bar */}
+          {/* Colored top bar */}
           <View
             className="h-1 w-full"
             style={{ backgroundColor: headerColor }}
           />
 
           <View className="p-6">
+            {/* Title — wraps freely */}
             {title && (
               <Text
                 className="text-xl mb-3 font-semibold"
-                style={{
-                  color: colors.textPrimary,
-                }}
-                numberOfLines={2}
+                style={{ color: colors.textPrimary }}
               >
                 {title}
               </Text>
             )}
+
+            {/* Message — no numberOfLines, wraps naturally */}
             <Text
               className="text-base mb-6 leading-6 font-medium"
-              style={{
-                color: colors.textSecondary,
-              }}
-              numberOfLines={10}
+              style={{ color: colors.textSecondary }}
             >
               {message}
             </Text>
+
+            {/* Buttons: horizontal side-by-side */}
             <View className="flex-row justify-end gap-3">
               {buttons?.map((button, index) => {
                 const isDestructive = button.style === "destructive";
                 const isCancel = button.style === "cancel";
                 const isPrimary = !isDestructive && !isCancel;
 
-                // Use success color for primary button in success alert
                 const buttonColor =
                   isPrimary && alertType === "success"
                     ? colors.success
@@ -97,44 +86,37 @@ export const Alert = () => {
                       : undefined;
 
                 return (
-                  <View
+                  <TouchableOpacity
                     key={index}
-                    className={buttons.length > 1 ? "flex-1" : ""}
-                    style={{ minWidth: buttons.length === 1 ? undefined : 100 }}
+                    onPress={() => {
+                      hide();
+                      button.onPress?.();
+                    }}
+                    className="rounded-2xl py-3 px-5 items-center justify-center flex-1"
+                    style={{
+                      backgroundColor: isPrimary
+                        ? buttonColor || colors.primary
+                        : isCancel
+                          ? "transparent"
+                          : colors.danger,
+                      borderWidth: isCancel ? 1 : 0,
+                      borderColor: isCancel ? colors.border : undefined,
+                    }}
+                    activeOpacity={0.8}
                   >
-                    <TouchableOpacity
-                      onPress={() => {
-                        // Always hide alert first
-                        hide();
-                        // Then execute button's onPress if provided
-                        button.onPress?.();
-                      }}
-                      className={`rounded-2xl py-3 px-6 items-center justify-center ${buttons.length === 1 ? "w-full" : ""}`}
+                    <Text
+                      className="text-base font-semibold text-center"
                       style={{
-                        backgroundColor: isPrimary
-                          ? buttonColor || colors.primary
+                        color: isPrimary
+                          ? colors.primaryText
                           : isCancel
-                            ? "transparent"
-                            : colors.danger,
-                        borderWidth: isCancel ? 1 : 0,
-                        borderColor: isCancel ? colors.border : undefined,
+                            ? colors.textPrimary
+                            : colors.primaryText,
                       }}
-                      activeOpacity={0.8}
                     >
-                      <Text
-                        className="text-base font-semibold"
-                        style={{
-                          color: isPrimary
-                            ? colors.primaryText
-                            : isCancel
-                              ? colors.textPrimary
-                              : colors.primaryText,
-                        }}
-                      >
-                        {button.text}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                      {button.text}
+                    </Text>
+                  </TouchableOpacity>
                 );
               })}
             </View>

@@ -1,5 +1,5 @@
 export type AppLanguage = "vi";
-export type AppTheme = "light" | "dark";
+export type AppTheme = "light" | "dark" | "auto";
 
 export interface OnboardingSlide {
   key: string;
@@ -7,4 +7,3 @@ export interface OnboardingSlide {
   description: string;
   image: string | number; // string for URL, number for require()
 }
-

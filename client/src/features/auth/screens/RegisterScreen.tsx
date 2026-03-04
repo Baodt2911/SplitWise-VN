@@ -1,4 +1,5 @@
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
@@ -8,7 +9,10 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { Button } from "../components/Button";
 import { TextInput } from "../components/TextInput";
-import { createRegisterSchema, type RegisterFormData } from "../schemas/auth.schema";
+import {
+  createRegisterSchema,
+  type RegisterFormData,
+} from "../schemas/auth.schema";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
@@ -45,14 +49,14 @@ const RegisterScreen = () => {
         phone: data.phone || undefined,
         password: data.password,
       });
-      
+
       // Check if result is an error response (has field property)
       if ("field" in result) {
         const apiError = result as ApiError;
-        
+
         // Show toast with error message
         showError(apiError.message, "Lỗi");
-        
+
         // Set error to form field to highlight with red border
         if (apiError.field) {
           setError(apiError.field as keyof RegisterFormData, {
@@ -60,7 +64,7 @@ const RegisterScreen = () => {
             message: apiError.message,
           });
         }
-        
+
         return;
       }
 
@@ -97,13 +101,12 @@ const RegisterScreen = () => {
     login: "Đăng nhập",
   };
 
-
   const isDark = theme === "dark";
-  
+
   // Gradient colors based on theme
   const gradientColors = isDark
-    ? [colors.primaryLight, colors.background, colors.surface] as const
-    : [colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const;
+    ? ([colors.primaryLight, colors.background, colors.surface] as const)
+    : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
   return (
     <LinearGradient
@@ -112,13 +115,17 @@ const RegisterScreen = () => {
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
-      <SafeAreaView className="flex-1" style={{ backgroundColor: "transparent" }}>
+      <SafeAreaView
+        className="flex-1"
+        style={{ backgroundColor: "transparent" }}
+      >
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -128,7 +135,7 @@ const RegisterScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card ,               
+                backgroundColor: colors.card,
               }}
             >
               {/* Header */}
@@ -201,7 +208,10 @@ const RegisterScreen = () => {
                 <Controller
                   control={control}
                   name="agreeToTerms"
-                  render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  render={({
+                    field: { onChange, value },
+                    fieldState: { error },
+                  }) => (
                     <>
                       <TouchableOpacity
                         onPress={() => onChange(!value)}
@@ -211,7 +221,9 @@ const RegisterScreen = () => {
                         <View
                           className="mr-3 h-5 w-5 items-center justify-center rounded-lg border"
                           style={{
-                            backgroundColor: value ? colors.primary : colors.surface,
+                            backgroundColor: value
+                              ? colors.primary
+                              : colors.surface,
                             borderColor: error ? colors.danger : colors.border,
                             borderWidth: error ? 1.5 : 1,
                           }}
@@ -230,7 +242,6 @@ const RegisterScreen = () => {
                         <Text
                           className="flex-1 text-sm font-normal"
                           style={{
-        
                             color: colors.textPrimary,
                           }}
                         >
@@ -274,7 +285,6 @@ const RegisterScreen = () => {
                 <Text
                   className="text-sm font-semibold"
                   style={{
-
                     color: colors.primary,
                   }}
                 >
@@ -283,11 +293,10 @@ const RegisterScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 };
 
 export default RegisterScreen;
-

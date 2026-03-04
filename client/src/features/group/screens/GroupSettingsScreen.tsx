@@ -7,13 +7,15 @@ import {
   Image,
   Switch,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Modal,
   Pressable,
   FlatList,
+  Alert,
+  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetView,
@@ -369,72 +371,60 @@ export const GroupSettingsScreen = () => {
   const handleLeaveGroup = async () => {
     if (!group) return;
 
-    alert(
-      "Rời nhóm",
-      "Bạn có chắc chắn muốn rời khỏi nhóm này không? Các khoản nợ/thu chưa thanh toán sẽ cần được xử lý.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Rời nhóm",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const result = await leaveGroup(group.id);
-              if ("message" in result && !("field" in result)) {
-                showSuccessRef.current("Đã rời nhóm thành công", "Thành công");
-                queryClient.invalidateQueries({ queryKey: ["groups"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["group", params.id],
-                });
-                router.replace("/(tabs)/home");
-              } else {
-                throw new Error(
-                  (result as any).message || "Không thể rời nhóm",
-                );
-              }
-            } catch (err: any) {
-              showErrorRef.current(err.message || "Không thể rời nhóm", "Lỗi");
+    alert("Bạn có chắc chắn muốn rời nhóm?", "Rời nhóm", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Rời nhóm",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const result = await leaveGroup(group.id);
+            if ("message" in result && !("field" in result)) {
+              showSuccessRef.current("Đã rời nhóm thành công", "Thành công");
+              queryClient.invalidateQueries({ queryKey: ["groups"] });
+              queryClient.invalidateQueries({
+                queryKey: ["group", params.id],
+              });
+              router.replace("/(tabs)/home");
+            } else {
+              throw new Error((result as any).message || "Không thể rời nhóm");
             }
-          },
+          } catch (err: any) {
+            showErrorRef.current(err.message || "Không thể rời nhóm", "Lỗi");
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   // Handle Delete Group
   const handleDeleteGroup = async () => {
     if (!group) return;
 
-    alert(
-      "Xóa nhóm",
-      "Hành động này không thể hoàn tác. Tất cả dữ liệu của nhóm sẽ bị xóa vĩnh viễn.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa vĩnh viễn",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const result = await deleteGroup(group.id);
-              if ("message" in result && !("field" in result)) {
-                showSuccessRef.current("Đã xóa nhóm thành công", "Thành công");
-                queryClient.invalidateQueries({ queryKey: ["groups"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["group", params.id],
-                });
-                router.replace("/(tabs)/home");
-              } else {
-                throw new Error(
-                  (result as any).message || "Không thể xóa nhóm",
-                );
-              }
-            } catch (err: any) {
-              showErrorRef.current(err.message || "Không thể xóa nhóm", "Lỗi");
+    alert("Bạn có chắc chắn muốn xóa nhóm này?", "Xóa nhóm", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa vĩnh viễn",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const result = await deleteGroup(group.id);
+            if ("message" in result && !("field" in result)) {
+              showSuccessRef.current("Đã xóa nhóm thành công", "Thành công");
+              queryClient.invalidateQueries({ queryKey: ["groups"] });
+              queryClient.invalidateQueries({
+                queryKey: ["group", params.id],
+              });
+              router.replace("/(tabs)/home");
+            } else {
+              throw new Error((result as any).message || "Không thể xóa nhóm");
             }
-          },
+          } catch (err: any) {
+            showErrorRef.current(err.message || "Không thể xóa nhóm", "Lỗi");
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   // Validate email format
@@ -474,7 +464,10 @@ export const GroupSettingsScreen = () => {
       const result = await addMember(group.id, data);
 
       if ("message" in result && !("field" in result)) {
-        showSuccessRef.current("Đã thêm thành viên thành công", "Thành công");
+        showSuccessRef.current(
+          (result as any).message || "Đã thêm thành viên thành công",
+          "Thành công",
+        );
         queryClient.invalidateQueries({ queryKey: ["group", params.id] });
         setInputValue("");
         setShowAddMemberModal(false);
@@ -1111,6 +1104,22 @@ export const GroupSettingsScreen = () => {
           <TouchableOpacity
             className="flex-row items-center justify-between py-3"
             activeOpacity={0.7}
+            onPress={() => router.push(`/group/${params.id}/activities`)}
+          >
+            <Text
+              className="text-base"
+              style={{
+                color: colors.textPrimary,
+              }}
+            >
+              Nhật ký hoạt động
+            </Text>
+            <Icon name="list" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-row items-center justify-between py-3"
+            activeOpacity={0.7}
           >
             <Text
               className="text-base"
@@ -1296,8 +1305,11 @@ export const GroupSettingsScreen = () => {
           onPress={closeAddMemberModal}
         >
           <Pressable onPress={(e) => e.stopPropagation()}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            <KeyboardAwareScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+              showsVerticalScrollIndicator={false}
+              enableOnAndroid={true}
+              keyboardShouldPersistTaps="handled"
             >
               <View
                 style={{
@@ -1425,7 +1437,7 @@ export const GroupSettingsScreen = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
           </Pressable>
         </Pressable>
       </Modal>

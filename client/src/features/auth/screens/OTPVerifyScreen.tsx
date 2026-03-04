@@ -1,4 +1,5 @@
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
@@ -12,12 +13,18 @@ import { createOtpSchema, type OtpFormData } from "../schemas/auth.schema";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
-import { verifyOtpRegister, sendOtpRegister } from "../../../services/api/otp.api";
+import {
+  verifyOtpRegister,
+  sendOtpRegister,
+} from "../../../services/api/otp.api";
 
 const OTPVerifyScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
   const colors = getThemeColors(theme);
-  const params = useLocalSearchParams<{ email?: string; type?: "register" | "forgot-password" }>();
+  const params = useLocalSearchParams<{
+    email?: string;
+    type?: "register" | "forgot-password";
+  }>();
   const { success, error } = useToast();
 
   const {
@@ -49,13 +56,14 @@ const OTPVerifyScreen = () => {
         success("Xác minh OTP thành công!", "Thành công");
         router.push({
           pathname: "/auth/reset-password",
-          params: { email: params.email, otp: data.otp }
+          params: { email: params.email, otp: data.otp },
         });
       } else {
         error("Loại xác minh không hợp lệ.", "Lỗi");
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Mã OTP không đúng. Vui lòng thử lại.";
+      const errorMessage =
+        err.response?.data?.message || "Mã OTP không đúng. Vui lòng thử lại.";
       error(errorMessage, "Lỗi");
     }
   };
@@ -69,7 +77,8 @@ const OTPVerifyScreen = () => {
       await sendOtpRegister(params.email);
       success("Mã OTP đã được gửi lại!", "Thành công");
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Gửi lại mã OTP thất bại.";
+      const errorMessage =
+        err.response?.data?.message || "Gửi lại mã OTP thất bại.";
       error(errorMessage, "Lỗi");
     }
   };
@@ -84,11 +93,11 @@ const OTPVerifyScreen = () => {
   };
 
   const isDark = theme === "dark";
-  
+
   // Gradient colors based on theme
   const gradientColors = isDark
-    ? [colors.primaryLight, colors.background, colors.surface] as const
-    : [colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const;
+    ? ([colors.primaryLight, colors.background, colors.surface] as const)
+    : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
   return (
     <LinearGradient
@@ -97,13 +106,17 @@ const OTPVerifyScreen = () => {
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
-      <SafeAreaView className="flex-1" style={{ backgroundColor: "transparent" }}>
+      <SafeAreaView
+        className="flex-1"
+        style={{ backgroundColor: "transparent" }}
+      >
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -113,7 +126,7 @@ const OTPVerifyScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card,       
+                backgroundColor: colors.card,
               }}
             >
               {/* Header */}
@@ -179,11 +192,10 @@ const OTPVerifyScreen = () => {
               />
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 };
 
 export default OTPVerifyScreen;
-

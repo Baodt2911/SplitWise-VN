@@ -1,5 +1,12 @@
 export type UserRole = "USER" | "SYSTEM_ADMIN";
 
+export interface UserSettings {
+  notificationReminder: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  theme: "LIGHT" | "DARK" | "AUTO";
+}
+
 export interface User {
   id: string;
   phone: string | null;
@@ -14,6 +21,7 @@ export interface User {
   timezone: string;
   currency: string;
   allowDirectAdd: boolean;
+  settings: UserSettings | null;
   isPremium: boolean;
   premiumExpiresAt: string | null;
   createdAt: string;
@@ -58,7 +66,7 @@ export interface Group {
   };
 }
 
-export type ExpenseCategory = 
+export type ExpenseCategory =
   | "FOOD"
   | "TRANSPORT"
   | "ENTERTAINMENT"
@@ -104,8 +112,17 @@ export interface Expense {
   splits?: ExpenseSplit[];
 }
 
-export type SettlementStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "DISPUTED";
-export type SettlementPaymentMethod = "CASH" | "BANK_TRANSFER" | "MOMO" | "ZALOPAY" | "VNPAY";
+export type SettlementStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "REJECTED"
+  | "DISPUTED";
+export type SettlementPaymentMethod =
+  | "CASH"
+  | "BANK_TRANSFER"
+  | "MOMO"
+  | "ZALOPAY"
+  | "VNPAY";
 
 export interface Settlement {
   id: string;

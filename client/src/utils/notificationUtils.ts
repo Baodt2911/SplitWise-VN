@@ -31,6 +31,7 @@ export type RelatedType =
   | "EXPENSE"
   | "SETTLEMENT"
   | "GROUP"
+  | "GROUP_INVITE"
   | "USER"
   | "COMMENT";
 
@@ -45,9 +46,9 @@ interface NotificationStyle {
 export const getNotificationStyle = (type: string): NotificationStyle => {
   const typeMap: Record<NotificationType, NotificationStyle> = {
     // Expense
-    EXPENSE_ADDED: { icon: "book", color: "#10B981" }, // green
-    EXPENSE_UPDATED: { icon: "edit", color: "#3B82F6" }, // blue
-    EXPENSE_DELETED: { icon: "trash", color: "#EF4444" }, // red
+    EXPENSE_ADDED: { icon: "receipt", color: "#10B981" }, // green
+    EXPENSE_UPDATED: { icon: "receipt", color: "#3B82F6" }, // blue
+    EXPENSE_DELETED: { icon: "receipt", color: "#EF4444" }, // red
 
     // Payment
     PAYMENT_REQUEST: { icon: "dollarSign", color: "#F59E0B" }, // yellow
@@ -265,22 +266,21 @@ export const getRelatedRoute = (
   type: string,
   referenceId?: string,
 ): string | null => {
-  if (!referenceId) return null;
+  if (!referenceId && type !== "GROUP_INVITE") return null;
 
   const relatedType = type as RelatedType;
 
   switch (relatedType) {
-    case "EXPENSE":
-      return `/expense/${referenceId}`;
     case "GROUP":
       return `/group/${referenceId}`;
     case "SETTLEMENT":
       return `/settlement/${referenceId}`;
-    case "COMMENT":
-      // Comments are part of expenses, navigate to expense
-      return `/expense/${referenceId}`;
     case "USER":
       return `/profile/${referenceId}`;
+    case "GROUP_INVITE":
+      return `/invites`;
+    case "EXPENSE":
+    case "COMMENT":
     default:
       return null;
   }

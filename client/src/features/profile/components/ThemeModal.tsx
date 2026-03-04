@@ -6,6 +6,7 @@ import type { AppTheme } from "../../onboarding/types";
 interface ThemeModalProps {
   visible: boolean;
   onClose: () => void;
+  onThemeChange?: (theme: AppTheme) => void;
 }
 
 const THEME_OPTIONS: {
@@ -20,15 +21,26 @@ const THEME_OPTIONS: {
     code: "dark",
     label: "Tối",
   },
+  {
+    code: "auto",
+    label: "Tự động (Hệ thống)",
+  },
 ];
 
-export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
+export const ThemeModal = ({
+  visible,
+  onClose,
+  onThemeChange,
+}: ThemeModalProps) => {
   const theme = usePreferencesStore((state) => state.theme);
   const setTheme = usePreferencesStore((state) => state.setTheme);
   const colors = getThemeColors(theme);
 
   const handleSelect = (selectedTheme: AppTheme) => {
     setTheme(selectedTheme);
+    if (onThemeChange) {
+      onThemeChange(selectedTheme);
+    }
     onClose();
   };
 
@@ -86,7 +98,9 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
                     style={{
                       borderWidth: 2,
                       borderColor: isSelected ? colors.primary : colors.border,
-                      backgroundColor: isSelected ? colors.primary : "transparent",
+                      backgroundColor: isSelected
+                        ? colors.primary
+                        : "transparent",
                     }}
                   >
                     {isSelected && (
@@ -130,4 +144,3 @@ export const ThemeModal = ({ visible, onClose }: ThemeModalProps) => {
     </Modal>
   );
 };
-

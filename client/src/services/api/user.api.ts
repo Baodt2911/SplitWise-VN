@@ -5,35 +5,57 @@ import type { ApiError } from "./auth.api";
 export interface UpdateProfileRequest {
   fullName?: string;
   avatarUrl?: string;
-  phone?: string;
-  // bank info etc
-  bankName?: string;
-  bankAccountNumber?: string;
-  bankAccountName?: string;
+  phone?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  language?: string;
+  timezone?: string;
+  currency?: string;
+  allowDirectAdd?: boolean;
 }
 
-export const updateProfile = async (data: UpdateProfileRequest): Promise<{ user: User; message: string } | ApiError> => {
+export const updateProfile = async (
+  data: UpdateProfileRequest,
+): Promise<{ user: User; message: string }> => {
   try {
-    const response = await apiClient.patch<{ user: User; message: string }>("/users/me", data);
+    const response = await apiClient.patch<{ user: User; message: string }>(
+      "/users/me",
+      data,
+    );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
-    return {
-      message: error.response?.data?.message || "Không thể cập nhật hồ sơ",
-      field: error.response?.data?.field
-    };
+    throw new Error(
+      error.response?.data?.message || "Không thể cập nhật hồ sơ",
+    );
   }
 };
 
 export interface UpdateSettingsRequest {
-  language?: string;
-  currency?: string;
-  timezone?: string;
-  allowDirectAdd?: boolean;
+  notificationReminder?: boolean;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  theme?: "LIGHT" | "DARK" | "AUTO";
 }
 
-export const updateSettings = async (data: UpdateSettingsRequest): Promise<{ user: User; message: string }> => {
-  const response = await apiClient.patch("/users/me/settings", data);
+export const updateSettings = async (
+  data: UpdateSettingsRequest,
+): Promise<{ user: User; message: string }> => {
+  try {
+    const response = await apiClient.patch<{ user: User; message: string }>(
+      "/users/me/settings",
+      data,
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    throw new Error(error.response?.data?.message || "Không thể lưu cài đặt");
+  }
+};
+
+export const getCurrentUser = async (): Promise<{ user: User }> => {
+  const response = await apiClient.get("/users/me");
   return response.data;
 };
 
@@ -48,20 +70,43 @@ export const getNotifications = async (): Promise<any> => {
   return response.data;
 };
 
+export interface InviteResponse {
+  id: string;
+  inviteToken: string;
+  createdAt: string;
+  inviter: string;
+  group: {
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
+export const getInvites = async (): Promise<{ invites: InviteResponse[] }> => {
+  const response = await apiClient.get<{ invites: InviteResponse[] }>(
+    "/users/me/invites",
+  );
+  return response.data;
+};
+
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
 }
 
-export const changePassword = async (data: ChangePasswordRequest): Promise<{ message: string } | ApiError> => {
+export const changePassword = async (
+  data: ChangePasswordRequest,
+): Promise<{ message: string } | ApiError> => {
   try {
-    const response = await apiClient.patch<{ message: string }>("/users/me/password", data);
+    const response = await apiClient.patch<{ message: string }>(
+      "/users/me/password",
+      data,
+    );
     return response.data;
   } catch (error: any) {
     if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
     return {
       message: error.response?.data?.message || "Đổi mật khẩu thất bại",
-      field: error.response?.data?.field
+      field: error.response?.data?.field,
     };
   }
 };

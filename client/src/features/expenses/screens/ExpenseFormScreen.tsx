@@ -8,6 +8,7 @@ import {
   TextInput as RNTextInput,
   Keyboard,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -714,10 +715,12 @@ export const ExpenseFormScreen = ({
 
       {/* Form */}
       <FormProvider {...methods}>
-        <ScrollView
+        <KeyboardAwareScrollView
           className="flex-1"
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Description */}
           <View className="mb-5">
@@ -1072,7 +1075,7 @@ export const ExpenseFormScreen = ({
               )}
             />
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </FormProvider>
 
       {/* Submit Button */}

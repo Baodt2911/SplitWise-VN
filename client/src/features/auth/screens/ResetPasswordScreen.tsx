@@ -1,4 +1,5 @@
-import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
@@ -8,7 +9,10 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { Button } from "../components/Button";
 import { TextInput } from "../components/TextInput";
-import { createResetPasswordSchema, type ResetPasswordFormData } from "../schemas/auth.schema";
+import {
+  createResetPasswordSchema,
+  type ResetPasswordFormData,
+} from "../schemas/auth.schema";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
@@ -47,11 +51,12 @@ const ResetPasswordScreen = () => {
         otp: params.otp,
         newPassword: data.password,
       });
-      
+
       success("Đặt lại mật khẩu thành công!", "Thành công");
       router.replace("/auth/login");
     } catch (err: any) {
-      const errorMessage = err.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.";
+      const errorMessage =
+        err.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.";
       error(errorMessage, "Lỗi");
     }
   };
@@ -68,11 +73,11 @@ const ResetPasswordScreen = () => {
   };
 
   const isDark = theme === "dark";
-  
+
   // Gradient colors based on theme
   const gradientColors = isDark
-    ? [colors.primaryLight, colors.background, colors.surface] as const
-    : [colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const;
+    ? ([colors.primaryLight, colors.background, colors.surface] as const)
+    : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
   return (
     <LinearGradient
@@ -81,13 +86,17 @@ const ResetPasswordScreen = () => {
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
-      <SafeAreaView className="flex-1" style={{ backgroundColor: "transparent" }}>
+      <SafeAreaView
+        className="flex-1"
+        style={{ backgroundColor: "transparent" }}
+      >
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -97,7 +106,7 @@ const ResetPasswordScreen = () => {
             <View
               className="rounded-3xl px-5 pt-6 pb-5"
               style={{
-                backgroundColor: colors.card,      
+                backgroundColor: colors.card,
               }}
             >
               {/* Header */}
@@ -147,11 +156,10 @@ const ResetPasswordScreen = () => {
               />
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 };
 
 export default ResetPasswordScreen;
-

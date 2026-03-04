@@ -1,4 +1,5 @@
-import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusBar } from "expo-status-bar";
@@ -8,7 +9,10 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { Button } from "../components/Button";
 import { TextInput } from "../components/TextInput";
-import { createForgotPasswordSchema, type ForgotPasswordFormData } from "../schemas/auth.schema";
+import {
+  createForgotPasswordSchema,
+  type ForgotPasswordFormData,
+} from "../schemas/auth.schema";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useToast } from "../../../hooks/useToast";
@@ -42,7 +46,8 @@ const ForgotPasswordScreen = () => {
         params: { email: data.email, type: "forgot-password" },
       });
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Gửi mã OTP thất bại. Vui lòng thử lại.";
+      const errorMessage =
+        err.response?.data?.message || "Gửi mã OTP thất bại. Vui lòng thử lại.";
       error(errorMessage, "Lỗi");
     }
   };
@@ -58,11 +63,11 @@ const ForgotPasswordScreen = () => {
   };
 
   const isDark = theme === "dark";
-  
+
   // Gradient colors based on theme
   const gradientColors = isDark
-    ? [colors.primaryLight, colors.background, colors.surface] as const
-    : [colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const;
+    ? ([colors.primaryLight, colors.background, colors.surface] as const)
+    : ([colors.primaryLight, "#E8F5F0", "#F0FBF8", colors.background] as const);
 
   return (
     <LinearGradient
@@ -71,13 +76,17 @@ const ForgotPasswordScreen = () => {
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
-      <SafeAreaView className="flex-1" style={{ backgroundColor: "transparent" }}>
+      <SafeAreaView
+        className="flex-1"
+        style={{ backgroundColor: "transparent" }}
+      >
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        <KeyboardAwareScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
         >
           <View
             className="flex-1 px-5 pt-4 pb-4"
@@ -149,11 +158,10 @@ const ForgotPasswordScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 };
 
 export default ForgotPasswordScreen;
-

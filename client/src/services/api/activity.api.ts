@@ -46,19 +46,36 @@ export interface GetActivitiesResponse {
 /**
  * Get user activities
  */
-export const getUserActivities = async (page: number = 1, pageSize: number = 10): Promise<GetActivitiesResponse> => {
-  const response = await apiClient.get<GetActivitiesResponse>("/users/activites", {
-    params: { page, pageSize },
-  });
+export const getUserActivities = async (
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<GetActivitiesResponse> => {
+  const response = await apiClient.get<GetActivitiesResponse>(
+    "/users/activites",
+    {
+      params: { page, pageSize },
+    },
+  );
   return response.data;
 };
 
 /**
  * Get group activities
  */
-export const getGroupActivities = async (groupId: string, action?: string): Promise<GetActivitiesResponse> => {
-  const params = action ? { action } : {};
-  const response = await apiClient.get<GetActivitiesResponse>(`/groups/${groupId}/activities`, { params });
+export const getGroupActivities = async (
+  groupId: string,
+  page: number = 1,
+  pageSize: number = 10,
+  action?: string,
+): Promise<GetActivitiesResponse> => {
+  const params: any = { page, pageSize };
+  if (action) {
+    params.action = action;
+  }
+  const response = await apiClient.get<GetActivitiesResponse>(
+    `/groups/${groupId}/activities`,
+    { params },
+  );
   return response.data;
 };
 

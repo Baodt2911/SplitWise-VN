@@ -8,13 +8,14 @@ import {
   RefreshControl,
   Dimensions,
   Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
 import { useQuery } from "@tanstack/react-query";
-import { getOverviewStats } from "../../../services/api/stats.api";
+import { getOverviewStats, exportStats } from "../../../services/api/stats.api";
 import { Icon } from "../../../components/common/Icon";
 import {
   getCategoryIcon,
@@ -22,6 +23,8 @@ import {
   CATEGORY_COLORS,
 } from "../../../constants/category.constants";
 import type { IconName } from "../../../components/common/Icon";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -43,6 +46,7 @@ export const StatsScreen = () => {
   const colors = getThemeColors(theme);
 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Applied filters (what the API uses)
   const [appliedYear, setAppliedYear] = useState<number>(
@@ -81,6 +85,50 @@ export const StatsScreen = () => {
   const openMonthPicker = () => {
     setSelectedYear(appliedYear); // reset modal to whatever year is currently applied
     setShowMonthPicker(true);
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await exportStats(appliedMonth, appliedYear, "csv");
+
+      // Since react-native's blob handling can be tricky, we'll convert the blob to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64data = (reader.result as string).split(",")[1];
+
+        const fileName = `bao-cao-thang-${appliedMonth}-${appliedYear}.csv`;
+        const FS: any = FileSystem;
+        const fileUri = `${FS.documentDirectory}${fileName}`;
+
+        await FS.writeAsStringAsync(fileUri, base64data, {
+          encoding: FS.EncodingType?.Base64 || "base64",
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "text/csv",
+            dialogTitle: "Lưu báo cáo chi tiêu",
+            UTI: "public.comma-separated-values-text",
+          });
+        } else {
+          Alert.alert(
+            "Lỗi",
+            "Tính năng chia sẻ không khả dụng trên thiết bị này",
+          );
+        }
+      };
+
+      reader.onerror = () => {
+        Alert.alert("Lỗi", "Không thể xử lý dữ liệu báo cáo");
+      };
+
+      reader.readAsDataURL(blob);
+    } catch (err: any) {
+      Alert.alert("Lỗi", err?.message || "Không thể xuất báo cáo");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Pie chart data
@@ -534,6 +582,30 @@ export const StatsScreen = () => {
               .
             </Text>
           </View>
+
+          {/* Export Button */}
+          <TouchableOpacity
+            onPress={handleExport}
+            disabled={isExporting}
+            className="rounded-xl flex-row items-center justify-center py-4 mt-2 shadow-sm"
+            style={{
+              backgroundColor: colors.primary,
+              opacity: isExporting ? 0.7 : 1,
+            }}
+            activeOpacity={0.8}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color="#fff" className="mr-2" />
+            ) : (
+              <Icon name="download" size={20} color="#fff" />
+            )}
+            <Text
+              className="text-base font-semibold ml-2"
+              style={{ color: "#fff" }}
+            >
+              {isExporting ? "Đang xuất dữ liệu..." : "Xuất báo cáo tháng"}
+            </Text>
+          </TouchableOpacity>
 
           {/* Bottom Spacing */}
           <View className="h-24" />

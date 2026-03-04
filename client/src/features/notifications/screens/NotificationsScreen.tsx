@@ -98,21 +98,36 @@ export const NotificationsScreen: React.FC = () => {
     }
   }, [refetch]);
 
+  const isNavigatingRef = useRef(false);
+
   const handleNotificationPress = useCallback(
     async (
       notificationId: string,
       relatedId?: string,
       relatedType?: string,
+      isRead?: boolean,
     ) => {
-      // Mark as read first
-      await markAsRead(notificationId);
+      // Prevent double taps
+      if (isNavigatingRef.current) return;
+      isNavigatingRef.current = true;
 
-      // Navigate to related item if available
-      if (relatedId && relatedType) {
-        const route = getRelatedRoute(relatedType, relatedId);
-        if (route) {
-          router.push(route as any);
+      try {
+        // Mark as read first if not read
+        if (!isRead) {
+          await markAsRead(notificationId);
         }
+
+        // Navigate to related item if available
+        if (relatedId && relatedType) {
+          const route = getRelatedRoute(relatedType, relatedId);
+          if (route) {
+            router.push(route as any);
+          }
+        }
+      } finally {
+        setTimeout(() => {
+          isNavigatingRef.current = false;
+        }, 500); // 500ms cooldown
       }
     },
     [markAsRead],
@@ -174,6 +189,7 @@ export const NotificationsScreen: React.FC = () => {
                 item.data.id,
                 item.data.relatedId,
                 item.data.relatedType,
+                item.data.isRead,
               )
             }
           />

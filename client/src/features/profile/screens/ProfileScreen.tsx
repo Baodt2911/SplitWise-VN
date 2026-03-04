@@ -7,6 +7,7 @@ import {
   View,
   ActivityIndicator,
   Image,
+  Switch,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,7 +22,15 @@ import { useAlert } from "../../../hooks/useAlert";
 import { ThemeModal } from "../components/ThemeModal";
 import { unregisterPushTokenApi } from "../../../services/notifications";
 import { uploadImage, deleteImage } from "../../../services/api/upload.api";
-import { updateProfile } from "../../../services/api/user.api";
+import {
+  updateProfile,
+  updateSettings,
+  getCurrentUser,
+} from "../../../services/api/user.api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { EditProfileModal } from "../components/EditProfileModal";
+import { EditBankModal } from "../components/EditBankModal";
+import { EditPreferencesModal } from "../components/EditPreferencesModal";
 
 export const ProfileScreen = () => {
   const theme = usePreferencesStore((state) => state.theme);
@@ -30,16 +39,51 @@ export const ProfileScreen = () => {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const { success, error } = useToast();
   const { alert } = useAlert();
+  const queryClient = useQueryClient();
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Mock data - will be replaced with real API calls later
-  const bankAccount = {
-    bankName: "Vietcombank",
-    accountNumber: "1234567890",
-  };
+  // Modal states
+  const [isEditProfileVisible, setIsEditProfileVisible] = useState(false);
+  const [isEditBankVisible, setIsEditBankVisible] = useState(false);
+  const [isEditPreferencesVisible, setIsEditPreferencesVisible] =
+    useState(false);
+
+  // Fetch real-time user data
+  const { data: fetchedUserData, isLoading: isLoadingUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: getCurrentUser,
+  });
+
+  // Use fetched data if available, fallback to AuthStore user
+  const displayUser = fetchedUserData?.user || user;
+
+  // Mutations
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["currentUser"], { user: data.user });
+      useAuthStore.setState({ user: data.user });
+      success("Cập nhật thành công");
+    },
+    onError: (err: any) => {
+      error(err.message || "Không thể cập nhật thông tin");
+    },
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: updateSettings,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["currentUser"], { user: data.user });
+      useAuthStore.setState({ user: data.user });
+    },
+    onError: (err: any) => {
+      error(err.message || "Không thể lưu cài đặt");
+    },
+  });
 
   const formatPhoneNumber = (phone: string) => {
     // Format phone number: +84 987 654 321
@@ -247,14 +291,14 @@ export const ProfileScreen = () => {
             >
               {isUploadingAvatar ? (
                 <ActivityIndicator size="small" color={colors.primary} />
-              ) : user?.avatarUrl ? (
+              ) : displayUser?.avatarUrl ? (
                 <Image
-                  source={{ uri: user.avatarUrl }}
+                  source={{ uri: displayUser.avatarUrl }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
               ) : (
-                <Icon name="user" size={40} color={colors.textSecondary} />
+                <Icon name="user" size={60} color={colors.primary} />
               )}
             </View>
             <TouchableOpacity
@@ -274,76 +318,253 @@ export const ProfileScreen = () => {
               color: colors.textPrimary,
             }}
           >
-            {user?.fullName || "Nguyễn Văn An"}
+            {displayUser?.fullName || "Chưa cập nhật tên"}
           </Text>
 
           {/* Phone */}
-          <Text
-            className="text-base font-normal"
-            style={{
-              color: colors.textSecondary,
-            }}
+          {displayUser?.phone && (
+            <Text
+              className="text-base font-normal"
+              style={{
+                color: colors.textSecondary,
+              }}
+            >
+              {formatPhoneNumber(displayUser.phone)}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            onPress={() => setIsEditProfileVisible(true)}
+            className="px-4 py-2 mt-4 rounded-xl items-center justify-center flex-row"
+            style={{ backgroundColor: colors.surface }}
           >
-            {user?.phone ? formatPhoneNumber(user.phone) : "+84 987 654 321"}
-          </Text>
+            <Icon name="edit" size={16} color={colors.primary} />
+            <Text
+              className="ml-2 font-medium"
+              style={{ color: colors.primary }}
+            >
+              Chỉnh sửa thông tin
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Main Content Card */}
-        <View
-          className="mx-4 mb-4 rounded-3xl px-4 py-6"
-          style={{
-            backgroundColor: colors.card,
-          }}
-        >
+        {/* Info Content Container */}
+        <View className="mx-4 gap-4 mb-4">
           {/* Bank Account Section */}
-          <View className="mb-6">
-            <View className="flex-row items-center mb-3">
+          <View
+            className="rounded-3xl px-4 py-5"
+            style={{ backgroundColor: colors.card }}
+          >
+            <View className="flex-row items-center justify-between mb-4">
               <Text
-                className="text-xl font-extrabold "
+                className="text-lg font-bold"
                 style={{
                   color: colors.textPrimary,
                 }}
               >
                 Tài khoản ngân hàng
               </Text>
+              <TouchableOpacity
+                onPress={() => setIsEditBankVisible(true)}
+                className="p-2"
+              >
+                <Icon name="edit" size={20} color={colors.primary} />
+              </TouchableOpacity>
             </View>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-1 px-4">
+            <View className="gap-2">
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>Ngân hàng</Text>
                 <Text
-                  className="text-sm mb-1 font-normal"
-                  style={{
-                    color: colors.textSecondary,
-                  }}
+                  className="font-medium"
+                  style={{ color: colors.textPrimary }}
                 >
-                  {bankAccount.bankName} STK:
-                </Text>
-                <Text
-                  className="text-base font-normal"
-                  style={{
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {bankAccount.accountNumber}
+                  {displayUser?.bankName || "Chưa cập nhật"}
                 </Text>
               </View>
-              <TouchableOpacity
-                className="px-4 py-2 rounded-xl"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <Text
-                  className="text-sm font-medium"
-                  style={{
-                    color: colors.primaryText,
-                  }}
-                >
-                  Sửa
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>
+                  Số tài khoản
                 </Text>
-              </TouchableOpacity>
+                <Text
+                  className="font-medium"
+                  style={{ color: colors.textPrimary }}
+                >
+                  {displayUser?.bankAccountNumber || "Chưa cập nhật"}
+                </Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>
+                  Chủ tài khoản
+                </Text>
+                <Text
+                  className="font-medium"
+                  style={{ color: colors.textPrimary }}
+                >
+                  {displayUser?.bankAccountName || "Chưa cập nhật"}
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Settings Section */}
-          <View>
+          {/* System Preferences Section */}
+          <View
+            className="rounded-3xl px-4 py-5"
+            style={{ backgroundColor: colors.card }}
+          >
+            <View className="flex-row items-center justify-between mb-4">
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.textPrimary }}
+              >
+                Tùy chọn hệ thống
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsEditPreferencesVisible(true)}
+                className="p-2"
+              >
+                <Icon name="edit" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <View className="gap-2">
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>Ngôn ngữ</Text>
+                <Text
+                  className="font-medium"
+                  style={{ color: colors.textPrimary }}
+                >
+                  {displayUser?.language === "vi"
+                    ? "Tiếng Việt"
+                    : displayUser?.language || "Mặc định (vi)"}
+                </Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>Tiền tệ</Text>
+                <Text
+                  className="font-medium"
+                  style={{ color: colors.textPrimary }}
+                >
+                  {displayUser?.currency || "VND"}
+                </Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text style={{ color: colors.textSecondary }}>
+                  Tự động duyệt kết bạn
+                </Text>
+                <Text className="font-medium" style={{ color: colors.primary }}>
+                  {displayUser?.allowDirectAdd ? "Bật" : "Tắt"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Additional App Settings Section */}
+          <View
+            className="rounded-3xl px-4 py-4"
+            style={{ backgroundColor: colors.card }}
+          >
+            <Text
+              className="text-lg font-bold mb-2 ml-1"
+              style={{ color: colors.textPrimary }}
+            >
+              Cài đặt quyền riêng tư & thông báo
+            </Text>
+
+            {/* Push Notification Toggle */}
+            <View
+              className="flex-row items-center justify-between py-3"
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <View className="flex-row items-center flex-1 pr-4">
+                <Icon name="bell" size={20} color={colors.textSecondary} />
+                <Text
+                  className="text-base ml-3 font-normal"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Thông báo đẩy (Push)
+                </Text>
+              </View>
+              <Switch
+                value={displayUser?.settings?.pushNotifications ?? true}
+                onValueChange={async (val) => {
+                  try {
+                    await updateSettingsMutation.mutateAsync({
+                      pushNotifications: val,
+                    });
+                  } catch (e) {}
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+
+            {/* Email Notification Toggle */}
+            <View
+              className="flex-row items-center justify-between py-3"
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <View className="flex-row items-center flex-1 pr-4">
+                <Icon name="mail" size={20} color={colors.textSecondary} />
+                <Text
+                  className="text-base ml-3 font-normal"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Thông báo qua Email
+                </Text>
+              </View>
+              <Switch
+                value={displayUser?.settings?.emailNotifications ?? true}
+                onValueChange={async (val) => {
+                  try {
+                    await updateSettingsMutation.mutateAsync({
+                      emailNotifications: val,
+                    });
+                  } catch (e) {}
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+
+            {/* Reminder Notification Toggle */}
+            <View
+              className="flex-row items-center justify-between py-3"
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <View className="flex-row items-center flex-1 pr-4">
+                <Icon name="clock" size={20} color={colors.textSecondary} />
+                <Text
+                  className="text-base ml-3 font-normal"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Thông báo nhắc nhở
+                </Text>
+              </View>
+              <Switch
+                value={displayUser?.settings?.notificationReminder ?? true}
+                onValueChange={async (val) => {
+                  try {
+                    await updateSettingsMutation.mutateAsync({
+                      notificationReminder: val,
+                    });
+                  } catch (e) {}
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+
+            <Text
+              className="text-lg font-bold mb-2 ml-1 mt-4"
+              style={{ color: colors.textPrimary }}
+            >
+              Lối tắt
+            </Text>
             {settingsItems.map((item, index) => (
               <TouchableOpacity
                 key={item.key}
@@ -406,6 +627,46 @@ export const ProfileScreen = () => {
       <ThemeModal
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
+        onThemeChange={async (selectedTheme) => {
+          try {
+            await updateSettingsMutation.mutateAsync({
+              theme: selectedTheme.toUpperCase() as "LIGHT" | "DARK" | "AUTO",
+            });
+          } catch (e) {
+            // Error is handled by mutation
+          }
+        }}
+      />
+
+      {/* Edit Modals */}
+      <EditProfileModal
+        visible={isEditProfileVisible}
+        onClose={() => setIsEditProfileVisible(false)}
+        user={displayUser}
+        isSaving={updateProfileMutation.isPending}
+        onSave={async (data) => {
+          await updateProfileMutation.mutateAsync(data);
+        }}
+      />
+
+      <EditBankModal
+        visible={isEditBankVisible}
+        onClose={() => setIsEditBankVisible(false)}
+        user={displayUser}
+        isSaving={updateProfileMutation.isPending}
+        onSave={async (data) => {
+          await updateProfileMutation.mutateAsync(data);
+        }}
+      />
+
+      <EditPreferencesModal
+        visible={isEditPreferencesVisible}
+        onClose={() => setIsEditPreferencesVisible(false)}
+        user={displayUser}
+        isSaving={updateProfileMutation.isPending}
+        onSave={async (data) => {
+          await updateProfileMutation.mutateAsync(data);
+        }}
       />
     </SafeAreaView>
   );
