@@ -5,8 +5,10 @@ import {
   addMemberController,
   createGroupController,
   deleteGroupController,
+  dismissInviteController,
   getAllGroupController,
   getGroupController,
+  getPaymentInfoController,
   joinGroupController,
   leaveGroupController,
   removeMemberController,
@@ -27,7 +29,7 @@ router.get(
   "/",
   verifyAccessToken,
   validateAll({ query: queryGroupSchema }),
-  getAllGroupController
+  getAllGroupController,
 );
 router.get(
   "/:groupId",
@@ -37,14 +39,14 @@ router.get(
       groupId: z.uuid("Group ID is required"),
     }),
   }),
-  getGroupController
+  getGroupController,
 );
 
 router.post(
   "/",
   verifyAccessToken,
   validateAll({ body: createGroupSchema }),
-  createGroupController
+  createGroupController,
 );
 router.patch(
   "/:groupId",
@@ -55,7 +57,7 @@ router.patch(
     }),
     body: updateGroupSchema,
   }),
-  updateGroupControlleer
+  updateGroupControlleer,
 );
 router.delete(
   "/:groupId",
@@ -65,7 +67,21 @@ router.delete(
       groupId: z.uuid("Group ID is required"),
     }),
   }),
-  deleteGroupController
+  deleteGroupController,
+);
+
+router.get(
+  "/:groupId/payment-info",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      groupId: z.uuid("Group ID is required"),
+    }),
+    query: z.object({
+      payeeId: z.uuid("Payee ID is required"),
+    }),
+  }),
+  getPaymentInfoController,
 );
 
 // GROUP MEMBER
@@ -78,7 +94,7 @@ router.delete(
     }),
   }),
   verifyAccessToken,
-  removeMemberController
+  removeMemberController,
 );
 
 router.get(
@@ -89,7 +105,7 @@ router.get(
       code: z.string().length(6, "Invite code must be exactly 6 characters"),
     }),
   }),
-  joinGroupController
+  joinGroupController,
 );
 
 router.post(
@@ -100,7 +116,7 @@ router.post(
       groupId: z.uuid("Group ID is required"),
     }),
   }),
-  leaveGroupController
+  leaveGroupController,
 );
 
 router.post(
@@ -115,7 +131,7 @@ router.post(
       email: z.email("Invalid format email").optional(),
     }),
   }),
-  addMemberController
+  addMemberController,
 );
 
 router.get(
@@ -125,7 +141,7 @@ router.get(
       token: z.uuidv4("Token is required"),
     }),
   }),
-  verifyInviteTokenController
+  verifyInviteTokenController,
 );
 router.post(
   "/invites/:token/accept",
@@ -135,7 +151,18 @@ router.post(
     }),
   }),
   verifyAccessToken,
-  acceptInviteController
+  acceptInviteController,
+);
+
+router.post(
+  "/invites/:token/dismiss",
+  validateAll({
+    params: z.object({
+      token: z.uuidv4("Token is required"),
+    }),
+  }),
+  verifyAccessToken,
+  dismissInviteController,
 );
 
 export default router;

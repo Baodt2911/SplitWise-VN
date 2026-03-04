@@ -119,6 +119,7 @@ enum RelatedType {
   EXPENSE
   SETTLEMENT
   GROUP
+  GROUP_INVITE
   USER
   COMMENT
 }
@@ -252,20 +253,6 @@ enum ThemeType {
   LIGHT
   DARK
   AUTO
-}
-
-enum FontSize {
-  SMALL
-  MEDIUM
-  LARGE
-}
-
-enum AccentColor {
-  BLUE
-  RED
-  GREEN
-  PURPLE
-  ORANGE
 }
 
 enum PlatformDevice {
@@ -607,6 +594,8 @@ model Notification {
   title String @db.VarChar(255)
   body  String @db.Text
 
+  metadata Json?
+
   // Liên kết đến
   relatedType RelatedType? @map("related_type") // expense, settlement, group, user
   relatedId   String?      @map("related_id")
@@ -810,30 +799,10 @@ model UserPoint {
 model UserSettings {
   id     String @id @default(uuid())
   userId String @unique @map("user_id")
-
-  notificationExpenseAdded     Boolean @default(true) @map("notification_expense_added")
-  notificationPaymentRequest   Boolean @default(true) @map("notification_payment_request")
-  notificationPaymentConfirmed Boolean @default(true) @map("notification_payment_confirmed")
-  notificationMemberAdded      Boolean @default(true) @map("notification_member_added")
-  notificationComment          Boolean @default(true) @map("notification_comment")
   notificationReminder         Boolean @default(true) @map("notification_reminder")
-
   emailNotifications Boolean @default(true) @map("email_notifications")
-  emailWeeklySummary Boolean @default(false) @map("email_weekly_summary")
-
   pushNotifications Boolean @default(true) @map("push_notifications")
-
-  appLockEnabled   Boolean @default(false) @map("app_lock_enabled")
-  appLockTimeout   Int     @default(5) @map("app_lock_timeout")
-  biometricEnabled Boolean @default(false) @map("biometric_enabled")
-
-  showInSearch        Boolean @default(true) @map("show_in_search")
-  allowFriendRequests Boolean @default(true) @map("allow_friend_requests")
-  showOnlineStatus    Boolean @default(true) @map("show_online_status")
-
   theme       ThemeType   @default(LIGHT)
-  accentColor AccentColor @default(BLUE) @map("accent_color")
-  fontSize    FontSize    @default(MEDIUM) @map("font_size")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp()

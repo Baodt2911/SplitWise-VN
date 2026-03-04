@@ -4,11 +4,21 @@ import {
   getDetailExpenseService,
   updateExpenseService,
   getExpenseGroupService,
+  searchExpensesService,
 } from "../services";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { CreateExpenseDTO, QueryExpenseDTO, UpdateExpenseDTO } from "../dtos";
 import { StatusCodes } from "http-status-codes";
+
+export const searchExpensesController = catchAsync(
+  async (req: Request<{}, {}, {}, { search: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    const { search } = req.query;
+    const result = await searchExpensesService(userId!, search);
+    res.status(StatusCodes.OK).json(result);
+  },
+);
 
 export const getExpenseGroupController = catchAsync(
   async (req: Request<{ groupId: string }>, res: Response) => {

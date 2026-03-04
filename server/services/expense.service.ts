@@ -13,10 +13,7 @@ import {
 } from "../generated/prisma/client";
 import { createActivityService } from "./activity.service";
 import Decimal from "decimal.js";
-import {
-  createManyNotificationService,
-  createNotificationService,
-} from "./notification.service";
+import { createManyNotificationService } from "./notification.service";
 import { mapExpense } from "../utils/map";
 import { emitNotificationToUserInGroup } from "../emitter/notification.emitter";
 import { io } from "../app";
@@ -225,6 +222,9 @@ export const createExpenseService = async (
         type: NotificationType.EXPENSE_ADDED,
         title: "Nhóm có chi phí mới",
         body: `${userAdd?.fullName} đã thêm chi phí "${expense.description}"`,
+        metadata: {
+          groupId,
+        },
         relatedType: RelatedType.EXPENSE,
         relatedId: expense.id,
       })),
@@ -541,6 +541,9 @@ export const updateExpenseService = async (
         type: NotificationType.EXPENSE_UPDATED,
         title: "Chi phí vừa được sửa",
         body: `${userEdit?.fullName} đã sửa chi phí "${updateExpense.description}"`,
+        metadata: {
+          groupId,
+        },
         relatedType: RelatedType.EXPENSE,
         relatedId: updateExpense.id,
       })),
@@ -692,6 +695,9 @@ export const deleteExpenseService = async (
         type: NotificationType.EXPENSE_DELETED,
         title: "Chi phí vừa bị xóa",
         body: `${userEdit?.fullName} đã xóa chi phí "${expense.description}"`,
+        metadata: {
+          groupId,
+        },
         relatedType: RelatedType.EXPENSE,
         relatedId: expense.id,
       })),
@@ -704,6 +710,31 @@ export const deleteExpenseService = async (
     relatedType: RelatedType.EXPENSE,
     relatedId: expenseId,
   });
+};
+
+export const searchExpensesService = async (userId: string, search: string) => {
+  const PAGE_SIZE = 10;
+  const expenses = await prisma.expense.findMany({
+    where: {
+      description: {
+        contains: search,
+        mode: "insensitive" as const,
+      },
+      group: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+      deletedAt: null,
+    },
+    take: PAGE_SIZE,
+  });
+
+  return {
+    expenses,
+  };
 };
 
 export const getExpenseGroupService = async (

@@ -7,11 +7,38 @@ import {
 } from "../dtos";
 import {
   changePasswordServie,
+  getCurrentUserService,
   getInvitesService,
   updateProfileService,
   updateUserSettingsService,
+  getPaymentInfoService,
 } from "../services";
 import { StatusCodes } from "http-status-codes";
+
+export const getCurrentUserController = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    const user = await getCurrentUserService(userId!);
+    res.status(StatusCodes.OK).json({
+      user,
+    });
+  },
+);
+
+export const getPaymentInfoController = catchAsync(
+  async (
+    req: Request<{ groupId: string }, {}, {}, { payeeId: string }>,
+    res: Response,
+  ) => {
+    const userId = req.user?.userId;
+    const groupId = req.params.groupId;
+    const payeeId = req.query.payeeId;
+    const paymentInfo = await getPaymentInfoService(userId!, groupId, payeeId!);
+    res.status(StatusCodes.OK).json({
+      paymentInfo,
+    });
+  },
+);
 
 export const changePasswordController = catchAsync(
   async (req: Request<{}, {}, ChangePasswordDTO>, res: Response) => {
@@ -27,30 +54,31 @@ export const updateProfileController = catchAsync(
   async (req: Request<{}, {}, UpdateProfileDTO>, res: Response) => {
     const userId = req.user?.userId;
 
-    const data = await updateProfileService(userId!, req.body);
+    const user = await updateProfileService(userId!, req.body);
     res.status(StatusCodes.OK).json({
       message: "Cập nhật thông tin người dùng thành công",
-      data,
+      user,
     });
   },
 );
 
-export const updateUserSettingsController = async (
-  req: Request<{}, {}, UpdateUserSettingsDTO>,
-  res: Response,
-) => {
-  const userId = req.user?.userId;
+export const updateUserSettingsController = catchAsync(
+  async (req: Request<{}, {}, UpdateUserSettingsDTO>, res: Response) => {
+    const userId = req.user?.userId;
+    const user = await updateUserSettingsService(userId!, req.body);
+    res.status(StatusCodes.OK).json({
+      message: "Cập nhật cài đặt người dùng thành công",
+      user,
+    });
+  },
+);
+export const getInvitesController = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
 
-  await updateUserSettingsService(userId!, req.body);
-  res.status(StatusCodes.OK).json({
-    message: "Cập nhật cài đặt người dùng thành công",
-  });
-};
-export const getInvitesController = async (req: Request, res: Response) => {
-  const userId = req.user?.userId;
-
-  const invites = await getInvitesService(userId!);
-  res.status(StatusCodes.OK).json({
-    invites,
-  });
-};
+    const invites = await getInvitesService(userId!);
+    res.status(StatusCodes.OK).json({
+      invites,
+    });
+  },
+);

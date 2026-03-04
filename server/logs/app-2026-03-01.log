@@ -1,3 +1,13 @@
 {"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/dfe46e81-d177-429f-a95c-0c69bb26d966","status":404,"timestamp":"2026-02-28T17:46:59.653Z"}
 {"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/1ef591e5-15bd-4441-a8b7-cb084e3f994b","status":404,"timestamp":"2026-02-28T17:47:50.615Z"}
 {"level":"error","message":"groupId is required","method":"POST","path":"/api/v1/cloudinary/signature","status":400,"timestamp":"2026-02-28T17:51:03.710Z"}
+{"level":"error","message":"Chủ sở hữu nhóm không thể rời khỏi nhóm","method":"POST","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901/leave","status":403,"timestamp":"2026-02-28T18:38:08.224Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-01T13:38:19.690Z"}
+{"level":"error","message":"Bạn không phải là thành viên của nhóm này","method":"GET","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901/expenses?sort=expenseDate&order=desc&page=1&pageSize=10","status":403,"timestamp":"2026-03-01T13:38:29.229Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901","status":404,"timestamp":"2026-03-01T13:38:29.235Z"}
+{"level":"error","message":"Bạn không phải là thành viên của nhóm này","method":"GET","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901/expenses?sort=expenseDate&order=desc&page=1&pageSize=10","status":403,"timestamp":"2026-03-01T13:38:30.374Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901","status":404,"timestamp":"2026-03-01T13:38:30.457Z"}
+{"level":"error","message":"Lời mời đã được gửi và không thể gửi lại","method":"POST","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901/members","status":403,"timestamp":"2026-03-01T14:20:57.537Z"}
+{"level":"error","message":"Lời mời đã được gửi và không thể gửi lại","method":"POST","path":"/api/v1/groups/f4df9462-57bc-4fb5-9d7c-97f9888be901/members","status":403,"timestamp":"2026-03-01T14:22:32.230Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-01T14:26:05.013Z"}
+{"level":"error","message":"Lời mời đã được sử dụng hoặc đã hết hạn","method":"POST","path":"/api/v1/groups/invites/8b093d32-b5aa-471c-b6f9-b83ba041229d/accept","status":410,"timestamp":"2026-03-01T15:00:13.557Z"}

@@ -12,7 +12,7 @@ dotenv.config();
 const app: Application = express();
 const server = http.createServer(app);
 export const io = new Server(server);
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json());
 app.use(cookieParser());
 app.use(
@@ -22,8 +22,15 @@ app.use(
     //     logger.info(message.trim());
     //   },
     // },
-  })
+  }),
 );
+app.use("/api/v1/health", (req: Request, res: Response) => {
+  res.status(StatusCodes.OK).json({
+    status: StatusCodes.OK,
+    message: "OK",
+    timestamp: new Date().toISOString(),
+  });
+});
 app.use("/api/v1", routers);
 
 app.use((req: Request, res: Response) => {
@@ -34,7 +41,7 @@ app.use((req: Request, res: Response) => {
 });
 app.use(errorHandler);
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   configSocket(io);
   console.log(`🚀API running on port http://localhost:${PORT}`);
 });

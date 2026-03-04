@@ -47,4 +47,5 @@ export const queryGroupSchema = z.object({
     .int()
     .positive("Page size must be a positive integer")
     .default(10),
+  q: z.string().optional(),
 });

@@ -15,6 +15,7 @@ import {
   verifySystemAdmin,
 } from "../middlewares";
 import z from "zod";
+import { searchExpensesController } from "../controllers";
 
 const routers = Router();
 
@@ -32,9 +33,10 @@ routers.use(
   verifyAccessToken,
   groupRouters,
 );
+routers.use("/expenses", verifyAccessToken, searchExpensesController);
 routers.use("/users", verifyAccessToken, userRouter);
 routers.use("/stats/me", verifyAccessToken, userStatsRouter);
 routers.use("/notifications", verifyAccessToken, notificationRouter);
 routers.use("/expense-categories", expenseCategoryRouter);
-routers.use("/cloudinary",verifyAccessToken, cloudinaryRouter);
+routers.use("/cloudinary", verifyAccessToken, cloudinaryRouter);
 export default routers;

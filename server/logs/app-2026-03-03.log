@@ -1,0 +1,14 @@
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:23:22.063Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:23:23.147Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:23:51.682Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:23:52.742Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:25:41.736Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:25:42.809Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:26:36.961Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:26:38.040Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"GET","path":"/api/v1/users/me","status":404,"timestamp":"2026-03-03T15:56:56.212Z"}
+{"level":"error","message":"Người dùng không tồn tại","method":"PATCH","path":"/api/v1/users/me/settings","status":404,"timestamp":"2026-03-03T16:13:39.587Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/40344b4b-ffb1-468d-a6cd-38688254f21f","status":404,"timestamp":"2026-03-03T16:24:32.702Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/40344b4b-ffb1-468d-a6cd-38688254f21f","status":404,"timestamp":"2026-03-03T16:25:11.259Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04","status":404,"timestamp":"2026-03-03T16:26:51.044Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04","status":404,"timestamp":"2026-03-03T16:27:34.219Z"}

@@ -1,0 +1,1 @@
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:15:02.012Z"}

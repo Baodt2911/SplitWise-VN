@@ -7,4 +7,5 @@ export interface NotificationPayload {
   body: string;
   relatedId?: string;
   relatedType?: RelatedType;
+  metadata?: any;
 }

@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   changePasswordController,
   getActivitiesController,
+  getCurrentUserController,
   getInvitesController,
   getNotificationsController,
   updateProfileController,
@@ -16,6 +17,8 @@ import {
 } from "../schemas";
 
 const router = Router();
+
+router.get("/me", getCurrentUserController);
 
 router.get(
   "/activites",

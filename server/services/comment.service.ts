@@ -14,7 +14,7 @@ export const createCommentService = async (
   userId: string,
   groupId: string,
   expenseId: string,
-  data: CreateCommentDTO
+  data: CreateCommentDTO,
 ) => {
   await checkGroupMember(userId, groupId);
   const expense = await prisma.expense.findFirst({
@@ -79,7 +79,7 @@ export const createCommentService = async (
           preview: comment.content.slice(0, 50),
         },
       },
-      tx
+      tx,
     );
 
     const members = await tx.groupMember.findMany({
@@ -94,11 +94,15 @@ export const createCommentService = async (
         userId: m.userId,
         type: NotificationType.COMMENT_ADDED,
         title: "Bình luận mới",
-        body: `${expense.description}" có thêm bình luận mới từ ${comment.user.fullName}. Xem ngay!`,
-        relatedType: RelatedType.EXPENSE,
-        relatedId: expense.id,
+        body: `Chi phí "${expense.description}" có thêm bình luận mới từ ${comment.user.fullName}. Xem ngay!`,
+        metadata: {
+          groupId,
+          expenseId: expense.id,
+        },
+        relatedType: RelatedType.COMMENT,
+        relatedId: comment.id,
       })),
-      tx
+      tx,
     );
     return {
       id: comment.id,
@@ -112,7 +116,7 @@ export const createCommentService = async (
 export const getCommentsService = async (
   userId: string,
   groupId: string,
-  expenseId: string
+  expenseId: string,
 ) => {
   await checkGroupMember(userId, groupId);
   const expense = await prisma.expense.findFirst({
@@ -134,9 +138,11 @@ export const getCommentsService = async (
     },
     select: {
       id: true,
+      userId: true,
       user: {
         select: {
           fullName: true,
+          avatarUrl: true,
         },
       },
       content: true,
@@ -147,7 +153,9 @@ export const getCommentsService = async (
   });
   const resultComments = comments.map((c) => ({
     id: c.id,
+    userId: c.userId,
     fullName: c.user.fullName,
+    avatarUrl: c.user.avatarUrl,
     content: c.content,
     createdAt: c.createdAt,
     parent: c.parent,

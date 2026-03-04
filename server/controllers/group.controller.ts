@@ -1,4 +1,7 @@
-import { leaveGroupService } from "./../services/group.service";
+import {
+  dismissInviteService,
+  leaveGroupService,
+} from "./../services/group.service";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { CreateGroupDTO, QueryGroupDTO, UpdateGroupDTO } from "../dtos";
@@ -25,7 +28,7 @@ export const createGroupController = catchAsync(
       message: "Tạo nhóm thành công",
       data,
     });
-  }
+  },
 );
 
 export const updateGroupControlleer = catchAsync(
@@ -37,20 +40,20 @@ export const updateGroupControlleer = catchAsync(
       {},
       UpdateGroupDTO
     >,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
 
     const data = await updateGroupService(
       userId!,
       req.params.groupId,
-      req.body
+      req.body,
     );
     res.status(StatusCodes.OK).json({
       message: "Cập nhật nhóm thành công",
       data,
     });
-  }
+  },
 );
 
 export const deleteGroupController = catchAsync(
@@ -60,21 +63,22 @@ export const deleteGroupController = catchAsync(
     res.status(StatusCodes.OK).json({
       message: "Xóa nhóm thành công",
     });
-  }
+  },
 );
 
 export const getAllGroupController = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const { page = 1, pageSize = 10 } = req.query as any as QueryGroupDTO;
+    const { page = 1, pageSize = 10, q } = req.query as any as QueryGroupDTO;
     const groups = await getAllGroupService(userId!, {
       page: +page,
       pageSize: +pageSize,
+      q,
     });
     res.status(StatusCodes.OK).json({
       groups,
     });
-  }
+  },
 );
 
 export const getGroupController = catchAsync(
@@ -84,24 +88,24 @@ export const getGroupController = catchAsync(
     res.status(StatusCodes.OK).json({
       group,
     });
-  }
+  },
 );
 
 export const addMemberController = catchAsync(
   async (
     req: Request<{ groupId: string }, {}, { phone?: string; email?: string }>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     const { added } = await addMemberService(
       userId!,
       req.params.groupId,
-      req.body
+      req.body,
     );
     res.status(StatusCodes.OK).json({
       message: added ? "Đã thêm vào nhóm" : "Đã gửi lời mời",
     });
-  }
+  },
 );
 
 export const verifyInviteTokenController = catchAsync(
@@ -110,7 +114,7 @@ export const verifyInviteTokenController = catchAsync(
     res.status(StatusCodes.OK).json({
       message: "Token đã được xác thực",
     });
-  }
+  },
 );
 
 export const acceptInviteController = catchAsync(
@@ -120,7 +124,17 @@ export const acceptInviteController = catchAsync(
     res.status(StatusCodes.OK).json({
       message: "Đã chấp nhận lời mời",
     });
-  }
+  },
+);
+
+export const dismissInviteController = catchAsync(
+  async (req: Request<{ token: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    await dismissInviteService(req.params.token, userId!);
+    res.status(StatusCodes.OK).json({
+      message: "Đã từ chối lời mời",
+    });
+  },
 );
 
 export const joinGroupController = catchAsync(
@@ -130,7 +144,7 @@ export const joinGroupController = catchAsync(
     res.status(StatusCodes.OK).json({
       message: "Đã tham gia nhóm",
     });
-  }
+  },
 );
 
 export const leaveGroupController = catchAsync(
@@ -140,18 +154,18 @@ export const leaveGroupController = catchAsync(
     res.status(StatusCodes.OK).json({
       message: "Đã rời khỏi nhóm",
     });
-  }
+  },
 );
 
 export const removeMemberController = catchAsync(
   async (
     req: Request<{ groupId: string; memberId: string }>,
-    res: Response
+    res: Response,
   ) => {
     const userId = req.user?.userId;
     await removeMemberService(userId!, req.params.groupId, req.params.memberId);
     res.status(StatusCodes.OK).json({
       message: "Đã xóa thành viên khỏi nhóm",
     });
-  }
+  },
 );

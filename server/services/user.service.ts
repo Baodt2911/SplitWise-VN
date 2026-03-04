@@ -9,6 +9,100 @@ import {
 import bcrypt from "bcrypt";
 import { GroupInviteStatus } from "../generated/prisma/enums";
 
+export const getPaymentInfoService = async (
+  userId: string,
+  groupId: string,
+  payeeId: string,
+) => {
+  const group = await prisma.group.findUnique({
+    where: {
+      id: groupId,
+      members: {
+        some: {
+          userId,
+        },
+      },
+      AND: {
+        members: {
+          some: {
+            userId: payeeId,
+          },
+        },
+      },
+    },
+  });
+  if (!group) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "Bạn không có quyền truy cập vào nhóm này",
+    };
+  }
+
+  const balance = await prisma.balance.findUnique({
+    where: {
+      groupId_payerId_payeeId: {
+        groupId,
+        payerId: userId,
+        payeeId,
+      },
+    },
+  });
+
+  if (balance?.amount.equals(0)) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "Bạn không nợ người này",
+    };
+  }
+  const paymentInfo = await prisma.user.findUnique({
+    where: {
+      id: payeeId,
+    },
+    select: {
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+    },
+  });
+  if (!paymentInfo) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Thông tin thanh toán không tồn tại",
+    };
+  }
+  return paymentInfo;
+};
+
+export const getCurrentUserService = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      avatarUrl: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+      language: true,
+      timezone: true,
+      currency: true,
+      allowDirectAdd: true,
+      settings: true,
+    },
+  });
+  if (!user) {
+    throw {
+      status: StatusCodes.NOT_FOUND,
+      message: "Người dùng không tồn tại",
+    };
+  }
+  return user;
+};
+
 export const saveUserService = async (email: string) => {
   const raw = await redis.get(`pending:${email}`);
   if (!raw) {
@@ -94,7 +188,10 @@ export const updateProfileService = async (
     },
     data,
     select: {
+      id: true,
       fullName: true,
+      email: true,
+      phone: true,
       avatarUrl: true,
       bankName: true,
       bankAccountNumber: true,
@@ -102,6 +199,8 @@ export const updateProfileService = async (
       language: true,
       timezone: true,
       currency: true,
+      allowDirectAdd: true,
+      settings: true,
     },
   });
 };
@@ -110,24 +209,19 @@ export const updateUserSettingsService = async (
   userId: string,
   data: UpdateUserSettingsDTO,
 ) => {
-  const existingUser = await prisma.userSettings.findUnique({
+  await prisma.userSettings.upsert({
     where: {
-      id: userId,
+      userId,
+    },
+    update: data,
+    create: {
+      userId,
+      ...data,
     },
   });
-  if (!existingUser) {
-    throw {
-      status: StatusCodes.NOT_FOUND,
-      message: "Người dùng không tồn tại",
-    };
-  }
-  await prisma.userSettings.update({
-    where: {
-      id: userId,
-    },
-    data,
-  });
-  return true;
+
+  // Return the full updated user object
+  return await getCurrentUserService(userId);
 };
 
 export const getInvitesService = async (userId: string) => {
