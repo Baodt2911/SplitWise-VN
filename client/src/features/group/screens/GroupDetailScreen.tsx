@@ -20,6 +20,7 @@ import {
   type GroupDetail,
   type GroupBalance,
 } from "../../../services/api/group.api";
+import { getPendingSettlements } from "../../../services/api/settlement.api";
 import {
   getExpenses,
   deleteExpense,
@@ -73,6 +74,19 @@ export const GroupDetailScreen = () => {
     queryFn: () => getGroupDetail(params.id!),
     enabled: !!params.id,
   });
+
+  // Fetch pending settlements to show status in balance list
+  const { data: pendingSettlements = [] } = useQuery({
+    queryKey: ["pendingSettlements", params.id],
+    queryFn: () => getPendingSettlements(params.id!),
+    enabled: !!params.id,
+  });
+
+  // Build a Set of payeeIds that already have a pending settlement
+  const pendingSettlementPayeeIds = useMemo(
+    () => new Set(pendingSettlements.map((s) => s.payeeId)),
+    [pendingSettlements]
+  );
 
   const group = useMemo(() => {
     if (!groupData?.group) return null;
@@ -332,6 +346,7 @@ export const GroupDetailScreen = () => {
           formatCurrency={formatCurrency}
           onBalancePress={handleBalancePress}
           onPaymentPress={handlePaymentPress}
+          pendingSettlementPayeeIds={pendingSettlementPayeeIds}
         />
         {/* Search and Filter Bar - only show when has expenses */}
         <View
@@ -362,6 +377,7 @@ export const GroupDetailScreen = () => {
     formatCurrency,
     handleBalancePress,
     handlePaymentPress,
+    pendingSettlementPayeeIds,
     filters,
     handleFilterChange,
     activeFilterCount,

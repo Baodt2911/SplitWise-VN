@@ -162,6 +162,7 @@ export default function PaymentScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["group", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["pendingSettlements", groupId] });
       success("Đã xác nhận thanh toán thành công!");
       router.back();
     },

@@ -260,28 +260,56 @@ export const flattenNotifications = (
 };
 
 /**
- * Get navigation route for related item
+ * Get navigation route for notification
  */
-export const getRelatedRoute = (
-  type: string,
-  referenceId?: string,
-): string | null => {
-  if (!referenceId && type !== "GROUP_INVITE") return null;
+export const getRelatedRoute = (notification: Notification): string | null => {
+  const { type, relatedType, relatedId, metadata } = notification;
 
-  const relatedType = type as RelatedType;
-
-  switch (relatedType) {
-    case "GROUP":
-      return `/group/${referenceId}`;
-    case "SETTLEMENT":
-      return `/settlement/${referenceId}`;
-    case "USER":
-      return `/profile/${referenceId}`;
-    case "GROUP_INVITE":
-      return `/invites`;
-    case "EXPENSE":
-    case "COMMENT":
-    default:
-      return null;
+  // 1. Group Invites - Handled in-place in notification list
+  if (type === "MEMBER_INVITED" || relatedType === "GROUP_INVITE") {
+    return null;
   }
+
+  // 2. Settlement related (Payment Request, Confirmed, Rejected, etc.)
+  // Navigate to Group Payment tab of settlement history
+  if (relatedType === "SETTLEMENT" || type.startsWith("PAYMENT_")) {
+    const groupId = metadata?.groupId;
+    const status = metadata?.status;
+
+    if (groupId) {
+      // Nếu đã xác nhận hoặc từ chối, dẫn về lịch sử thanh toán
+      if (status === "CONFIRMED" || status === "REJECTED" || type === "PAYMENT_CONFIRMED" || type === "PAYMENT_REJECTED") {
+        return `/group/${groupId}/settlement-history`;
+      }
+      return `/group/${groupId}/payment`;
+    }
+  }
+
+  // 3. Expense/Comment related
+  // Navigate to Group Expense Detail
+  if (relatedType === "EXPENSE" || relatedType === "COMMENT") {
+    const groupId = metadata?.groupId;
+    const expenseId =
+      relatedType === "EXPENSE" ? relatedId : metadata?.expenseId;
+
+    if (groupId && expenseId) {
+      return `/group/${groupId}/expense/${expenseId}`;
+    }
+  }
+
+  // 4. Group general (Member joined, role changed, etc.)
+  if (relatedType === "GROUP" || (metadata?.groupId && !relatedType)) {
+    const groupId = relatedId || metadata?.groupId;
+    if (groupId) {
+      return `/group/${groupId}`;
+    }
+  }
+
+  // 5. User related (Profile)
+  if (relatedType === "USER" && relatedId) {
+    return `/profile/${relatedId}`;
+  }
+
+  // Default fallback
+  return null;
 };

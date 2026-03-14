@@ -10,10 +10,11 @@ interface BalanceListItemProps {
   formatCurrency: (amount: string) => string;
   onPress: () => void;
   onPayment: () => void;
+  hasPendingSettlement?: boolean;
 }
 
 export const BalanceListItem = React.memo<BalanceListItemProps>(
-  ({ balance, colors, currentUserId, formatCurrency, onPress, onPayment }) => {
+  ({ balance, colors, currentUserId, formatCurrency, onPress, onPayment, hasPendingSettlement }) => {
     const isCurrentUserPayer = balance.payer.id === currentUserId;
     const isCurrentUserPayee = balance.payee.id === currentUserId;
 
@@ -69,14 +70,18 @@ export const BalanceListItem = React.memo<BalanceListItemProps>(
           <TouchableOpacity
             onPress={(e) => {
               e.stopPropagation();
-              onPayment();
+              if (!hasPendingSettlement) onPayment();
             }}
-            activeOpacity={0.7}
+            activeOpacity={hasPendingSettlement ? 1 : 0.7}
             className="rounded-full items-center justify-center px-2 py-2"
-            style={{ backgroundColor: colors.primary }}
+            style={{
+              backgroundColor: hasPendingSettlement
+                ? colors.textTertiary
+                : colors.primary,
+            }}
           >
             <Text className="text-xs font-medium" style={{ color: "#fff" }}>
-              Thanh toán
+              {hasPendingSettlement ? "Chờ xác nhận" : "Thanh toán"}
             </Text>
           </TouchableOpacity>
         )}

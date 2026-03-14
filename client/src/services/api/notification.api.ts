@@ -9,6 +9,12 @@ export interface Notification {
   relatedType?: string;
   relatedId?: string;
   createdAt: string;
+  metadata?: {
+    groupId?: string;
+    settlementId?: string;
+    status?: "PENDING" | "CONFIRMED" | "REJECTED" | "DISPUTED" | "ACCEPTED";
+    [key: string]: any;
+  };
 }
 
 export interface GetNotificationsResponse {
