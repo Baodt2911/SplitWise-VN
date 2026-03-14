@@ -14,10 +14,102 @@ import { createNotificationService } from "./notification.service";
 import { emitNotificationToUser } from "../emitter/notification.emitter";
 import { io } from "../app";
 
+export const getPendingSettlementsService = async (
+  userId: string,
+  groupId: string,
+) => {
+  await checkGroupMember(userId, groupId);
+  const settlements = await prisma.settlement.findMany({
+    where: {
+      groupId,
+      payerId: userId,
+      status: {
+        in: [SettlementStatus.PENDING, SettlementStatus.DISPUTED],
+      },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      payerId: true,
+      payeeId: true,
+      amount: true,
+      status: true,
+    },
+  });
+  return settlements;
+};
+
+export const getSettlementHistoryService = async (
+  userId: string,
+  groupId: string,
+  page: number = 1,
+  pageSize: number = 20,
+) => {
+  await checkGroupMember(userId, groupId);
+  const skip = (page - 1) * pageSize;
+  const [settlements, total] = await Promise.all([
+    prisma.settlement.findMany({
+      where: {
+        groupId,
+        OR: [{ payerId: userId }, { payeeId: userId }],
+        status: {
+          in: [
+            SettlementStatus.CONFIRMED,
+            SettlementStatus.REJECTED,
+            SettlementStatus.DISPUTED,
+            SettlementStatus.PENDING,
+          ],
+        },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        paymentMethod: true,
+        paymentDate: true,
+        rejectionReason: true,
+        createdAt: true,
+        confirmedAt: true,
+        payer: { select: { id: true, fullName: true, avatarUrl: true } },
+        payee: { select: { id: true, fullName: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize,
+    }),
+    prisma.settlement.count({
+      where: {
+        groupId,
+        OR: [{ payerId: userId }, { payeeId: userId }],
+        status: {
+          in: [
+            SettlementStatus.CONFIRMED,
+            SettlementStatus.REJECTED,
+            SettlementStatus.DISPUTED,
+            SettlementStatus.PENDING,
+          ],
+        },
+        deletedAt: null,
+      },
+    }),
+  ]);
+  return {
+    settlements,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  };
+};
+
 export const getSettlementService = async (
   userId: string,
   groupId: string,
-  settlementId: string
+  settlementId: string,
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
@@ -71,7 +163,7 @@ export const getSettlementService = async (
 export const createSettlementService = async (
   userId: string,
   groupId: string,
-  data: CreateSettlementDTO
+  data: CreateSettlementDTO,
 ) => {
   const existingGroup = await prisma.group.findUnique({
     where: {
@@ -189,7 +281,7 @@ export const createSettlementService = async (
           currency: settlement.currency,
         },
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo cho người nhận tiền yêu cầu xác nhận
@@ -215,9 +307,14 @@ export const createSettlementService = async (
             } cho bạn.`,
         relatedType: RelatedType.SETTLEMENT,
         relatedId: settlement.id,
+        metadata: {
+          groupId,
+          status: SettlementStatus.PENDING,
+        },
       },
-      tx
+      tx,
     );
+
     return settlement;
   });
 
@@ -235,7 +332,7 @@ const disputeSettlementController = async (
   userId: string,
   groupId: string,
   settlementId: string,
-  reason: string
+  reason: string,
 ) => {
   await checkGroupMember(userId, groupId);
   const settlement = await prisma.settlement.findUnique({
@@ -318,7 +415,7 @@ const disputeSettlementController = async (
           settlementId: updateSettlement.id,
         },
       },
-      tx
+      tx,
     );
 
     // Gửi thông báo cho người nhận tiền
@@ -335,7 +432,7 @@ const disputeSettlementController = async (
         relatedType: RelatedType.SETTLEMENT,
         relatedId: updateSettlement.id,
       },
-      tx
+      tx,
     );
   });
 
@@ -353,10 +450,12 @@ const updateStatusSettlementService = async (
   {
     status,
     reason,
+    notificationId,
   }: {
     status: Exclude<SettlementStatus, "PENDING" | "DISPUTED">;
     reason?: string;
-  }
+    notificationId?: string;
+  },
 ) => {
   await checkGroupMember(userId, groupId);
 
@@ -475,7 +574,7 @@ const updateStatusSettlementService = async (
           settlementId: updateSettlement.id,
         },
       },
-      tx
+      tx,
     );
 
     const map_title_body = {
@@ -489,6 +588,19 @@ const updateStatusSettlementService = async (
       },
     };
 
+    const map_metadata: {
+      groupId: string;
+      status: Exclude<SettlementStatus, "PENDING" | "DISPUTED">;
+      rejectionReason?: string;
+    } = {
+      groupId,
+      status,
+    };
+
+    if (status === SettlementStatus.REJECTED) {
+      map_metadata.rejectionReason = reason;
+    }
+
     // Gửi thông báo cho người thanh toán
     await createNotificationService(
       {
@@ -496,11 +608,44 @@ const updateStatusSettlementService = async (
         type: mapNotificationType[status],
         title: map_title_body.title[status],
         body: map_title_body.body[status],
+        metadata: map_metadata,
         relatedType: RelatedType.SETTLEMENT,
         relatedId: updateSettlement.id,
       },
-      tx
+      tx,
     );
+
+    // Cập nhật thông báo liên quan - Ưu tiên theo ID nếu có
+    if (notificationId) {
+      await tx.notification.update({
+        where: { id: notificationId, userId },
+        data: {
+          metadata: {
+            groupId,
+            status,
+          },
+          isRead: true,
+        },
+      });
+    }
+
+    // Luôn chạy updateMany để đảm bảo tất cả thông báo PAYMENT_REQUEST liên quan đều được cập nhật
+    // (Phòng trường hợp notificationId không khớp hoặc người dùng có nhiều thông báo cho cùng 1 settlement)
+    await tx.notification.updateMany({
+      where: {
+        userId,
+        relatedType: RelatedType.SETTLEMENT,
+        relatedId: settlementId,
+        type: NotificationType.PAYMENT_REQUEST,
+      },
+      data: {
+        metadata: {
+          groupId,
+          status,
+        },
+        isRead: true,
+      },
+    });
   });
 
   emitNotificationToUser(io, settlement.payerId, {
@@ -512,27 +657,35 @@ const updateStatusSettlementService = async (
 };
 
 export const updateSettlementService = {
-  confirm: (userId: string, groupId: string, settlementId: string) =>
+  confirm: (
+    userId: string,
+    groupId: string,
+    settlementId: string,
+    notificationId?: string,
+  ) =>
     updateStatusSettlementService(userId, groupId, settlementId, {
       status: SettlementStatus.CONFIRMED,
+      notificationId,
     }),
 
   reject: (
     userId: string,
     groupId: string,
     settlementId: string,
-    rejectionReason: string
+    rejectionReason: string,
+    notificationId?: string,
   ) =>
     updateStatusSettlementService(userId, groupId, settlementId, {
       status: SettlementStatus.REJECTED,
       reason: rejectionReason,
+      notificationId,
     }),
 
   dispute: (
     userId: string,
     groupId: string,
     settlementId: string,
-    disputeReason: string
+    disputeReason: string,
   ) =>
     disputeSettlementController(userId, groupId, settlementId, disputeReason),
 };

@@ -707,6 +707,7 @@ const sendInviteTokensService = async (
       },
       select: {
         id: true,
+        inviteToken: true,
         user: {
           select: {
             id: true,
@@ -738,9 +739,10 @@ const sendInviteTokensService = async (
         metadata: {
           groupId,
           groupName: groupName,
+          status: "PENDING",
         },
         relatedType: RelatedType.GROUP_INVITE,
-        relatedId: newInvite.id,
+        relatedId: newInvite.inviteToken,
       },
       tx,
     );
@@ -993,6 +995,24 @@ export const acceptInviteService = async (token: string, userId: string) => {
       })),
       tx,
     );
+
+    // Cập nhật lại thông báo mời cho người dùng này
+    await tx.notification.updateMany({
+      where: {
+        userId,
+        relatedType: RelatedType.GROUP_INVITE,
+        relatedId: token,
+        type: NotificationType.MEMBER_INVITED,
+      },
+      data: {
+        metadata: {
+          groupId: invite.groupId,
+          groupName: invite.group.name,
+          status: "ACCEPTED",
+        },
+        isRead: true,
+      },
+    });
   });
 
   emitNotificationToUserInGroup(io, invite.groupId, userId, {
@@ -1053,6 +1073,23 @@ export const dismissInviteService = async (token: string, userId: string) => {
       usedBy: userId,
       usedAt: new Date(),
       expiresAt: new Date(),
+    },
+  });
+
+  // Cập nhật lại thông báo mời cho người dùng này
+  await prisma.notification.updateMany({
+    where: {
+      userId,
+      relatedType: RelatedType.GROUP_INVITE,
+      relatedId: token,
+      type: NotificationType.MEMBER_INVITED,
+    },
+    data: {
+      metadata: {
+        groupId: invite.groupId,
+        status: "REJECTED",
+      },
+      isRead: true,
     },
   });
 

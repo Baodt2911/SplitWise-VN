@@ -5,8 +5,36 @@ import { StatusCodes } from "http-status-codes";
 import {
   createSettlementService,
   getSettlementService,
+  getPendingSettlementsService,
+  getSettlementHistoryService,
   updateSettlementService,
 } from "../services";
+
+export const getPendingSettlementsController = catchAsync(
+  async (req: Request<{ groupId: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    const settlements = await getPendingSettlementsService(
+      userId!,
+      req.params.groupId
+    );
+    res.status(StatusCodes.OK).json({ settlements });
+  }
+);
+
+export const getSettlementHistoryController = catchAsync(
+  async (req: Request<{ groupId: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    const { page = 1, pageSize = 20 } = req.query as any;
+    const result = await getSettlementHistoryService(
+      userId!,
+      req.params.groupId,
+      +page,
+      +pageSize
+    );
+    res.status(StatusCodes.OK).json(result);
+  }
+);
+
 
 export const getSettlementController = catchAsync(
   async (
@@ -52,7 +80,8 @@ export const confirmSettlementController = catchAsync(
     await updateSettlementService.confirm(
       userId!,
       req.params.groupId,
-      req.params.settlementId
+      req.params.settlementId,
+      req.body.notificationId
     );
     res.status(StatusCodes.OK).json({
       message: "Xác nhận thanh toán thành công",
@@ -61,20 +90,15 @@ export const confirmSettlementController = catchAsync(
 );
 
 export const rejectSettlementController = catchAsync(
-  async (
-    req: Request<
-      { groupId: string; settlementId: string },
-      {},
-      { rejectionReason: string }
-    >,
-    res: Response
-  ) => {
+  async (req: Request<{ groupId: string; settlementId: string }, {}, { rejectionReason: string; notificationId: string }>, res: Response) => {
     const userId = req.user?.userId;
+    const { rejectionReason, notificationId } = req.body;
     await updateSettlementService.reject(
       userId!,
       req.params.groupId,
       req.params.settlementId,
-      req.body.rejectionReason
+      rejectionReason,
+      notificationId
     );
     res.status(StatusCodes.OK).json({
       message: "Từ chối xác nhận thanh toán",

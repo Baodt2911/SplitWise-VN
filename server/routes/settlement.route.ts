@@ -7,10 +7,15 @@ import {
   createSettlementController,
   disputeSettlementController,
   getSettlementController,
+  getPendingSettlementsController,
+  getSettlementHistoryController,
   rejectSettlementController,
 } from "../controllers";
 
 const router = Router({ mergeParams: true });
+
+router.get("/", getPendingSettlementsController);
+router.get("/history", getSettlementHistoryController);
 
 router.get(
   "/:settlementId",
