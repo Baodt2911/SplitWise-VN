@@ -14,6 +14,7 @@ import {
   FlatList,
   Alert,
   KeyboardAvoidingView,
+  Share,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import BottomSheet, {
@@ -42,6 +43,7 @@ import {
 import { useToast } from "../../../hooks/useToast";
 import { useAlert } from "../../../hooks/useAlert";
 import * as Clipboard from "expo-clipboard";
+import { apiClient } from "../../../services/api/config";
 import { uploadImage, deleteImage } from "../../../services/api/upload.api";
 import { MemberListItem } from "../components/MemberListItem";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -350,12 +352,31 @@ export const GroupSettingsScreen = () => {
     }
   };
 
-  // Copy invite link
-  const handleCopyLink = useCallback(async () => {
+  // Share invite link
+  const handleShareLink = useCallback(async () => {
     if (!group) return;
-    const inviteLink = `splitwise.vn/join/${group.inviteCode}`;
-    await Clipboard.setStringAsync(inviteLink);
-    showSuccessRef.current("Đã sao chép link", "Thành công");
+    try {
+      const baseUrl = apiClient.defaults.baseURL;
+      const shareUrl = `${baseUrl}/groups/invites/open/${group.inviteCode}`;
+      
+      const result = await Share.share({
+        message: `Tham gia nhóm "${group.name}" trên SplitwiseVN tại: ${shareUrl}`,
+        url: shareUrl, // Only used on iOS
+        title: `Mời tham gia nhóm ${group.name}`,
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // shared with activity type of result.activityType
+        } else {
+          // shared
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // dismissed
+      }
+    } catch (err: any) {
+      showErrorRef.current("Không thể chia sẻ link", "Lỗi");
+    }
   }, [group]);
 
   // Get current user role
@@ -426,6 +447,8 @@ export const GroupSettingsScreen = () => {
       },
     ]);
   };
+
+
 
   // Validate email format
   const isValidEmail = (email: string) => {
@@ -911,22 +934,23 @@ export const GroupSettingsScreen = () => {
                 borderWidth: 1,
                 borderColor: colors.border,
               }}
-              value={`splitwise.vn/join/${group.inviteCode}`}
+              value={`splitwise://invites/${group.inviteCode}`}
               editable={false}
             />
             <TouchableOpacity
-              className="px-4 py-3 rounded-xl"
+              className="px-4 py-3 rounded-xl flex-row items-center justify-center gap-2"
               style={{ backgroundColor: colors.primary }}
               activeOpacity={0.8}
-              onPress={handleCopyLink}
+              onPress={handleShareLink}
             >
+              <Icon name="share" size={18} color="#FFFFFF" />
               <Text
-                className="text-base"
+                className="text-base font-medium"
                 style={{
                   color: "#FFFFFF",
                 }}
               >
-                Sao chép
+                Chia sẻ
               </Text>
             </TouchableOpacity>
           </View>
@@ -1117,35 +1141,7 @@ export const GroupSettingsScreen = () => {
             <Icon name="list" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            activeOpacity={0.7}
-          >
-            <Text
-              className="text-base"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              Xuất dữ liệu nhóm
-            </Text>
-            <Icon name="chevronRight" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            activeOpacity={0.7}
-          >
-            <Text
-              className="text-base"
-              style={{
-                color: colors.textPrimary,
-              }}
-            >
-              Lưu trữ nhóm
-            </Text>
-            <Icon name="chevronRight" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
         </View>
 
         <View
@@ -1207,7 +1203,7 @@ export const GroupSettingsScreen = () => {
     tempReminderDays,
     reminderDays,
     group,
-    handleCopyLink,
+    handleShareLink,
     handleLeaveGroup,
     handleDeleteGroup,
   ]);

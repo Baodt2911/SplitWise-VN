@@ -70,6 +70,7 @@ export const getSettlementHistoryService = async (
         paymentMethod: true,
         paymentDate: true,
         rejectionReason: true,
+        disputeReason: true,
         createdAt: true,
         confirmedAt: true,
         payer: { select: { id: true, fullName: true, avatarUrl: true } },
@@ -325,6 +326,8 @@ export const createSettlementService = async (
     relatedType: RelatedType.SETTLEMENT,
     relatedId: result.id,
   });
+
+
   return true;
 };
 
@@ -426,11 +429,16 @@ const disputeSettlementController = async (
         title: "Yêu cầu tranh chấp thanh toán",
         body: `${
           updateSettlement.payer.fullName
-        } đã tranh chấp khoản thanh toán ${updateSettlement.amount.toString()} ${
+        } đã khiếu nại khoản thanh toán ${updateSettlement.amount.toString()} ${
           updateSettlement.currency
         }. Vui lòng kiểm tra lại.`,
         relatedType: RelatedType.SETTLEMENT,
         relatedId: updateSettlement.id,
+        metadata: {
+          groupId,
+          status: SettlementStatus.DISPUTED,
+          disputeReason: reason,
+        },
       },
       tx,
     );
@@ -441,6 +449,7 @@ const disputeSettlementController = async (
     relatedType: RelatedType.SETTLEMENT,
     relatedId: settlementId,
   });
+
 };
 
 const updateStatusSettlementService = async (
@@ -629,14 +638,16 @@ const updateStatusSettlementService = async (
       });
     }
 
-    // Luôn chạy updateMany để đảm bảo tất cả thông báo PAYMENT_REQUEST liên quan đều được cập nhật
+    // Luôn chạy updateMany để đảm bảo tất cả thông báo liên quan (PAYMENT_REQUEST hoặc PAYMENT_DISPUTED) đều được cập nhật
     // (Phòng trường hợp notificationId không khớp hoặc người dùng có nhiều thông báo cho cùng 1 settlement)
     await tx.notification.updateMany({
       where: {
         userId,
         relatedType: RelatedType.SETTLEMENT,
         relatedId: settlementId,
-        type: NotificationType.PAYMENT_REQUEST,
+        type: {
+          in: [NotificationType.PAYMENT_REQUEST, NotificationType.PAYMENT_DISPUTED],
+        },
       },
       data: {
         metadata: {
@@ -653,6 +664,8 @@ const updateStatusSettlementService = async (
     relatedType: RelatedType.SETTLEMENT,
     relatedId: settlementId,
   });
+
+
   return true;
 };
 

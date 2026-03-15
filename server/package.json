@@ -12,7 +12,7 @@
     "prisma:migrate:prod": "prisma migrate deploy",
     "prisma:studio": "prisma studio --config ./prisma.config.ts",
     "prisma:seed": "prisma db seed",
-    "prisma:reset": "prisma migrate reset --force",
+    "prisma:reset": "prisma migrate reset --force && prisma db seed",
     "worker": "tsx ./workers/push.worker.ts"
   },
   "keywords": [],

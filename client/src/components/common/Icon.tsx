@@ -61,6 +61,9 @@ const iconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   lightbulb: "lightbulb-on",
   image: "image",
   download: "download",
+  history: "history",
+  archive: "archive",
+  refreshCw: "refresh",
 
   // Notification icons
   checkCircle: "check-circle",

@@ -333,7 +333,18 @@ export const addMember = async (
   }
 };
 
-export const verifyInvite = async (token: string): Promise<any | ApiError> => {
+export interface VerifyInviteResponse {
+  message: string;
+  data?: {
+    groupName: string;
+    description: string | null;
+    inviterName: string;
+    isMember?: boolean;
+    groupId?: string;
+  };
+}
+
+export const verifyInvite = async (token: string): Promise<VerifyInviteResponse | ApiError> => {
   try {
     const response = await apiClient.get(`/groups/invites/${token}`);
     return response.data;
@@ -341,6 +352,18 @@ export const verifyInvite = async (token: string): Promise<any | ApiError> => {
     if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
     return {
       message: error.response?.data?.message || "Lời mời không hợp lệ",
+    };
+  }
+};
+
+export const verifyInviteCode = async (code: string): Promise<VerifyInviteResponse | ApiError> => {
+  try {
+    const response = await apiClient.get(`/groups/invites/verify/${code}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.code === "ERR_NETWORK") throw new Error("Lỗi kết nối server");
+    return {
+      message: error.response?.data?.message || "Mã mời không hợp lệ",
     };
   }
 };
@@ -368,3 +391,5 @@ export const dismissInvite = async (token: string): Promise<any | ApiError> => {
     };
   }
 };
+
+

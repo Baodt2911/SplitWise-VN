@@ -14,6 +14,8 @@ import {
   removeMemberController,
   updateGroupControlleer,
   verifyInviteTokenController,
+  verifyInviteCodeController,
+  renderInviteBridgeController,
 } from "../controllers";
 import {
   createGroupSchema,
@@ -84,6 +86,8 @@ router.get(
   getPaymentInfoController,
 );
 
+
+
 // GROUP MEMBER
 router.delete(
   "/:groupId/members/:memberId",
@@ -136,12 +140,29 @@ router.post(
 
 router.get(
   "/invites/:token",
+  verifyAccessToken,
   validateAll({
     params: z.object({
       token: z.uuidv4("Token is required"),
     }),
   }),
   verifyInviteTokenController,
+);
+
+router.get(
+  "/invites/verify/:code",
+  verifyAccessToken,
+  validateAll({
+    params: z.object({
+      code: z.string().length(6, "Invite code must be 6 characters"),
+    }),
+  }),
+  verifyInviteCodeController,
+);
+
+router.get(
+  "/invites/open/:code",
+  renderInviteBridgeController,
 );
 router.post(
   "/invites/:token/accept",

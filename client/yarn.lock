@@ -5886,7 +5886,7 @@ snake-case@^3.0.4:
     dot-case "^3.0.4"
     tslib "^2.0.3"
 
-socket.io-client@^4.8.1:
+socket.io-client@^4.8.3:
   version "4.8.3"
   resolved "https://registry.yarnpkg.com/socket.io-client/-/socket.io-client-4.8.3.tgz#62717edd46a318c918125b57e92dc7f8bb71c34c"
   integrity sha512-uP0bpjWrjQmUt5DTHq9RuoCBdFJF10cdX9X+a368j/Ft0wmaVgxlrjvK3kjvgCODOMMOz9lcaRzxmso0bTWZ/g==

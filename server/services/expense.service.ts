@@ -239,6 +239,7 @@ export const createExpenseService = async (
     relatedType: RelatedType.EXPENSE,
     relatedId: resultExpenses.id,
   });
+  
 
   return resultExpenses;
 };
@@ -559,6 +560,7 @@ export const updateExpenseService = async (
     relatedId: result.id,
   });
 
+
   return result;
 };
 
@@ -710,6 +712,7 @@ export const deleteExpenseService = async (
     relatedType: RelatedType.EXPENSE,
     relatedId: expenseId,
   });
+
 };
 
 export const searchExpensesService = async (userId: string, search: string) => {

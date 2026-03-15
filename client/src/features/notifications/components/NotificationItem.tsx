@@ -27,10 +27,11 @@ export const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   const { theme } = usePreferencesStore();
   const colors = getThemeColors(theme);
   const isPaymentRequest = notification.type === "PAYMENT_REQUEST";
+  const isPaymentDisputed = notification.type === "PAYMENT_DISPUTED";
 
   // Priority: if metadata already has a conclusive status, show it.
   const status = notification.metadata?.status;
-  const isProcessed = status && status !== "PENDING";
+  const isProcessed = status && status !== "PENDING" && status !== "DISPUTED";
 
   const { icon, color } = getNotificationStyle(notification.type);
 
@@ -117,6 +118,7 @@ export const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
           {/* Action buttons or status label — only for relevant types */}
           {(isPaymentRequest ||
+            isPaymentDisputed ||
             notification.type === "MEMBER_INVITED" ||
             notification.type === "PAYMENT_CONFIRMED" ||
             notification.type === "PAYMENT_REJECTED") && (
@@ -189,71 +191,85 @@ export const NotificationItemComponent: React.FC<NotificationItemProps> = ({
                 </View>
               ) : onConfirm && onReject ? (
                 /* Action Buttons */
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 8,
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={onConfirm}
-                    disabled={isConfirmLoading}
+                <View style={{ gap: 8 }}>
+                  {isPaymentDisputed && notification.metadata?.disputeReason && (
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                        fontStyle: "italic",
+                        marginBottom: 4,
+                      }}
+                    >
+                      " {notification.metadata.disputeReason} "
+                    </Text>
+                  )}
+                  <View
                     style={{
-                      flex: 1,
-                      height: 36,
-                      borderRadius: 8,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: colors.primary,
-                      opacity: isConfirmLoading ? 0.7 : 1,
+                      flexDirection: "row",
+                      gap: 8,
                     }}
-                    activeOpacity={0.8}
                   >
-                    {isConfirmLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
+                    <TouchableOpacity
+                      onPress={onConfirm}
+                      disabled={isConfirmLoading}
+                      style={{
+                        flex: 1,
+                        height: 36,
+                        borderRadius: 8,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: colors.primary,
+                        opacity: isConfirmLoading ? 0.7 : 1,
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      {isConfirmLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text
+                          style={{
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: "600",
+                          }}
+                        >
+                          {notification.type === "MEMBER_INVITED"
+                            ? "Chấp nhận"
+                            : "Xác nhận nhận tiền"}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={onReject}
+                      disabled={isConfirmLoading}
+                      style={{
+                        flex: 1,
+                        height: 36,
+                        borderRadius: 8,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderWidth: 1,
+                        borderColor: colors.danger,
+                        backgroundColor: "transparent",
+                        opacity: isConfirmLoading ? 0.5 : 1,
+                      }}
+                      activeOpacity={0.8}
+                    >
                       <Text
                         style={{
-                          color: "#fff",
+                          color: colors.danger,
                           fontSize: 13,
                           fontWeight: "600",
                         }}
                       >
                         {notification.type === "MEMBER_INVITED"
-                          ? "Chấp nhận"
-                          : "Xác nhận nhận tiền"}
+                          ? "Bỏ qua"
+                          : "Từ chối"}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={onReject}
-                    disabled={isConfirmLoading}
-                    style={{
-                      flex: 1,
-                      height: 36,
-                      borderRadius: 8,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor: colors.danger,
-                      backgroundColor: "transparent",
-                      opacity: isConfirmLoading ? 0.5 : 1,
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={{
-                        color: colors.danger,
-                        fontSize: 13,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {notification.type === "MEMBER_INVITED"
-                        ? "Bỏ qua"
-                        : "Từ chối"}
-                    </Text>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : null}
             </View>

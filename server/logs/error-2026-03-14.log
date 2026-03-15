@@ -1,0 +1,12 @@
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-14T09:57:25.937Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T10:13:13.808Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T10:13:18.736Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T10:13:22.866Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T10:13:25.704Z"}
+{"level":"error","message":"Mật khẩu không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T10:13:29.170Z"}
+{"level":"error","message":"Email không hợp lệ","method":"POST","path":"/api/v1/auth/login","status":400,"timestamp":"2026-03-14T11:20:39.314Z"}
+{"level":"error","message":"Khoản thanh toán đã được xử lý trước đó","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements/9700f057-344f-40a5-857c-1f2aab401de0/confirm","status":403,"timestamp":"2026-03-14T11:44:40.470Z"}
+{"level":"error","message":"Chủ sở hữu nhóm không thể rời khỏi nhóm","method":"POST","path":"/api/v1/groups/40344b4b-ffb1-468d-a6cd-38688254f21f/leave","status":403,"timestamp":"2026-03-14T11:55:05.868Z"}
+{"level":"error","message":"Khoản thanh toán đã được xử lý trước đó","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements/a003df22-a40a-4bd4-920f-3719cd2a209f/confirm","status":403,"timestamp":"2026-03-14T11:55:58.691Z"}
+{"level":"error","message":"Không tìm thấy nhóm","method":"GET","path":"/api/v1/groups/40344b4b-ffb1-468d-a6cd-38688254f21f","status":404,"timestamp":"2026-03-14T12:11:16.047Z"}
+{"level":"error","message":"Chủ sở hữu nhóm không thể rời khỏi nhóm","method":"POST","path":"/api/v1/groups/40344b4b-ffb1-468d-a6cd-38688254f21f/leave","status":403,"timestamp":"2026-03-14T13:19:21.478Z"}

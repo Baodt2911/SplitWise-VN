@@ -2,6 +2,8 @@ import {
   dismissInviteService,
   leaveGroupService,
 } from "./../services/group.service";
+import fs from "fs";
+import path from "path";
 import { Response, Request } from "express";
 import { catchAsync } from "../helper/catchAsync";
 import { CreateGroupDTO, QueryGroupDTO, UpdateGroupDTO } from "../dtos";
@@ -13,6 +15,7 @@ import {
   updateGroupService,
   addMemberService,
   verifyInviteTokenService,
+  verifyInviteCodeService,
   acceptInviteService,
   joinGroupService,
   removeMemberService,
@@ -110,10 +113,38 @@ export const addMemberController = catchAsync(
 
 export const verifyInviteTokenController = catchAsync(
   async (req: Request<{ token: string }>, res: Response) => {
-    await verifyInviteTokenService(req.params.token);
+    const userId = req.user?.userId;
+    const data = await verifyInviteTokenService(req.params.token, userId!);
     res.status(StatusCodes.OK).json({
       message: "Token đã được xác thực",
+      data,
     });
+  },
+);
+
+export const verifyInviteCodeController = catchAsync(
+  async (req: Request<{ code: string }>, res: Response) => {
+    const userId = req.user?.userId;
+    const data = await verifyInviteCodeService(req.params.code, userId!);
+    res.status(StatusCodes.OK).json({
+      message: "Mã mời đã được xác thực",
+      data,
+    });
+  },
+);
+
+export const renderInviteBridgeController = catchAsync(
+  async (req: Request<{ code: string }>, res: Response) => {
+    const { code } = req.params;
+    const appSchemeUrl = `splitwise://invites/${code}`;
+    const templatePath = path.join(__dirname, "../views/invite-bridge.html");
+    let html = fs.readFileSync(templatePath, "utf8");
+
+    // Inject dynamic data
+    html = html.replace(/{{APP_SCHEME_URL}}/g, appSchemeUrl);
+
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
   },
 );
 

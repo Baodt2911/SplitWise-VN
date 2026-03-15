@@ -384,6 +384,7 @@ export const deleteGroupService = async (userId: string, groupId: string) => {
       tx,
     );
   });
+
   return true;
 };
 
@@ -596,6 +597,7 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
     relatedType: RelatedType.GROUP,
     relatedId: groupId,
   });
+
   return true;
 };
 
@@ -841,11 +843,23 @@ export const addMemberService = async (
   return { added: false, method: "invite_sent" };
 };
 
-export const verifyInviteTokenService = async (token: string) => {
+export const verifyInviteTokenService = async (
+  token: string,
+  userId: string,
+) => {
   const invite = await prisma.groupInvite.findUnique({
     where: { inviteToken: token },
     include: {
-      group: true,
+      group: {
+        include: {
+          members: {
+            where: {
+              userId,
+              status: GroupMemberStatus.ACTIVE,
+            },
+          },
+        },
+      },
       inviter: { select: { id: true, fullName: true } },
     },
   });
@@ -854,18 +868,65 @@ export const verifyInviteTokenService = async (token: string) => {
     throw { status: StatusCodes.NOT_FOUND, message: "Không tìm thấy lời mời" };
   }
 
-  if (invite.status !== GroupInviteStatus.PENDING) {
+  const isMember = invite.group.members.length > 0;
+  if (!isMember && invite.status !== GroupInviteStatus.PENDING) {
     throw {
       status: StatusCodes.GONE,
       message: "Lời mời không còn hợp lệ",
     };
   }
 
-  if (new Date() > invite.expiresAt) {
+  if (!isMember && new Date() > invite.expiresAt) {
     throw { status: StatusCodes.GONE, message: "Lời mời đã hết hạn" };
   }
 
-  return true;
+  return {
+    groupName: invite.group.name,
+    description: invite.group.description,
+    inviterName: invite.inviter.fullName,
+    isMember,
+    groupId: invite.groupId,
+  };
+};
+
+export const verifyInviteCodeService = async (code: string, userId: string) => {
+  const group = await prisma.group.findUnique({
+    where: { inviteCode: code, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      avatarUrl: true,
+      isPublic: true,
+      creator: { select: { fullName: true } },
+      members: {
+        where: {
+          userId,
+          status: GroupMemberStatus.ACTIVE,
+        },
+      },
+    },
+  });
+
+  if (!group) {
+    throw { status: StatusCodes.NOT_FOUND, message: "Mã mời không tồn tại" };
+  }
+
+  const isMember = group.members.length > 0;
+  if (!isMember && !group.isPublic) {
+    throw {
+      status: StatusCodes.FORBIDDEN,
+      message: "Nhóm này không để chế độ công khai",
+    };
+  }
+
+  return {
+    groupName: group.name,
+    description: group.description,
+    inviterName: group.creator?.fullName || "Chủ nhóm",
+    isMember,
+    groupId: group.id,
+  };
 };
 
 export const acceptInviteService = async (token: string, userId: string) => {

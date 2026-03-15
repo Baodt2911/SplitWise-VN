@@ -49,6 +49,7 @@ export interface SettlementHistoryItem {
   paymentMethod: string | null;
   paymentDate: string;
   rejectionReason: string | null;
+  disputeReason: string | null;
   createdAt: string;
   confirmedAt: string | null;
   payer: { id: string; fullName: string; avatarUrl: string | null };

@@ -18,7 +18,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { getThemeColors } from "../../../utils/themeColors";
 import { usePreferencesStore } from "../../../store/preferencesStore";
@@ -51,6 +55,9 @@ export const HomeScreen = React.memo(() => {
   const [isNavigating, setIsNavigating] = useState(false);
 
   const isInitialLoadRef = useRef(true);
+  const queryClient = useQueryClient();
+
+
 
   const containerStyle = useMemo(
     () => ({ backgroundColor: colors.background }),

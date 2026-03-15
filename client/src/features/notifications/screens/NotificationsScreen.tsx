@@ -325,7 +325,7 @@ export const NotificationsScreen: React.FC = () => {
       }
 
       const notification = item.data;
-      const isPaymentRequest = notification.type === "PAYMENT_REQUEST";
+      const isPaymentActionable = notification.type === "PAYMENT_REQUEST" || notification.type === "PAYMENT_DISPUTED";
 
       // Extract groupId and settlementId from the notification's relatedId
       // relatedType === "SETTLEMENT", relatedId === settlementId
@@ -340,7 +340,7 @@ export const NotificationsScreen: React.FC = () => {
             notification={notification}
             onPress={() => handleNotificationPress(notification)}
             onConfirm={
-              isPaymentRequest && settlementId && groupId
+              isPaymentActionable && settlementId && groupId
                 ? () => {
                     setConfirmingId(notification.id);
                     confirmMutation.mutate({
@@ -358,7 +358,7 @@ export const NotificationsScreen: React.FC = () => {
                   : undefined
             }
             onReject={
-              isPaymentRequest && settlementId && groupId
+              isPaymentActionable && settlementId && groupId
                 ? () => openRejectModal(groupId, settlementId, notification.id)
                 : notification.type === "MEMBER_INVITED" &&
                     notification.relatedId

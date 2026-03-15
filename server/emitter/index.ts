@@ -19,7 +19,7 @@ const socketEvents = (socket: Socket) => {
       return ackError(
         ack,
         "FORBIDDEN",
-        "Bạn không phải là thành viên của nhóm này"
+        "Bạn không phải là thành viên của nhóm này",
       );
     }
     socket.join(GROUP_ROOM(groupId));

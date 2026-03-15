@@ -1,1 +1,5 @@
 {"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:15:02.012Z"}
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:15:11.332Z"}
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:15:42.601Z"}
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:16:15.128Z"}
+{"level":"error","message":"Thanh toán trước đó chưa được xử lý","method":"POST","path":"/api/v1/groups/3eefb67a-bdd4-4dd2-ab96-24667eaf1d04/settlements","status":403,"timestamp":"2026-03-04T17:16:20.454Z"}

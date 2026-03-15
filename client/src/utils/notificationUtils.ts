@@ -277,8 +277,15 @@ export const getRelatedRoute = (notification: Notification): string | null => {
     const status = metadata?.status;
 
     if (groupId) {
-      // Nếu đã xác nhận hoặc từ chối, dẫn về lịch sử thanh toán
-      if (status === "CONFIRMED" || status === "REJECTED" || type === "PAYMENT_CONFIRMED" || type === "PAYMENT_REJECTED") {
+      // Nếu đã xử lý xong hoặc đang khiếu nại, dẫn về lịch sử thanh toán
+      if (
+        status === "CONFIRMED" ||
+        status === "REJECTED" ||
+        status === "DISPUTED" ||
+        type === "PAYMENT_CONFIRMED" ||
+        type === "PAYMENT_REJECTED" ||
+        type === "PAYMENT_DISPUTED"
+      ) {
         return `/group/${groupId}/settlement-history`;
       }
       return `/group/${groupId}/payment`;

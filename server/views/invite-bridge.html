@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tham gia nhóm trên SplitwiseVN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #41AE8F;
+            --primary-dark: #20856B;
+            --bg: #FAFAFA;
+            --text-main: #333333;
+            --text-sub: #6E6E6E;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(65, 174, 143, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(65, 174, 143, 0.05) 0px, transparent 50%);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-main);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 48px 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            background: var(--primary);
+            border-radius: 24px;
+            margin: 0 auto 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 24px rgba(65, 174, 143, 0.3);
+            position: relative;
+        }
+
+        .logo-icon {
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 16px;
+            letter-spacing: -0.5px;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text-sub);
+            margin: 0 0 40px;
+        }
+
+        .btn {
+            display: block;
+            background: var(--primary);
+            color: white;
+            padding: 18px 32px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 17px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 16px rgba(65, 174, 143, 0.2);
+            border: none;
+            width: 100%;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+            background: var(--primary-dark);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(65, 174, 143, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(65, 174, 143, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(65, 174, 143, 0); }
+        }
+
+        .footer-text {
+            margin-top: 32px;
+            font-size: 13px;
+            color: var(--text-sub);
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        @media (max-width: 380px) {
+            .card { padding: 40px 24px; }
+            h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo-container">
+                <span class="logo-icon">🤝</span>
+            </div>
+            <h1>SplitwiseVN</h1>
+            <p>Bạn đã nhận được lời mời tham gia nhóm.<br>Ứng dụng sẽ tự động mở sau vài giây.</p>
+            
+            <a href="{{APP_SCHEME_URL}}" class="btn">Mở ứng dụng ngay</a>
+
+            <div class="footer-text">
+                <span class="status-dot"></span> Đang kết nối với ứng dụng...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appUrl = "{{APP_SCHEME_URL}}";
+        
+        // Auto redirect
+        window.location.href = appUrl;
+
+        // Fallback for app not installed
+        setTimeout(() => {
+            console.log("App may not be installed.");
+        }, 2500);
+
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+    </script>
+</body>
+</html>
