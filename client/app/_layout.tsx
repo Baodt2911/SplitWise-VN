@@ -17,6 +17,11 @@ import { router } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../src/lib/queryClient";
 
+import { DynamicIsland } from "../src/components/common/DynamicIsland";
+import { useSocketListener } from "../src/hooks/useSocketListener";
+import { socketService } from "../src/services/socket";
+import { useAuthStore } from "../src/store/authStore";
+
 SplashScreen.preventAutoHideAsync();
 
 function useNotificationObserver() {
@@ -45,10 +50,45 @@ function useNotificationObserver() {
   }, []);
 }
 
-export default function RootLayout() {
-  useNotificationObserver();
+function RootContent({ screenOptions }: { screenOptions: any }) {
+  useSocketListener();
+  const { isAuthenticated } = useAuthStore();
+  
+  // Handle Socket Connection
+  useEffect(() => {
+    if (isAuthenticated) {
+      socketService.connect();
+    } else {
+      socketService.disconnect();
+    }
+  }, [isAuthenticated]);
+
   const theme = usePreferencesStore((state) => state.theme);
   const colors = useMemo(() => getThemeColors(theme), [theme]);
+
+  // Merge background color into content style if needed (or rely on layout)
+  
+  return (
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <DynamicIsland />
+        <Stack screenOptions={screenOptions} />
+        <Alert />
+        <ToastContainer />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  useNotificationObserver();
+  
+  const theme = usePreferencesStore((state) => state.theme);
+  const colors = useMemo(() => getThemeColors(theme), [theme]);
+
   const [loaded] = useFonts({
     BeVietnamPro: require("../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-Regular.ttf"),
     BeVietnamProBold: require("../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-Bold.ttf"),
@@ -98,16 +138,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView
-        style={{ flex: 1, backgroundColor: colors.background }}
-      >
-        <SafeAreaProvider>
-          <StatusBar style="dark" />
-          <Stack screenOptions={screenOptions} />
-          <Alert />
-          <ToastContainer />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+      <RootContent screenOptions={screenOptions} />
     </QueryClientProvider>
   );
 }

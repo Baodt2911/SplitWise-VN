@@ -41,7 +41,4 @@ app.use((req: Request, res: Response) => {
 });
 app.use(errorHandler);
 
-server.listen(PORT, "0.0.0.0", () => {
-  configSocket(io);
-  console.log(`🚀API running on port http://localhost:${PORT}`);
-});
+export { app, server };

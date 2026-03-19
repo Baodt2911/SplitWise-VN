@@ -11,6 +11,10 @@ const SOCKET_URL = __DEV__
 class SocketService {
   private socket: Socket | null = null;
   private isConnecting: boolean = false;
+  private eventQueue: Array<{
+    event: string;
+    callback: (...args: any[]) => void;
+  }> = [];
 
   async connect() {
     if (this.socket?.connected || this.isConnecting) return;
@@ -32,6 +36,11 @@ class SocketService {
 
       this.socket.on("connect", () => {
         console.log("[SOCKET] Connected successfully:", this.socket?.id);
+        // Process queued events
+        this.eventQueue.forEach(({ event, callback }) => {
+          this.socket?.on(event, callback);
+        });
+        this.eventQueue = [];
       });
 
       this.socket.on("connect_error", (error) => {
@@ -49,19 +58,25 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
     }
+    this.eventQueue = [];
   }
 
   on(event: string, callback: (...args: any[]) => void) {
-    if (!this.socket) {
-      // Allow late binding by scheduling it or relying on component reconnecting
-      return;
+    if (this.socket) {
+      this.socket.on(event, callback);
+    } else {
+      this.eventQueue.push({ event, callback });
     }
-    this.socket.on(event, callback);
   }
 
   off(event: string, callback?: (...args: any[]) => void) {
-    if (!this.socket) return;
-    this.socket.off(event, callback);
+    if (this.socket) {
+      this.socket.off(event, callback);
+    } else {
+      this.eventQueue = this.eventQueue.filter(
+        (e) => !(e.event === event && (!callback || e.callback === callback)),
+      );
+    }
   }
 
   getSocket() {
