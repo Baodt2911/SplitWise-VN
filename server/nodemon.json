@@ -2,6 +2,6 @@
   "watch": ["."],
   "ext": "ts",
   "ignore": ["dist", "node"],
-  "exec": "tsx app.ts",
+  "exec": "tsx index.ts",
   "experimentalSpecifierResolution": "node"
 }
