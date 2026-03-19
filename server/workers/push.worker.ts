@@ -1,13 +1,13 @@
 import { Worker, Job } from "bullmq";
-import { bullConfig } from "../configs";
+import { bullConfig } from "../configs/bullmq.config";
 import { pushNotificationService } from "../services/pushNotification.service";
 import { prisma } from "../lib/prisma";
 
 const pushWorker = new Worker(
   "push-notification",
   async (job: Job) => {
-    console.time("Process push notification");
     const { pushTokens, data } = job.data;
+    console.time("Process push notification");
     const tickets = await pushNotificationService(pushTokens, data);
 
     // xử lý token chết
@@ -25,11 +25,11 @@ const pushWorker = new Worker(
           }
         }
       }
-      console.timeEnd("Process push notification");
     }
+    console.timeEnd("Process push notification");
   },
   {
-    connection: bullConfig.connection,
+    connection: bullConfig?.connection,
     concurrency: 5,
   },
 );

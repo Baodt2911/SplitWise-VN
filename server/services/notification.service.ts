@@ -9,6 +9,9 @@ import { prisma } from "../lib/prisma";
 import { StatusCodes } from "http-status-codes";
 import { getPushTokensByUserService } from "./pushNotification.service";
 import { NotificationPayload } from "../types";
+import { io } from "../socket";
+import { emitNotificationToUser } from "../socket/emitters/notification.emitter";
+
 
 export const getNotificationsService = async (
   userId: string,
@@ -82,6 +85,11 @@ export const createNotificationService = async (
       tokens.map((t) => t.token),
       data,
     );
+
+    // Realtime Emitter
+    emitNotificationToUser(io, data.userId, notification);
+
+
   }
   return true;
 };
@@ -107,6 +115,11 @@ export const createManyNotificationService = async (
           relatedType: e.relatedType,
         },
       );
+      
+      // Realtime Emitter
+      emitNotificationToUser(io, e.userId, e);
+
+
     }
   }
   return true;
