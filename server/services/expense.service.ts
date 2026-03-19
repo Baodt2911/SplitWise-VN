@@ -15,8 +15,18 @@ import { createActivityService } from "./activity.service";
 import Decimal from "decimal.js";
 import { createManyNotificationService } from "./notification.service";
 import { mapExpense } from "../utils/map";
-import { emitNotificationToUserInGroup } from "../emitter/notification.emitter";
-import { io } from "../app";
+import { io } from "../socket";
+import {
+  emitExpenseCreate,
+  emitExpenseUpdate,
+  emitExpenseDelete,
+} from "../socket/emitters/expense.emitter";
+import { emitBalanceUpdate } from "../socket/emitters/balance.emitter";
+import {
+  emitNotificationToUserInGroup,
+  emitNotificationToUser,
+} from "../socket/emitters/notification.emitter";
+
 import {
   calculateNetBalanceCreate,
   calculateNetBalanceDelete,
@@ -87,6 +97,7 @@ export const createExpenseService = async (
       deletedAt: null,
     },
     select: {
+      name: true,
       members: {
         where: {
           status: GroupMemberStatus.ACTIVE,
@@ -238,8 +249,12 @@ export const createExpenseService = async (
     type: NotificationType.EXPENSE_ADDED,
     relatedType: RelatedType.EXPENSE,
     relatedId: resultExpenses.id,
+    groupName: existingGroup.name,
   });
-  
+
+  // Realtime Emitters
+  emitExpenseCreate(io, groupId, resultExpenses);
+  emitBalanceUpdate(io, groupId);
 
   return resultExpenses;
 };
@@ -253,6 +268,7 @@ export const updateExpenseService = async (
   const group = await prisma.group.findUnique({
     where: { id: groupId, deletedAt: null },
     select: {
+      name: true,
       createdBy: true,
       allowMemberEdit: true,
       members: {
@@ -558,8 +574,12 @@ export const updateExpenseService = async (
     type: NotificationType.EXPENSE_UPDATED,
     relatedType: RelatedType.EXPENSE,
     relatedId: result.id,
+    groupName: group.name,
   });
 
+  // Realtime Emitters
+  emitExpenseUpdate(io, groupId, result);
+  emitBalanceUpdate(io, groupId);
 
   return result;
 };
@@ -572,6 +592,7 @@ export const deleteExpenseService = async (
   const group = await prisma.group.findUnique({
     where: { id: groupId, deletedAt: null },
     select: {
+      name: true,
       createdBy: true,
       allowMemberEdit: true,
       members: {
@@ -618,7 +639,7 @@ export const deleteExpenseService = async (
       message: "Bạn không có quyền xóa chi phí này",
     };
   }
-
+  // Cần sửa lại logic xóa chi phí, phải thêm bảng trung gian giữa expense và settlement
   //Check Settlement
   const participantIds = expense.splits.map((s) => s.userId);
   const hasSettlement = await prisma.settlement.findFirst({
@@ -637,6 +658,7 @@ export const deleteExpenseService = async (
       ],
     },
   });
+  console.log(hasSettlement, participantIds);
   if (hasSettlement) {
     throw {
       status: StatusCodes.FORBIDDEN,
@@ -711,8 +733,12 @@ export const deleteExpenseService = async (
     type: NotificationType.EXPENSE_DELETED,
     relatedType: RelatedType.EXPENSE,
     relatedId: expenseId,
+    groupName: group.name,
   });
 
+  // Realtime Emitters
+  emitExpenseDelete(io, groupId, expenseId);
+  emitBalanceUpdate(io, groupId);
 };
 
 export const searchExpensesService = async (userId: string, search: string) => {

@@ -20,11 +20,13 @@ import {
   createManyNotificationService,
 } from "./notification.service";
 import Decimal from "decimal.js";
-import {
+import { io } from "../socket";
+import { emitBalanceUpdate } from "../socket/emitters/balance.emitter";
+import { 
   emitNotificationToUser,
-  emitNotificationToUserInGroup,
-} from "../emitter/notification.emitter";
-import { io } from "../app";
+  emitNotificationToUserInGroup 
+} from "../socket/emitters/notification.emitter";
+
 
 export const getAllGroupService = async (
   userId: string,
@@ -496,8 +498,14 @@ export const joinGroupService = async (userId: string, inviteCode: string) => {
     type: NotificationType.MEMBER_SELF_JOINED,
     relatedType: RelatedType.GROUP,
     relatedId: existingGroup.id,
+    groupName: existingGroup.name,
   });
+
+  // Realtime Emitter (updates group stats)
+  emitBalanceUpdate(io, existingGroup.id);
+
   return { joined: true };
+
 };
 
 export const leaveGroupService = async (userId: string, groupId: string) => {
@@ -596,7 +604,12 @@ export const leaveGroupService = async (userId: string, groupId: string) => {
     type: NotificationType.MEMBER_LEFT,
     relatedType: RelatedType.GROUP,
     relatedId: groupId,
+    groupName: existingGroup.name,
   });
+
+  // Realtime Emitter (updates group stats)
+  emitBalanceUpdate(io, groupId);
+
 
   return true;
 };
@@ -670,8 +683,13 @@ const addMemberDirectlyService = async (
     type: NotificationType.MEMBER_ADDED,
     relatedType: RelatedType.GROUP,
     relatedId: groupId,
+    groupName: groupName,
   });
+
+  // Realtime Emitter (updates group stats)
+  emitBalanceUpdate(io, groupId);
 };
+
 
 const sendInviteTokensService = async (
   userId: string,

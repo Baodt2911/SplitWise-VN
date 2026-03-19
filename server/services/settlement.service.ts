@@ -11,8 +11,9 @@ import {
   SettlementStatus,
 } from "../generated/prisma/client";
 import { createNotificationService } from "./notification.service";
-import { emitNotificationToUser } from "../emitter/notification.emitter";
-import { io } from "../app";
+import { io } from "../socket";
+import { emitBalanceUpdate } from "../socket/emitters/balance.emitter";
+import { emitNotificationToUser } from "../socket/emitters/notification.emitter";
 
 export const getPendingSettlementsService = async (
   userId: string,
@@ -172,6 +173,7 @@ export const createSettlementService = async (
       deletedAt: null,
     },
     select: {
+      name: true,
       requirePaymentConfirmation: true,
       balances: {
         where: {
@@ -325,8 +327,12 @@ export const createSettlementService = async (
       : NotificationType.PAYMENT_CONFIRMED,
     relatedType: RelatedType.SETTLEMENT,
     relatedId: result.id,
+    groupName: existingGroup.name,
   });
 
+  if (!isRequireConfirm) {
+    emitBalanceUpdate(io, groupId);
+  }
 
   return true;
 };
@@ -342,7 +348,7 @@ const disputeSettlementController = async (
     where: {
       id: settlementId,
     },
-    select: { payerId: true, payeeId: true, groupId: true, status: true },
+    select: { payerId: true, payeeId: true, groupId: true, status: true, group: { select: { name: true } } },
   });
 
   if (settlement?.groupId !== groupId) {
@@ -448,8 +454,8 @@ const disputeSettlementController = async (
     type: NotificationType.PAYMENT_DISPUTED,
     relatedType: RelatedType.SETTLEMENT,
     relatedId: settlementId,
+    groupName: (settlement as any).group.name,
   });
-
 };
 
 const updateStatusSettlementService = async (
@@ -472,7 +478,7 @@ const updateStatusSettlementService = async (
     where: {
       id: settlementId,
     },
-    select: { payerId: true, payeeId: true, groupId: true, status: true },
+    select: { payerId: true, payeeId: true, groupId: true, status: true, group: { select: { name: true } } },
   });
 
   if (settlement?.groupId !== groupId) {
@@ -646,7 +652,10 @@ const updateStatusSettlementService = async (
         relatedType: RelatedType.SETTLEMENT,
         relatedId: settlementId,
         type: {
-          in: [NotificationType.PAYMENT_REQUEST, NotificationType.PAYMENT_DISPUTED],
+          in: [
+            NotificationType.PAYMENT_REQUEST,
+            NotificationType.PAYMENT_DISPUTED,
+          ],
         },
       },
       data: {
@@ -663,8 +672,12 @@ const updateStatusSettlementService = async (
     type: mapNotificationType[status],
     relatedType: RelatedType.SETTLEMENT,
     relatedId: settlementId,
+    groupName: (settlement as any).group.name,
   });
 
+  if (status === SettlementStatus.CONFIRMED) {
+    emitBalanceUpdate(io, groupId);
+  }
 
   return true;
 };
